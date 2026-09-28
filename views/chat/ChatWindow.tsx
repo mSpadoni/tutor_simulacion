@@ -2,7 +2,8 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport, type UIMessage } from "ai";
+import { DefaultChatTransport } from "ai";
+import type { TutorUIMessage } from "@/shared/chat";
 import { useEffect, useRef, useState } from "react";
 import { tituloDesde } from "@/shared/conversaciones";
 import { useSidebar } from "./EstadoSidebar";
@@ -23,7 +24,7 @@ type Props = {
   /** Id de la conversación (lo genera el servidor al abrir una nueva; se guarda con el primer mensaje). */
   conversacionId: string;
   /** El historial, leído de la base una sola vez al abrir la conversación. */
-  mensajesIniciales: UIMessage[];
+  mensajesIniciales: TutorUIMessage[];
   nombre: string;
 };
 
@@ -54,7 +55,7 @@ export default function ChatWindow({ conversacionId, mensajesIniciales, nombre }
       })
   );
 
-  const { messages, sendMessage, status, stop, error, regenerate } = useChat({
+  const { messages, sendMessage, status, stop, error, regenerate } = useChat<TutorUIMessage>({
     id: conversacionId,
     messages: mensajesIniciales,
     transport: transporte,

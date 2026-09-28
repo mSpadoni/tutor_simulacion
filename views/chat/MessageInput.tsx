@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, type KeyboardEvent, type RefObject } from "react";
-import { MAX_CARACTERES_MENSAJE } from "./tipos";
+import { MAX_CARACTERES_MENSAJE } from "@/shared/chat";
 
 /**
  * Props del campo de texto. El estado (el texto escrito) no vive acá sino en ChatWindow (el componente padre):

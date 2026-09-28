@@ -1,4 +1,4 @@
-import type { UIMessage } from "ai";
+import type { TutorUIMessage } from "@/shared/chat";
 import LoginButton from "@/views/LoginButton";
 import ChatWindow from "./ChatWindow";
 import { ProveedorSidebar } from "./EstadoSidebar";
@@ -10,7 +10,7 @@ type Props = {
   conversaciones: ItemConversacion[];
   ejercicios: ItemEjercicio[];
   conversacionId: string;
-  mensajesIniciales: UIMessage[];
+  mensajesIniciales: TutorUIMessage[];
   /** Server actions que conecta la página (las views no importan código del servidor). */
   cerrarSesion: () => Promise<void>;
   borrarConversacion: (id: string) => Promise<void>;

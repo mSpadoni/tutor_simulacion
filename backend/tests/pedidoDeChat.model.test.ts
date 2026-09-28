@@ -4,7 +4,8 @@
 // - expect(valor).toBe(esperado): compara. Otros: toEqual (mismo contenido), toContain, toMatch (regex), toThrow...
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { MAX_CARACTERES_MENSAJE, PedidoDeChat } from "@/backend/models/pedidoDeChat.model";
+import { PedidoDeChat } from "@/backend/models/pedidoDeChat.model";
+import { MAX_CARACTERES_MENSAJE } from "@/shared/chat";
 
 /** Un pedido como el que arma el navegador con useChat. */
 function pedido(texto: string, cambios: Record<string, unknown> = {}) {

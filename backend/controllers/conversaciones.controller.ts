@@ -1,5 +1,5 @@
 import "server-only";
-import type { UIMessage } from "ai";
+import type { TutorUIMessage } from "@/shared/chat";
 import { z } from "zod";
 import {
   conversacionesModel,
@@ -8,7 +8,7 @@ import {
 } from "@/backend/models/conversaciones.model";
 
 /** Una conversación abierta: sus datos (null si todavía no se guardó ningún mensaje) y su historial. */
-export type ConversacionAbierta = { conversacion: ConversacionGuardada | null; mensajes: UIMessage[] };
+export type ConversacionAbierta = { conversacion: ConversacionGuardada | null; mensajes: TutorUIMessage[] };
 
 /** ¿Es un id válido de conversación? (los genera el servidor con crypto.randomUUID) */
 export function esIdDeConversacion(id: string): boolean {

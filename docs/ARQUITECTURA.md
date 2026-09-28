@@ -31,8 +31,9 @@ MVC sobre Next.js (App Router) + Supabase, con reglas de dependencia que se hace
 4. El dominio no importa Next, Supabase, el AI SDK ni `backend/lib/` (solo `import type`).
 5. Los módulos del servidor empiezan con `import "server-only"`: si un Client Component los importa, el build falla.
 6. Solo `backend/lib/env.ts` lee `process.env`: cada servicio (Supabase, OpenAI, Kroki) valida sus variables con Zod al usarlas, así una que falta de un servicio no afecta a los otros. Si falta la de Supabase, el middleware deja pasar el request en vez de tumbar el sitio.
-7. `shared/` no importa backend, views, rutas ni SDKs: lo que está ahí se puede usar desde el navegador sin arrastrar código del servidor.
-8. Los datos se leen en Server Components al abrir la página; después de una acción del alumno, la vista se actualiza con lo que ya sabe (sin `router.refresh()` ni volver a consultar).
+7. `shared/` no importa backend, views, rutas ni SDKs (salvo `import type`, que no llega al navegador): lo que está ahí se puede usar desde el navegador sin arrastrar código del servidor.
+8. El contrato del chat vive en `shared/chat.ts`: los límites y `TutorUIMessage`, derivado de las tools reales (`crearToolsTutor`). La vista no usa strings sueltos ni casts para las tools: si una cambia de nombre, datos o resultado, deja de compilar (lo prueba `backend/tests/contratoChat.test.ts`).
+9. Los datos se leen en Server Components al abrir la página; después de una acción del alumno, la vista se actualiza con lo que ya sabe (sin `router.refresh()` ni volver a consultar).
 
 Las prueba `backend/tests/arquitectura.test.ts` con el ESLint real del proyecto.
 
@@ -43,7 +44,7 @@ Las prueba `backend/tests/arquitectura.test.ts` con el ESLint real del proyecto.
 | 1   | Reglas que se hacen cumplir solas (`server-only` + ESLint)                                              | Hecha     |
 | 2   | Variables de entorno en un solo lugar (`lib/env.ts`, Zod); el middleware no tumba el sitio si falta una | Hecha     |
 | 3   | Sacar el refetch del historial después de cada respuesta (`router.refresh`)                             | Hecha     |
-| 4   | Contrato tipado cliente↔servidor (`shared/`: nombres de tools, límites, `TutorUIMessage`)               | Pendiente |
+| 4   | Contrato tipado cliente↔servidor (`shared/`: nombres de tools, límites, `TutorUIMessage`)               | Hecha     |
 | 5   | Dividir `ChatController` (agente del LLM y errores aparte)                                              | Pendiente |
 | 6   | Nombres correctos (`repositories/`, `domain/`), helpers de queries                                      | Pendiente |
 | 7   | Separar `MaterialCatedra` (parser e índice puros, lectura de disco aparte)                              | Pendiente |

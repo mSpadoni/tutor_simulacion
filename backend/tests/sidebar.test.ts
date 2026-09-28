@@ -1,4 +1,4 @@
-import type { UIMessage } from "ai";
+import type { ParteDelTutor, TutorUIMessage } from "@/shared/chat";
 import { describe, expect, it } from "vitest";
 import {
   conActividad,
@@ -64,13 +64,21 @@ describe("sinConversacion", () => {
 });
 
 describe("ejerciciosGuardadosEn", () => {
-  const mensaje = (parts: unknown[]): UIMessage => ({ id: "m", role: "assistant", parts: parts as UIMessage["parts"] });
+  const mensaje = (parts: ParteDelTutor[]): TutorUIMessage => ({ id: "m", role: "assistant", parts });
+  const datos = (titulo: string) => ({
+    tema: "colas",
+    dificultad: "media" as const,
+    titulo,
+    enunciado: "Un taller de bicicletas atiende a los clientes que llegan con un intervalo entre arribos.",
+    sePide: ["El tiempo medio de espera en cola"],
+  });
 
   it("toma los ejercicios que la tool guardó bien (id del resultado, título de lo que le pasó el modelo)", () => {
-    const guardado = {
+    const guardado: ParteDelTutor = {
       type: "tool-generar_ejercicio",
+      toolCallId: "t1",
       state: "output-available",
-      input: { titulo: "Taller de bicicletas" },
+      input: datos("Taller de bicicletas"),
       output: { ok: true, id: "e9" },
     };
 
@@ -80,10 +88,22 @@ describe("ejerciciosGuardadosEn", () => {
   });
 
   it("ignora los que no se guardaron, los que están en curso y otras tools", () => {
-    const partes = [
-      { type: "tool-generar_ejercicio", state: "output-available", input: { titulo: "X" }, output: { ok: false } },
-      { type: "tool-generar_ejercicio", state: "input-available", input: { titulo: "Y" } },
-      { type: "tool-consultar_modelos", state: "output-available", input: {}, output: "texto" },
+    const partes: ParteDelTutor[] = [
+      {
+        type: "tool-generar_ejercicio",
+        toolCallId: "t1",
+        state: "output-available",
+        input: datos("X"),
+        output: { ok: false, error: "sin base" },
+      },
+      { type: "tool-generar_ejercicio", toolCallId: "t2", state: "input-available", input: datos("Y") },
+      {
+        type: "tool-consultar_modelos",
+        toolCallId: "t3",
+        state: "output-available",
+        input: { tema: "colas" },
+        output: "texto",
+      },
     ];
 
     expect(ejerciciosGuardadosEn(mensaje(partes), "c")).toEqual([]);

@@ -1,4 +1,4 @@
-import type { UIMessage } from "ai";
+import type { TutorUIMessage } from "@/shared/chat";
 
 // Estado del sidebar (conversaciones y "Mis ejercicios") y cómo cambia con lo que pasa en el chat.
 // Funciones puras: el sidebar se actualiza con lo que el navegador ya sabe (el mensaje que mandó, lo que respondió
@@ -47,13 +47,10 @@ export function sinConversacion(estado: EstadoSidebar, id: string): EstadoSideba
  * Los ejercicios que el tutor guardó en este mensaje: partes de generar_ejercicio que terminaron bien
  * (el resultado trae el id; el título viene en lo que el modelo le pasó a la tool).
  */
-export function ejerciciosGuardadosEn(mensaje: UIMessage, conversacionId: string): ItemEjercicio[] {
+export function ejerciciosGuardadosEn(mensaje: TutorUIMessage, conversacionId: string): ItemEjercicio[] {
   return mensaje.parts.flatMap((parte) => {
-    if (parte.type !== "tool-generar_ejercicio") return [];
-    const { state, input, output } = parte as { state?: string; input?: { titulo?: unknown }; output?: unknown };
-    const resultado = output as { ok?: boolean; id?: unknown } | undefined;
-    if (state !== "output-available" || !resultado?.ok || typeof resultado.id !== "string") return [];
-    if (typeof input?.titulo !== "string") return [];
-    return [{ id: resultado.id, titulo: input.titulo, conversacionId }];
+    // Con el tipo del mensaje, al preguntar por type y state TypeScript ya sabe qué forma tienen input y output.
+    if (parte.type !== "tool-generar_ejercicio" || parte.state !== "output-available" || !parte.output.ok) return [];
+    return [{ id: parte.output.id, titulo: parte.input.titulo, conversacionId }];
   });
 }

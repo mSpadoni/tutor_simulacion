@@ -64,6 +64,10 @@ describe("reglas de dependencia (ESLint)", () => {
     );
     expect(await erroresDeDependencia('import { streamText } from "ai";', "shared/ejemplo.ts")).toHaveLength(1);
     expect(await erroresDeDependencia('import type { UIMessage } from "ai";', "shared/ejemplo.ts")).toEqual([]);
+    // Solo tipos del backend (así se deriva el tipo de los mensajes de las tools reales): no llega código al navegador.
+    expect(
+      await erroresDeDependencia('import type { ToolsDelTutor } from "@/backend/tools/tutor.tools";', "shared/x.ts")
+    ).toEqual([]);
     expect(
       await erroresDeDependencia('import { tituloDesde } from "@/shared/conversaciones";', "views/chat/Ejemplo.tsx")
     ).toEqual([]);

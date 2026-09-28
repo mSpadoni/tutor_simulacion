@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { crearToolsDiagrama, generarDiagramaFlujo, resumenParaElModelo } from "@/backend/tools/diagrama.tools";
+import {
+  crearToolsDiagrama,
+  generarDiagramaFlujo,
+  resumenParaElModelo,
+  type DiagramaGenerado,
+} from "@/backend/tools/diagrama.tools";
+import type { ParteDelTutor } from "@/shared/chat";
 import { diagramaDe, herramientaFallo } from "@/views/chat/tipos";
 
 // Sin mocks: la tool llama a Kroki real (necesita internet).
@@ -60,9 +66,18 @@ describe("la tool generar_diagrama_flujo", () => {
 });
 
 describe("en la vista: diagramaDe y herramientaFallo", () => {
+  // Partes con el mismo tipo que recibe la vista (si la tool cambia de nombre o de datos, esto no compila).
+  const conSalida = (titulo: string, mermaid: string, output: DiagramaGenerado): ParteDelTutor => ({
+    type: "tool-generar_diagrama_flujo",
+    toolCallId: "t1",
+    state: "output-available",
+    input: { titulo, mermaid },
+    output,
+  });
+
   it("un diagrama generado se muestra como data URL con su SVG", async () => {
     const salida = await generarDiagramaFlujo("Llegada", MERMAID);
-    const parte = { type: "tool-generar_diagrama_flujo", state: "output-available", output: salida };
+    const parte = conSalida("Llegada", MERMAID, salida);
 
     const diagrama = diagramaDe(parte);
 
@@ -73,8 +88,13 @@ describe("en la vista: diagramaDe y herramientaFallo", () => {
 
   it("mientras se genera, o si falló, no hay imagen; si falló, se marca como error", async () => {
     const fallida = await generarDiagramaFlujo("Roto", "no es mermaid");
-    const enCurso = { type: "tool-generar_diagrama_flujo", state: "input-available" };
-    const conError = { type: "tool-generar_diagrama_flujo", state: "output-available", output: fallida };
+    const enCurso: ParteDelTutor = {
+      type: "tool-generar_diagrama_flujo",
+      toolCallId: "t2",
+      state: "input-available",
+      input: { titulo: "Roto", mermaid: "no es mermaid" },
+    };
+    const conError = conSalida("Roto", "no es mermaid", fallida);
 
     expect(diagramaDe(enCurso)).toBeNull();
     expect(diagramaDe(conError)).toBeNull();
@@ -83,6 +103,13 @@ describe("en la vista: diagramaDe y herramientaFallo", () => {
   });
 
   it("otras tools no son diagramas", () => {
-    expect(diagramaDe({ type: "tool-consultar_modelos", state: "output-available", output: "texto" })).toBeNull();
+    const parte: ParteDelTutor = {
+      type: "tool-consultar_modelos",
+      toolCallId: "t3",
+      state: "output-available",
+      input: { tema: "colas" },
+      output: "texto",
+    };
+    expect(diagramaDe(parte)).toBeNull();
   });
 });

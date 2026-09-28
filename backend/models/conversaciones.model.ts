@@ -1,5 +1,6 @@
 import "server-only";
 import type { UIMessage } from "ai";
+import type { TutorUIMessage } from "@/shared/chat";
 import { crearClienteServidor, type ClienteSupabase } from "@/backend/lib/supabase/server";
 import type { Database, Json } from "@/backend/types/database";
 
@@ -60,7 +61,7 @@ export class ConversacionesModel {
    * Los últimos `limite` mensajes de la conversación, en orden (el más viejo primero),
    * en el formato del AI SDK: "alumno" → user y "tutor" → assistant.
    */
-  async mensajes(conversacionId: string, limite = 200): Promise<UIMessage[]> {
+  async mensajes(conversacionId: string, limite = 200): Promise<TutorUIMessage[]> {
     const supabase = await this.crearCliente();
     // Se piden los más nuevos primero (para quedarse con los últimos) y después se da vuelta la lista.
     const { data, error } = await supabase
@@ -70,10 +71,11 @@ export class ConversacionesModel {
       .order("creado_en", { ascending: false })
       .limit(limite);
     if (error) throw new Error(`No se pudieron leer los mensajes: ${error.message}`);
-    return data.reverse().map((fila): UIMessage => ({
+    return data.reverse().map((fila): TutorUIMessage => ({
       id: fila.id,
       role: fila.rol === "alumno" ? "user" : "assistant",
-      parts: fila.partes as unknown as UIMessage["parts"],
+      // jsonb sin tipo: se confía en lo que guardó el propio servidor (los mensajes que arma el AI SDK).
+      parts: fila.partes as unknown as TutorUIMessage["parts"],
     }));
   }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import type { UIMessage } from "ai";
+import type { TutorUIMessage } from "@/shared/chat";
 import { createContext, useContext, useState, type ReactNode } from "react";
 import {
   conActividad,
@@ -13,7 +13,7 @@ import {
 
 type ValorSidebar = EstadoSidebar & {
   /** Terminó una respuesta del tutor: la conversación sube arriba y se agregan los ejercicios que guardó. */
-  alTerminarRespuesta: (conversacion: ItemConversacion, mensaje: UIMessage) => void;
+  alTerminarRespuesta: (conversacion: ItemConversacion, mensaje: TutorUIMessage) => void;
   /** Se borró una conversación. */
   quitarConversacion: (id: string) => void;
 };

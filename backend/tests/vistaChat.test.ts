@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { estaCercaDelFinal, mensajeDeError, siguienteScroll, TEXTOS_DE_HERRAMIENTAS } from "@/views/chat/tipos";
-import { EjerciciosModel } from "@/backend/models/ejercicios.model";
-import { crearToolsDiagrama } from "@/backend/tools/diagrama.tools";
-import { crearToolsEjercicio } from "@/backend/tools/ejercicio.tools";
-import { crearToolsFdp } from "@/backend/tools/fdp.tools";
-import { crearToolsMaterial } from "@/backend/tools/material.tools";
-import { MaterialCatedra } from "@/backend/models/materialCatedra.model";
+import { estaCercaDelFinal, mensajeDeError, siguienteScroll } from "@/views/chat/tipos";
 
 // Sin mocks: errores reales como los que arma useChat (Error con el cuerpo de la respuesta o el texto del stream).
 
@@ -74,21 +68,5 @@ describe("siguienteScroll (la pantalla se desliza hacia el final, sin saltos)", 
   it("si ya está en el final (o más abajo), no se mueve", () => {
     expect(siguienteScroll(1000, 1000)).toBe(1000);
     expect(siguienteScroll(1200, 1000)).toBe(1000);
-  });
-});
-
-describe("TEXTOS_DE_HERRAMIENTAS", () => {
-  it("tiene texto para cada tool del tutor (para que el alumno vea qué está haciendo)", () => {
-    const tools = Object.keys({
-      ...crearToolsMaterial(MaterialCatedra.cargar()),
-      ...crearToolsDiagrama(),
-      ...crearToolsFdp(),
-      ...crearToolsEjercicio(new EjerciciosModel(), "sin-conversacion"),
-    });
-
-    for (const nombre of tools) {
-      expect(TEXTOS_DE_HERRAMIENTAS[nombre]?.usando, nombre).toBeTruthy();
-      expect(TEXTOS_DE_HERRAMIENTAS[nombre]?.usada, nombre).toBeTruthy();
-    }
   });
 });

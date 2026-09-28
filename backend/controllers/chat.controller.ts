@@ -9,7 +9,6 @@ import {
   stepCountIs,
   streamText,
   type LanguageModel,
-  type UIMessage,
   type UIMessageChunk,
 } from "ai";
 import { crearModeloOpenAI } from "@/backend/lib/openai";
@@ -17,11 +16,9 @@ import { armarSystemPrompt } from "@/backend/lib/prompts/systemPrompt";
 import { conversacionesModel, type ConversacionesModel } from "@/backend/models/conversaciones.model";
 import { ejerciciosModel, type EjerciciosModel } from "@/backend/models/ejercicios.model";
 import { obtenerMaterialCatedra, type MaterialCatedra } from "@/backend/models/materialCatedra.model";
-import { MAX_MENSAJES_CONTEXTO, type PedidoDeChat } from "@/backend/models/pedidoDeChat.model";
-import { crearToolsDiagrama } from "@/backend/tools/diagrama.tools";
-import { crearToolsEjercicio } from "@/backend/tools/ejercicio.tools";
-import { crearToolsFdp } from "@/backend/tools/fdp.tools";
-import { crearToolsMaterial } from "@/backend/tools/material.tools";
+import type { PedidoDeChat } from "@/backend/models/pedidoDeChat.model";
+import { crearToolsTutor } from "@/backend/tools/tutor.tools";
+import { MAX_MENSAJES_CONTEXTO, type TutorUIMessage } from "@/shared/chat";
 import { tituloDesde } from "@/shared/conversaciones";
 
 /** Error con un mensaje pensado para mostrarle al alumno (qué pasó y qué hacer) y su código HTTP. */
@@ -65,7 +62,7 @@ const PAUSA_ENTRE_PALABRAS_MS = 30;
  * (modelos, enunciados) ocupa miles de tokens y, si lo necesita otra vez, el modelo vuelve a pedirlo.
  * En la base se guarda todo, para mostrarlo al reabrir la conversación.
  */
-function soloTexto(mensaje: UIMessage): UIMessage {
+function soloTexto(mensaje: TutorUIMessage): TutorUIMessage {
   return { ...mensaje, parts: mensaje.parts.filter((parte) => parte.type === "text") };
 }
 
@@ -134,12 +131,7 @@ export class ChatController {
     const mensajes = [...historial, mensaje];
 
     // 3) El modelo, en streaming.
-    const tools = {
-      ...crearToolsMaterial(this.material()),
-      ...crearToolsDiagrama(),
-      ...crearToolsFdp(),
-      ...crearToolsEjercicio(this.ejercicios(), conversacionId),
-    };
+    const tools = crearToolsTutor({ material: this.material(), ejercicios: this.ejercicios(), conversacionId });
     const inicio = Date.now();
     const resultado = streamText({
       model: modelo,

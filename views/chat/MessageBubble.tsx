@@ -2,7 +2,8 @@ import ReactMarkdown, { type Components } from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
-import type { UIMessage } from "ai";
+import { getStaticToolName, isStaticToolUIPart, type ToolUIPart } from "ai";
+import type { HerramientasDelTutor, TutorUIMessage } from "@/shared/chat";
 import { diagramaDe, herramientaFallo, TEXTOS_DE_HERRAMIENTAS, type DiagramaParaMostrar } from "./tipos";
 
 // react-markdown no renderiza HTML crudo: lo que escriba el modelo no puede inyectar scripts.
@@ -37,12 +38,11 @@ const componentesMarkdown: Components = {
 };
 
 /** Una parte de tool del mensaje (`tool-<nombre>`), con su estado (usándola, lista o con error) y su resultado. */
-type ParteDeTool = { type: string; state?: string; output?: unknown };
+type ParteDeTool = ToolUIPart<HerramientasDelTutor>;
 
 /** Cómo se muestra el uso de una tool: texto visible (no solo un ícono) y un indicador de estado. */
 function AvisoDeTool({ parte }: { parte: ParteDeTool }) {
-  const nombre = parte.type.slice("tool-".length);
-  const textos = TEXTOS_DE_HERRAMIENTAS[nombre] ?? { usando: `Usando ${nombre}…`, usada: `Usó ${nombre}` };
+  const textos = TEXTOS_DE_HERRAMIENTAS[getStaticToolName<HerramientasDelTutor>(parte)];
   const conError = herramientaFallo(parte);
   const lista = parte.state === "output-available" && !conError;
   return (
@@ -82,11 +82,11 @@ function DiagramaDeFlujo({ diagrama }: { diagrama: DiagramaParaMostrar }) {
  * Un globo de mensaje del chat. Los del alumno van a la derecha como texto plano;
  * los del tutor a la izquierda, con las tools que usó y el Markdown convertido a HTML (tablas, listas, negritas...).
  */
-export default function MessageBubble({ mensaje }: { mensaje: UIMessage }) {
+export default function MessageBubble({ mensaje }: { mensaje: TutorUIMessage }) {
   const esAlumno = mensaje.role === "user";
   // Un mensaje del AI SDK viene en partes: texto, tools usadas, inicio de cada paso...
   const texto = mensaje.parts.flatMap((parte) => (parte.type === "text" ? [parte.text] : [])).join("\n\n");
-  const tools = mensaje.parts.filter((parte) => parte.type.startsWith("tool-")) as ParteDeTool[];
+  const tools = mensaje.parts.filter(isStaticToolUIPart);
   const diagramas = tools.flatMap((parte) => diagramaDe(parte) ?? []);
   if (!texto && tools.length === 0) return null;
 

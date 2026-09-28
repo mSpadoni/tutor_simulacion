@@ -1,9 +1,5 @@
-import type { UIMessage } from "ai";
+import { MAX_CARACTERES_MENSAJE, type TutorUIMessage } from "@/shared/chat";
 import { z } from "zod";
-
-/** Mensajes previos que se le pasan al modelo como contexto. Más que esto encarece cada consulta sin mejorarla. */
-export const MAX_MENSAJES_CONTEXTO = 20;
-export const MAX_CARACTERES_MENSAJE = 6000;
 
 // zod (`z`) describe cómo tiene que ser un dato y después lo valida. El texto de cada regla es el error que se muestra.
 // El navegador manda solo el mensaje nuevo (en el formato del Vercel AI SDK) y el id de la conversación:
@@ -42,7 +38,7 @@ export class PedidoDeChat {
   // Constructor `private`: la única forma de crear uno es PedidoDeChat.validar(), así nunca existe uno sin validar.
   private constructor(
     readonly conversacionId: string,
-    readonly mensaje: UIMessage
+    readonly mensaje: TutorUIMessage
   ) {}
 
   /** Valida el cuerpo del request (viene del navegador: no se confía en él). */
