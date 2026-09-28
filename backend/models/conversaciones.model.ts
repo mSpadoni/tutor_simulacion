@@ -89,14 +89,17 @@ export class ConversacionesModel {
     const supabase = await this.crearCliente();
     // Cada mensaje con 1 ms de diferencia: así el orden queda fijo aunque se guarden en el mismo insert.
     const ahora = Date.now();
-    const { error } = await supabase.from("mensajes").insert(
+    // upsert con ignoreDuplicates = "insertá, y si ya existe ese id, no hagas nada": al reintentar después de un
+    // error, el navegador vuelve a mandar el mismo mensaje del alumno y no tiene que quedar dos veces.
+    const { error } = await supabase.from("mensajes").upsert(
       mensajes.map((mensaje, i) => ({
         id: mensaje.id,
         conversacion_id: conversacionId,
         rol: mensaje.role === "user" ? "alumno" : "tutor",
         partes: mensaje.parts as unknown as NonNullable<Json>,
         creado_en: new Date(ahora + i).toISOString(),
-      }))
+      })),
+      { onConflict: "conversacion_id,id", ignoreDuplicates: true }
     );
     if (error) throw new Error(`No se pudieron guardar los mensajes: ${error.message}`);
 

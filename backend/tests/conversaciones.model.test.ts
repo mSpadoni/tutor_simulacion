@@ -59,6 +59,18 @@ describe("ConversacionesModel", () => {
     expect(guardados[1]).toEqual(respuesta);
   });
 
+  it("guardar dos veces el mismo mensaje (un reintento) no lo duplica", async () => {
+    const { conversaciones } = await alumnoConModel();
+    const id = randomUUID();
+    await conversaciones.crear(id, "Prueba");
+    const pregunta = mensaje("user", "¿Qué es NS?");
+
+    await conversaciones.agregarMensajes(id, [pregunta]);
+    await conversaciones.agregarMensajes(id, [pregunta]);
+
+    expect(await conversaciones.mensajes(id)).toEqual([pregunta]);
+  });
+
   it("con límite devuelve los últimos mensajes, todavía en orden", async () => {
     const { conversaciones } = await alumnoConModel();
     const id = randomUUID();

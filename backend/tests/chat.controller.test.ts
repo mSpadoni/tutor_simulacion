@@ -2,100 +2,168 @@
 // - describe("tema", () => {...}): agrupa tests relacionados.
 // - it("qué debería pasar", () => {...}): un test. Si alguna línea `expect` no se cumple, el test falla.
 // - expect(valor).toBe(esperado): compara. Otros: toEqual (mismo contenido), toContain, toMatch (regex), toThrow...
+import { randomUUID } from "node:crypto";
 import { createOpenAI } from "@ai-sdk/openai";
-import { describe, expect, it } from "vitest";
-import { ChatController, ErrorDeChat, type RespuestaTutor } from "@/backend/controllers/chat.controller";
+import type { UIMessage } from "ai";
+import { afterAll, describe, expect, it } from "vitest";
+import { ChatController, ErrorDeChat } from "@/backend/controllers/chat.controller";
 import { URL_API_OPENAI_POR_DEFECTO } from "@/backend/lib/openai";
-import { Conversacion } from "@/backend/models/conversacion.model";
+import { ConversacionesModel } from "@/backend/models/conversaciones.model";
+import { PedidoDeChat } from "@/backend/models/pedidoDeChat.model";
+import { borrarAlumnosDePrueba, crearAlumnoLogueado } from "./helpers/alumnoDePrueba";
 
-// Sin mocks: todos los tests le hablan a la API real de OpenAI (necesitan internet).
+// Sin mocks: la base es la copia local de Supabase y el modelo es la API real de OpenAI (necesitan internet).
+afterAll(borrarAlumnosDePrueba);
 
-/** Atajo para armar una conversación válida de un solo mensaje del alumno. */
-function conversacion(texto: string): Conversacion {
-  const resultado = Conversacion.validar({ mensajes: [{ rol: "alumno", contenido: texto }] });
-  if (!resultado.ok) throw new Error(resultado.error);
-  return resultado.conversacion;
+/** Un alumno logueado, su model de conversaciones y un controller que guarda con su sesión. */
+async function alumnoConChat(dependencias: ConstructorParameters<typeof ChatController>[0] = {}) {
+  const alumno = await crearAlumnoLogueado();
+  const conversaciones = new ConversacionesModel(alumno.navegador.crearCliente);
+  const controller = new ChatController({ conversaciones: () => conversaciones, ...dependencias });
+  return { conversaciones, controller };
 }
 
-/** Nombres de las tools que usó el modelo, sin repetir. */
-const herramientas = (respuesta: RespuestaTutor) => [...new Set(respuesta.herramientas.map((h) => h.nombre))];
+/** Manda un mensaje como useChat, lee el stream completo y devuelve sus eventos. */
+async function conversar(controller: ChatController, conversacionId: string, texto: string) {
+  const validacion = PedidoDeChat.validar({
+    id: conversacionId,
+    mensaje: { id: randomUUID(), role: "user", parts: [{ type: "text", text: texto }] },
+  });
+  if (!validacion.ok) throw new Error(validacion.error);
+
+  const respuesta = await controller.responder(validacion.pedido);
+  const cuerpo = await respuesta.text();
+  // El stream es SSE: una línea "data: {json}" por evento, y "data: [DONE]" al final.
+  return cuerpo
+    .split("\n")
+    .filter((linea) => linea.startsWith("data: {"))
+    .map((linea) => JSON.parse(linea.slice(6)) as { type: string; errorText?: string; delta?: string });
+}
+
+/** Espera a que la respuesta del tutor quede guardada (se guarda al cerrar el stream) y devuelve los mensajes. */
+async function mensajesGuardados(conversaciones: ConversacionesModel, id: string, cantidad: number) {
+  for (let intento = 0; intento < 20; intento++) {
+    const mensajes = await conversaciones.mensajes(id);
+    if (mensajes.length >= cantidad) return mensajes;
+    await new Promise((listo) => setTimeout(listo, 150));
+  }
+  return conversaciones.mensajes(id);
+}
+
+/** Qué tools usó el tutor en un mensaje guardado (sus partes "tool-<nombre>"). */
+const herramientas = (mensaje: UIMessage) => [
+  ...new Set(mensaje.parts.filter((parte) => parte.type.startsWith("tool-")).map((parte) => parte.type.slice(5))),
+];
 
 /** Modelo real de OpenAI con una clave inválida: la API responde 401 sin gastar crédito. */
 const modeloConClaveInvalida = () =>
   createOpenAI({ apiKey: "sk-clave-invalida-de-prueba", baseURL: URL_API_OPENAI_POR_DEFECTO }).chat("gpt-4o-mini");
 
-// Si no hay API key configurada, los tests que llaman al modelo de verdad se saltean (describe.skipIf).
-const hayClave = Boolean(process.env.OPENAI_API_KEY);
+describe("ChatController.responder — conversación y errores (sin gastar crédito)", () => {
+  it("una conversación nueva se crea con el primer mensaje como título, y ese mensaje queda guardado", async () => {
+    const { conversaciones, controller } = await alumnoConChat({ crearModelo: modeloConClaveInvalida });
+    const id = randomUUID();
 
-describe("ChatController.responder — errores (con la API real, sin gastar crédito)", () => {
-  it("con una clave inválida devuelve un error para el alumno, sin mostrar detalles técnicos", async () => {
-    const controller = new ChatController({ crearModelo: modeloConClaveInvalida });
+    await conversar(controller, id, "Dame un ejercicio de colas");
 
-    const error = await controller.responder(conversacion("Hola")).catch((e: unknown) => e);
-
-    expect(error).toBeInstanceOf(ErrorDeChat);
-    expect(error).toMatchObject({ status: 502 });
-    expect((error as ErrorDeChat).mensajeParaAlumno).toContain("El tutor no está disponible");
-    expect((error as ErrorDeChat).mensajeParaAlumno).not.toMatch(/api key|401|sk-/i);
+    expect(await conversaciones.obtener(id)).toMatchObject({ titulo: "Dame un ejercicio de colas" });
+    const mensajes = await conversaciones.mensajes(id);
+    expect(mensajes.map((m) => m.role)).toEqual(["user"]);
   });
 
-  it("si OpenAI tarda demasiado, avisa que probés de nuevo (504)", async () => {
-    const controller = new ChatController({ crearModelo: modeloConClaveInvalida, timeoutMs: 1 });
+  it("si el modelo falla, el error llega en el stream con un mensaje para el alumno, sin detalles técnicos", async () => {
+    const { controller } = await alumnoConChat({ crearModelo: modeloConClaveInvalida });
 
-    await expect(controller.responder(conversacion("Hola"))).rejects.toMatchObject({
-      status: 504,
-      mensajeParaAlumno: expect.stringContaining("tardó demasiado"),
+    const eventos = await conversar(controller, randomUUID(), "Hola");
+    const error = eventos.find((evento) => evento.type === "error");
+
+    expect(error?.errorText).toContain("El tutor no está disponible");
+    expect(error?.errorText).not.toMatch(/api key|401|sk-/i);
+  });
+
+  it("si el modelo tarda demasiado, el stream avisa que probés de nuevo", async () => {
+    const { controller } = await alumnoConChat({ crearModelo: modeloConClaveInvalida, timeoutMs: 1 });
+
+    const eventos = await conversar(controller, randomUUID(), "Hola");
+
+    expect(eventos.find((evento) => evento.type === "error")?.errorText).toContain("tardó demasiado");
+  });
+
+  it("no deja escribir en la conversación de otro alumno (404) y no guarda nada", async () => {
+    const duenio = await alumnoConChat({ crearModelo: modeloConClaveInvalida });
+    const intruso = await alumnoConChat({ crearModelo: modeloConClaveInvalida });
+    const id = randomUUID();
+    await conversar(duenio.controller, id, "Mi conversación");
+
+    await expect(conversar(intruso.controller, id, "Hola")).rejects.toMatchObject({
+      constructor: ErrorDeChat,
+      status: 404,
     });
+    expect(await duenio.conversaciones.mensajes(id)).toHaveLength(1);
   });
 });
 
-// Con el modelo real la redacción cambia en cada respuesta: estos tests solo controlan que responda y que use
-// la tool correcta. Las reglas de contenido (f.d.p., «Se pide:», no nombrar la metodología…) están en el prompt
-// y las controla systemPrompt.test.ts, que no depende del modelo.
-describe.skipIf(!hayClave)("ChatController.responder — respuestas reales (requiere OPENAI_API_KEY)", () => {
-  it("un saludo se responde sin tools", async () => {
-    const respuesta = await new ChatController().responder(conversacion("Hola!"));
+// Con el modelo real la redacción cambia en cada respuesta: estos tests solo controlan que responda, que se
+// guarde y que use la tool correcta. Las reglas de contenido están en el prompt (systemPrompt.test.ts).
+const hayClave = Boolean(process.env.OPENAI_API_KEY);
 
-    expect(respuesta.texto.length).toBeGreaterThan(0);
-    expect(herramientas(respuesta)).toEqual([]);
+describe.skipIf(!hayClave)("ChatController.responder — respuestas reales (requiere OPENAI_API_KEY)", () => {
+  it("responde en streaming, guarda la respuesta y sigue la misma conversación con su historial", async () => {
+    const { conversaciones, controller } = await alumnoConChat();
+    const id = randomUUID();
+
+    const eventos = await conversar(controller, id, "Hola!");
+    expect(eventos.some((evento) => evento.type === "text-delta")).toBe(true);
+    const primeros = await mensajesGuardados(conversaciones, id, 2);
+    expect(primeros.map((m) => m.role)).toEqual(["user", "assistant"]);
+    expect(herramientas(primeros[1])).toEqual([]);
+
+    await conversar(controller, id, "Gracias, ¿qué me podés ayudar a practicar?");
+    const todos = await mensajesGuardados(conversaciones, id, 4);
+    expect(todos.map((m) => m.role)).toEqual(["user", "assistant", "user", "assistant"]);
   });
 
   it("una consulta de cómo se hace algo usa los modelos, no ejercicios", async () => {
-    const respuesta = await new ChatController().responder(
-      conversacion("¿Cómo calculo el PTO en un ejercicio de tiempo comprometido?")
-    );
+    const { conversaciones, controller } = await alumnoConChat();
+    const id = randomUUID();
 
-    expect(respuesta.texto.length).toBeGreaterThan(0);
-    expect(herramientas(respuesta)).toContain("consultar_modelos");
-    expect(herramientas(respuesta)).not.toContain("inspiracion_para_ejercicio");
+    await conversar(controller, id, "¿Cómo calculo el PTO en un ejercicio de tiempo comprometido?");
+    const [, tutor] = await mensajesGuardados(conversaciones, id, 2);
+
+    expect(herramientas(tutor)).toContain("consultar_modelos");
+    expect(herramientas(tutor)).not.toContain("inspiracion_para_ejercicio");
   });
 
   it("para resolver un ejercicio de la anexa busca su enunciado y usa los modelos", async () => {
-    const respuesta = await new ChatController().responder(
-      conversacion("Resolveme el análisis previo del ejercicio Garage de la Guía Anexa.")
-    );
+    const { conversaciones, controller } = await alumnoConChat();
+    const id = randomUUID();
 
-    expect(respuesta.texto.length).toBeGreaterThan(0);
-    expect(herramientas(respuesta)).toEqual(expect.arrayContaining(["buscar_ejercicio", "consultar_modelos"]));
+    await conversar(controller, id, "Resolveme el análisis previo del ejercicio Garage de la Guía Anexa.");
+    const [, tutor] = await mensajesGuardados(conversaciones, id, 2);
+
+    expect(herramientas(tutor)).toEqual(expect.arrayContaining(["buscar_ejercicio", "consultar_modelos"]));
   });
 
   it("un ejercicio nuevo usa la inspiración de la cátedra", async () => {
-    const respuesta = await new ChatController().responder(
-      conversacion("Dame un ejercicio nuevo para practicar, tipo parcial.")
-    );
+    const { conversaciones, controller } = await alumnoConChat();
+    const id = randomUUID();
 
-    expect(respuesta.texto.length).toBeGreaterThan(0);
-    expect(herramientas(respuesta)).toContain("inspiracion_para_ejercicio");
+    await conversar(controller, id, "Dame un ejercicio nuevo para practicar, tipo parcial.");
+    const [, tutor] = await mensajesGuardados(conversaciones, id, 2);
+
+    expect(herramientas(tutor)).toContain("inspiracion_para_ejercicio");
   });
 
-  it("con un modelo que no existe devuelve el error de configuración", async () => {
-    const controller = new ChatController({
+  it("con un modelo que no existe, el stream trae el error de configuración", async () => {
+    const { controller } = await alumnoConChat({
       crearModelo: () =>
         createOpenAI({ apiKey: process.env.OPENAI_API_KEY!, baseURL: URL_API_OPENAI_POR_DEFECTO }).chat(
           "modelo-que-no-existe"
         ),
     });
 
-    await expect(controller.responder(conversacion("Hola"))).rejects.toMatchObject({ status: 502 });
+    const eventos = await conversar(controller, randomUUID(), "Hola");
+
+    expect(eventos.find((evento) => evento.type === "error")?.errorText).toContain("El tutor no está disponible");
   });
 });

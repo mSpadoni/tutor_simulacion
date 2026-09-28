@@ -1,8 +1,20 @@
-import { APICallError, generateText, RetryError, stepCountIs, type LanguageModel } from "ai";
+import { randomUUID } from "node:crypto";
+import {
+  APICallError,
+  convertToModelMessages,
+  createUIMessageStreamResponse,
+  RetryError,
+  stepCountIs,
+  streamText,
+  type LanguageModel,
+  type UIMessage,
+  type UIMessageChunk,
+} from "ai";
 import { crearModeloOpenAI } from "@/backend/lib/openai";
 import { armarSystemPrompt } from "@/backend/lib/prompts/systemPrompt";
-import type { Conversacion } from "@/backend/models/conversacion.model";
+import { conversacionesModel, tituloDesde, type ConversacionesModel } from "@/backend/models/conversaciones.model";
 import { obtenerMaterialCatedra, type MaterialCatedra } from "@/backend/models/materialCatedra.model";
+import { MAX_MENSAJES_CONTEXTO, type PedidoDeChat } from "@/backend/models/pedidoDeChat.model";
 import { crearToolsMaterial } from "@/backend/tools/material.tools";
 
 /** Error con un mensaje pensado para mostrarle al alumno (qué pasó y qué hacer) y su código HTTP. */
@@ -18,12 +30,6 @@ export class ErrorDeChat extends Error {
   }
 }
 
-/** Una tool que usó el modelo para responder, con lo que le pasó. */
-export type HerramientaUsada = { nombre: string; entrada: unknown };
-
-/** La respuesta del tutor (Markdown) y las tools que usó el modelo para armarla. */
-export type RespuestaTutor = { texto: string; herramientas: HerramientaUsada[] };
-
 /**
  * Lo que se le puede pasar al ChatController para reemplazar sus piezas (útil en los tests).
  * Todas llevan `?`: son opcionales y, si no se pasan, se usan las reales.
@@ -31,6 +37,7 @@ export type RespuestaTutor = { texto: string; herramientas: HerramientaUsada[] }
 type Dependencias = {
   crearModelo?: () => LanguageModel;
   material?: () => MaterialCatedra;
+  conversaciones?: () => ConversacionesModel;
   timeoutMs?: number;
 };
 
@@ -38,12 +45,23 @@ type Dependencias = {
 const MAXIMO_DE_PASOS = 4;
 
 /**
- * Arma la consulta al modelo (instrucciones + conversación + tools del material) y devuelve la respuesta del tutor.
+ * Para el contexto del modelo, de los mensajes anteriores solo va el texto: lo que devolvieron las tools
+ * (modelos, enunciados) ocupa miles de tokens y, si lo necesita otra vez, el modelo vuelve a pedirlo.
+ * En la base se guarda todo, para mostrarlo al reabrir la conversación.
+ */
+function soloTexto(mensaje: UIMessage): UIMessage {
+  return { ...mensaje, parts: mensaje.parts.filter((parte) => parte.type === "text") };
+}
+
+/**
+ * Responde un mensaje del alumno en streaming: lee el historial de la base, guarda el mensaje nuevo, le pasa
+ * todo al modelo (con las tools del material) y, cuando la respuesta termina, la guarda.
  * El modelo decide qué tools usar según lo que pide el alumno: el controller no elige por él.
  */
 export class ChatController {
   private readonly crearModelo: () => LanguageModel;
   private readonly material: () => MaterialCatedra;
+  private readonly conversaciones: () => ConversacionesModel;
   private readonly timeoutMs: number;
 
   // Recibe UN objeto y lo desestructura en el momento: cada propiedad con su valor por defecto (`= ...`).
@@ -51,53 +69,105 @@ export class ChatController {
   constructor({
     crearModelo = () => crearModeloOpenAI(),
     material = obtenerMaterialCatedra,
+    conversaciones = () => conversacionesModel,
     timeoutMs = 45_000,
   }: Dependencias = {}) {
     this.crearModelo = crearModelo;
     this.material = material;
+    this.conversaciones = conversaciones;
     this.timeoutMs = timeoutMs;
   }
 
-  /** Le pasa la conversación al modelo (con sus tools) y devuelve la respuesta del tutor. */
-  async responder(conversacion: Conversacion): Promise<RespuestaTutor> {
+  /**
+   * Devuelve la respuesta del tutor como stream (el formato que entiende useChat en el navegador).
+   * Si algo falla antes de empezar (la conversación es de otro alumno, la base no responde) tira un ErrorDeChat;
+   * si falla el modelo en el medio, el error llega dentro del stream con el mensaje para el alumno.
+   */
+  async responder(pedido: PedidoDeChat): Promise<Response> {
+    const conversaciones = this.conversaciones();
+    const { conversacionId, mensaje } = pedido;
+
+    // 1) La conversación: si es nueva, se crea con el primer mensaje como título.
+    if (!(await conversaciones.obtener(conversacionId))) {
+      // Si falla, el id ya existe pero es de otro alumno (RLS no se la deja ver).
+      await conversaciones.crear(conversacionId, tituloDesde(pedido.texto)).catch((error: unknown) => {
+        throw new ErrorDeChat("No encontramos esa conversación. Empezá una nueva.", 404, { cause: error });
+      });
+    }
+
+    // 2) El historial (sin el mensaje nuevo, por si es un reintento y ya estaba guardado) y el mensaje nuevo.
+    const historial = (await conversaciones.mensajes(conversacionId, MAX_MENSAJES_CONTEXTO)).filter(
+      (anterior) => anterior.id !== mensaje.id
+    );
+    await conversaciones.agregarMensajes(conversacionId, [mensaje]);
+    const mensajes = [...historial, mensaje];
+
+    // 3) El modelo, en streaming.
+    const tools = crearToolsMaterial(this.material());
     const inicio = Date.now();
-    const resultado = await generateText({
+    const resultado = streamText({
       model: this.crearModelo(),
       system: armarSystemPrompt(),
-      messages: conversacion.paraModelo(),
-      tools: crearToolsMaterial(this.material()),
+      messages: await convertToModelMessages(mensajes.map(soloTexto)),
+      tools,
       toolChoice: "auto", // el modelo decide si usa tools y cuáles
       stopWhen: stepCountIs(MAXIMO_DE_PASOS),
       maxOutputTokens: 2000,
       maxRetries: 1,
       timeout: this.timeoutMs,
-    }).catch((error: unknown) => {
-      // Cualquier error del proveedor se convierte en un ErrorDeChat con un mensaje entendible para el alumno.
-      throw traducirError(error);
+      onFinish: ({ steps, totalUsage }) => {
+        // Log en formato JSON con datos útiles de cada respuesta (demora, pasos, tokens, tools usadas).
+        const herramientas = steps.flatMap((paso) =>
+          paso.toolCalls.map((llamada) => ({ nombre: llamada.toolName, entrada: llamada.input }))
+        );
+        console.info(
+          JSON.stringify({
+            evento: "chat.respuesta",
+            ms: Date.now() - inicio,
+            pasos: steps.length,
+            tokens: totalUsage.totalTokens,
+            herramientas,
+          })
+        );
+      },
     });
 
-    // Las tool calls de todos los pasos, en orden (steps = cada ida y vuelta con el modelo).
-    const herramientas = resultado.steps.flatMap((paso) =>
-      paso.toolCalls.map((llamada) => ({ nombre: llamada.toolName, entrada: llamada.input }))
-    );
-    // Log en formato JSON con datos útiles de cada respuesta (demora, tokens, tools usadas).
-    console.info(
-      JSON.stringify({
-        evento: "chat.respuesta",
-        ms: Date.now() - inicio,
-        pasos: resultado.steps.length,
-        tokens: resultado.totalUsage.totalTokens,
-        herramientas,
-      })
-    );
-
-    const texto = resultado.text.trim();
-    if (!texto) {
-      throw new ErrorDeChat("El tutor no generó una respuesta. Probá reformular tu mensaje.", 502);
-    }
-    return { texto, herramientas };
+    // 4) El stream para el navegador. Al terminar (o si el alumno lo corta), se guarda la respuesta.
+    const stream = resultado.toUIMessageStream({
+      originalMessages: mensajes,
+      generateMessageId: randomUUID,
+      onFinish: async ({ responseMessage }) => {
+        if (responseMessage.parts.length === 0) return;
+        await conversaciones.agregarMensajes(conversacionId, [responseMessage]).catch((error: unknown) => {
+          console.error("No se pudo guardar la respuesta del tutor:", error);
+        });
+      },
+      // Cualquier error del modelo llega al alumno con un mensaje entendible, sin detalles técnicos.
+      onError: (error) => traducirError(error).mensajeParaAlumno,
+    });
+    return createUIMessageStreamResponse({ stream: stream.pipeThrough(timeoutComoError()) });
   }
 }
+
+/**
+ * Cuando se vence el timeout, el SDK corta el stream con un evento "abort", no "error": en el navegador se vería
+ * como si el tutor se hubiera callado. Este paso lo convierte en un error con el mensaje de siempre.
+ * (Si el que corta es el alumno con "Detener", el navegador ya cerró la conexión y este evento no le llega.)
+ */
+function timeoutComoError(): TransformStream<UIMessageChunk, UIMessageChunk> {
+  return new TransformStream({
+    transform(evento, salida) {
+      if (evento.type === "abort" && /TimeoutError/.test(evento.reason ?? "")) {
+        salida.enqueue({ type: "error", errorText: MENSAJE_TIMEOUT });
+      } else {
+        salida.enqueue(evento);
+      }
+    },
+  });
+}
+
+/** Lo que ve el alumno cuando el modelo tarda demasiado. */
+const MENSAJE_TIMEOUT = "El tutor tardó demasiado en responder. Probá de nuevo en unos segundos.";
 
 /** ¿El error es de que la cuenta de OpenAI se quedó sin saldo? (llega como 429, igual que el exceso de consultas) */
 function esSinSaldo(error: APICallError): boolean {
@@ -117,7 +187,7 @@ export function traducirError(error: unknown): ErrorDeChat {
 
   // El timeout lo corta el SDK con un DOMException de nombre "TimeoutError".
   if (causa instanceof Error && causa.name === "TimeoutError") {
-    return new ErrorDeChat("El tutor tardó demasiado en responder. Probá de nuevo en unos segundos.", 504, {
+    return new ErrorDeChat(MENSAJE_TIMEOUT, 504, {
       cause: error,
     });
   }
