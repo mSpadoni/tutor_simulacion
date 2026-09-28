@@ -125,8 +125,8 @@ Sacarle foto o exportar a `docs/wireframe.png`; va al README el Día 5.
       como "RLS enabled". (No hay tabla `usuarios`: los usuarios aparecen en
       **Authentication → Users** después del primer login.)
 - [ ] Copiar a `.env.local`: - **Project Settings → Data API → Project URL** →
-      `NEXT_PUBLIC_SUPABASE_URL` - **Project Settings → API Keys → publishable key**
-      (`sb_publishable_...`) → `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+      `SUPABASE_URL` - **Project Settings → API Keys → publishable key**
+      (`sb_publishable_...`) → `SUPABASE_PUBLISHABLE_KEY`.
       Si solo ves las claves legacy, la `anon` sirve igual.
 
       Las dos son públicas a propósito (van al navegador). **No** copies la

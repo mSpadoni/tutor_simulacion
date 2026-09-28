@@ -5,13 +5,14 @@
  */
 export function leerConfigSupabase(): { url: string; key: string } {
   // process.env tiene las variables de entorno. Pueden no existir, así que su tipo es `string | undefined`.
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  // Sin el prefijo NEXT_PUBLIC_: solo las lee el servidor y no se mandan al navegador.
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_PUBLISHABLE_KEY;
 
   // `!url` es true si url es undefined o texto vacío. Después de este if, TypeScript ya sabe que ambas son string.
   if (!url || !key) {
     throw new Error(
-      "Faltan variables de entorno de Supabase: NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (ver .env.example)"
+      "Faltan variables de entorno de Supabase: SUPABASE_URL y SUPABASE_PUBLISHABLE_KEY (ver .env.example)"
     );
   }
 
