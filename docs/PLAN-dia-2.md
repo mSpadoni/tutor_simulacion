@@ -23,9 +23,10 @@ y encontrar sus conversaciones guardadas al volver a entrar.
       corregir de a un error genuino por vez en el orden de la sección 7 de la
       base de conocimiento, mostrar primero qué va a revisar y marcar el error
       principal como `> ⚠ ...`.
-- [x] `backend/lib/openai.ts`: cliente de **OpenAI** (URL fija de OpenAI) con
-      timeout de 30 s y un reintento. Modelo `gpt-4o-mini`, configurable con
-      `OPENAI_MODEL`.
+- [x] `backend/lib/openai.ts`: cliente de **OpenAI** con timeout de 30 s y un
+      reintento. URL y modelo configurables con `OPENAI_BASE_URL` (por
+      defecto `https://api.openai.com/v1`) y `OPENAI_MODEL` (por defecto
+      `gpt-4o-mini`).
 - [x] `backend/models/conversacion.model.ts`: clase `Conversacion`. Valida con
       Zod lo que manda el navegador (roles, mensajes vacíos, máximo 20
       mensajes y 6000 caracteres, el último tiene que ser del alumno) y lo
@@ -94,9 +95,9 @@ y encontrar sus conversaciones guardadas al volver a entrar.
 - [x] `conversacion.model.test.ts`: validaciones y traducción a OpenAI.
 - [x] `systemPrompt.test.ts`: incluye la base completa, los 3 modos y la regla
       del ⚠.
-- [x] `openai.test.ts`: el cliente siempre apunta a `api.openai.com` (aunque
-      exista `OPENAI_BASE_URL`), avisa si falta `OPENAI_API_KEY` y usa
-      `gpt-4o-mini` por defecto.
+- [x] `openai.test.ts`: sin `OPENAI_BASE_URL` (o vacía) el cliente apunta a
+      `api.openai.com`, con otra URL usa esa; avisa si falta `OPENAI_API_KEY`,
+      reutiliza un solo cliente y usa `gpt-4o-mini` por defecto.
 - [x] `chat.controller.test.ts` contra la **API real** de OpenAI: clave
       inválida → mensaje para el alumno sin detalles técnicos; timeout → 504.
       Con clave: una consulta teórica real respeta la regla del E.F.NO C.; un
@@ -147,8 +148,8 @@ Cada punto con su test sin mocks, `npm run format`, commit y push.
 ## Decisiones y trade-offs (para el README del Día 5)
 
 - **LLM: OpenAI** (`gpt-4o-mini`), como exige el enunciado. La URL de la API
-  va fija en el código, así el tutor no puede terminar hablándole a otro
-  servicio por una variable de entorno.
+  va en `OPENAI_BASE_URL` para poder cambiarla sin tocar código; si está
+  vacía se usa la de OpenAI.
 - **Streaming con el Vercel AI SDK** (bonus elegido). El SDK resuelve en el
   mismo stream el loop de tools del Día 3, así que no hay que armarlo a mano.
 - **Interpretación de intención = elección de tool.** No hay un clasificador

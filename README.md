@@ -34,7 +34,7 @@ Ver `.env.example` para las variables requeridas.
    y Client secret en Supabase → Authentication → Sign In / Providers → Google.
 
 3. **LLM (OpenAI):** crear una API key en platform.openai.com → `OPENAI_API_KEY` en `.env.local`.
-   `OPENAI_MODEL` ya viene con `gpt-4o-mini` en `.env.example`.
+   `OPENAI_BASE_URL` (`https://api.openai.com/v1`) y `OPENAI_MODEL` (`gpt-4o-mini`) ya vienen en `.env.example`.
 
 El paso a paso de Supabase y Google está en los bloques 3 y 4 del plan del Día 1.
 
