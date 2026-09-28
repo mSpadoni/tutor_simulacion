@@ -18,7 +18,7 @@ type Props = {
 
 /**
  * La pantalla del alumno logueado: encabezado con el único <h1>, la lista de conversaciones (<nav>) al costado
- * y el chat (<main>). Es un Server Component: solo arma el layout; el chat y la lista corren en el navegador.
+ * el chat (<main>) y el panel de debug (<aside>). Es un Server Component: solo arma el layout; el chat y la lista corren en el navegador.
  */
 export default function PantallaDeChat({
   usuario,
@@ -52,15 +52,14 @@ export default function PantallaDeChat({
       <ProveedorSidebar key={conversacionId} inicial={{ conversaciones, ejercicios }}>
         <div className="flex min-h-0 flex-1 flex-col md:flex-row">
           <SidebarConversaciones actualId={conversacionId} borrar={borrarConversacion} />
-          <main id="chat" className="flex min-h-0 flex-1 flex-col">
-            {/* key: al cambiar de conversación, el chat arranca de cero con el historial de la otra. */}
-            <ChatWindow
-              key={conversacionId}
-              conversacionId={conversacionId}
-              mensajesIniciales={mensajesIniciales}
-              nombre={usuario.primerNombre}
-            />
-          </main>
+          {/* El chat (<main>) y el panel de debug (<aside>). key: al cambiar de conversación, arranca de cero
+              con el historial de la otra. */}
+          <ChatWindow
+            key={conversacionId}
+            conversacionId={conversacionId}
+            mensajesIniciales={mensajesIniciales}
+            nombre={usuario.primerNombre}
+          />
         </div>
       </ProveedorSidebar>
     </div>

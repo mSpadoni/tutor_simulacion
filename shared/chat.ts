@@ -17,8 +17,24 @@ export type HerramientasDelTutor = InferUITools<ToolsDelTutor>;
 /** Los nombres de las tools del tutor ("consultar_modelos", "generar_diagrama_flujo"…). */
 export type NombreDeHerramienta = keyof HerramientasDelTutor;
 
+/**
+ * Datos de cada respuesta del tutor para el panel de debug. Los manda el servidor mientras responde (el modelo al
+ * empezar, los pasos a medida que pasan, los tokens y la demora al final). No se guardan en la base: al reabrir
+ * una conversación, las respuestas viejas muestran sus tools pero no estos datos.
+ */
+export type MetadatosDeRespuesta = {
+  modelo?: string;
+  /** Rondas con el modelo: cada tool usada suma una, más la respuesta final. */
+  pasos?: number;
+  /** Demora total, desde el pedido hasta el último token (ms). */
+  ms?: number;
+  tokens?: { entrada?: number; salida?: number; total?: number };
+  /** Por qué terminó: "stop" (normal), "length" (llegó al máximo de tokens), "tool-calls"... */
+  motivoDeFin?: string;
+};
+
 /** Un mensaje del chat del tutor, con sus partes tipadas (texto, y cada tool con sus datos y resultado). */
-export type TutorUIMessage = UIMessage<unknown, UIDataTypes, HerramientasDelTutor>;
+export type TutorUIMessage = UIMessage<MetadatosDeRespuesta, UIDataTypes, HerramientasDelTutor>;
 
 /** Una parte de un mensaje del tutor. */
 export type ParteDelTutor = TutorUIMessage["parts"][number];

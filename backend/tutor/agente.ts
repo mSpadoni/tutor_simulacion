@@ -1,10 +1,18 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { convertToModelMessages, smoothStream, stepCountIs, streamText, type LanguageModel } from "ai";
+import {
+  convertToModelMessages,
+  smoothStream,
+  stepCountIs,
+  streamText,
+  type LanguageModel,
+  type TextStreamPart,
+  type ToolSet,
+} from "ai";
 import { armarSystemPrompt } from "@/backend/lib/prompts/systemPrompt";
 import type { ToolsDelTutor } from "@/backend/tools/tutor.tools";
 import { timeoutComoError, traducirError } from "@/backend/tutor/errores";
-import type { TutorUIMessage } from "@/shared/chat";
+import type { MetadatosDeRespuesta, TutorUIMessage } from "@/shared/chat";
 
 // El agente: todo lo que tiene que ver con el LLM (prompt, tools, pasos, streaming, log).
 // No sabe de conversaciones ni de la base: recibe los mensajes y avisa cuando termina la respuesta.
@@ -39,6 +47,41 @@ function soloTexto(mensaje: TutorUIMessage): TutorUIMessage {
   return { ...mensaje, parts: mensaje.parts.filter((parte) => parte.type === "text") };
 }
 
+/** El nombre del modelo configurado (el SDK acepta un string o un objeto de modelo). */
+function nombreDelModelo(modelo: LanguageModel): string {
+  return typeof modelo === "string" ? modelo : modelo.modelId;
+}
+
+/**
+ * Arma los datos del panel de debug a medida que pasa el stream: el modelo al empezar, el número de paso al
+ * terminar cada uno (con el modelo exacto que respondió) y, al final, los tokens, la demora y el motivo de fin.
+ * El navegador junta todo en `message.metadata`.
+ */
+export function medidorDeRespuesta(modelo: string, inicio = Date.now()) {
+  let pasos = 0;
+  return (parte: TextStreamPart<ToolSet>): MetadatosDeRespuesta | undefined => {
+    switch (parte.type) {
+      case "start":
+        return { modelo };
+      case "finish-step":
+        pasos += 1;
+        return { pasos, modelo: parte.response.modelId || modelo };
+      case "finish":
+        return {
+          ms: Date.now() - inicio,
+          motivoDeFin: parte.finishReason,
+          tokens: {
+            entrada: parte.totalUsage.inputTokens,
+            salida: parte.totalUsage.outputTokens,
+            total: parte.totalUsage.totalTokens,
+          },
+        };
+      default:
+        return undefined;
+    }
+  };
+}
+
 /**
  * Le pide la respuesta al modelo y la devuelve como stream de partes (el formato que entiende useChat).
  * El modelo decide qué tools usar según lo que pide el alumno: acá no se elige por él.
@@ -53,6 +96,7 @@ export async function responderComoTutor({
   alTerminar,
 }: PedidoAlAgente) {
   const inicio = Date.now();
+  const medir = medidorDeRespuesta(nombreDelModelo(modelo), inicio);
   const resultado = streamText({
     model: modelo,
     system: armarSystemPrompt(),
@@ -86,6 +130,8 @@ export async function responderComoTutor({
     .toUIMessageStream<TutorUIMessage>({
       originalMessages: mensajes,
       generateMessageId: randomUUID,
+      // Modelo, pasos, tokens y demora de esta respuesta, para el panel de debug.
+      messageMetadata: ({ part }) => medir(part),
       onFinish: async ({ responseMessage }) => {
         if (responseMessage.parts.length > 0) await alTerminar(responseMessage);
       },

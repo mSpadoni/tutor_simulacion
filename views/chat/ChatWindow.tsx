@@ -4,11 +4,12 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import type { TutorUIMessage } from "@/shared/chat";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { tituloDesde } from "@/shared/conversaciones";
 import { useSidebar } from "./EstadoSidebar";
 import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
+import PanelDeDebug from "./PanelDeDebug";
 import { estaCercaDelFinal, mensajeDeError, siguienteScroll } from "./tipos";
 
 // Atajos siempre visibles debajo del campo: el alumno puede cambiar de tarea en cualquier momento (heurística #6,
@@ -44,6 +45,15 @@ export default function ChatWindow({ conversacionId, mensajesIniciales, nombre }
   const pegadoAlFinalRef = useRef(true);
   const ultimoScrollRef = useRef(0); // Para saber si el alumno scrolleó para arriba.
   const animacionRef = useRef<number | null>(null); // La animación que acompaña al texto (si hay una en curso).
+  const [debugAbierto, setDebugAbierto] = useState(false); // El panel de debug arranca plegado.
+  const botonDebugRef = useRef<HTMLButtonElement>(null);
+
+  // useCallback: la misma función en cada render (el panel la usa en un efecto y no tiene que re-ejecutarlo con
+  // cada palabra que llega). Al cerrar, el foco vuelve al botón que lo abrió.
+  const cerrarDebug = useCallback(() => {
+    setDebugAbierto(false);
+    botonDebugRef.current?.focus();
+  }, []);
 
   // El transporte se crea una sola vez (useState con función). Manda solo el mensaje nuevo y el id de la
   // conversación: el servidor lee el historial de la base.
@@ -139,92 +149,111 @@ export default function ChatWindow({ conversacionId, mensajesIniciales, nombre }
   }
 
   return (
-    <section aria-labelledby="titulo-conversacion" className="flex min-h-0 flex-1 flex-col">
-      <h2 id="titulo-conversacion" className="sr-only">
-        Conversación con el tutor
-      </h2>
-
-      <div
-        ref={zonaDeMensajesRef}
-        onScroll={(evento) => alScrollear(evento.currentTarget)}
-        className="flex-1 overflow-y-auto px-4 py-6"
-      >
-        <div className="mx-auto flex max-w-3xl flex-col gap-4">
-          {messages.length === 0 && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-6">
-              <p className="text-lg font-medium text-slate-900">Hola, {nombre}. ¿Qué querés hacer?</p>
-              <p className="mt-1 text-sm text-slate-600">
-                Escribí lo que necesites o usá uno de los atajos de abajo: pedir un ejercicio, corregir tu resolución,
-                resolver una f.d.p. o preguntar teoría.
-              </p>
-            </div>
-          )}
-
-          {/* aria-live="off": mientras la respuesta llega palabra por palabra no se anuncia (sería ruido).
-              La respuesta completa la anuncia la región de abajo cuando termina. */}
-          <ol aria-label="Mensajes" aria-live="off" className="flex flex-col gap-4">
-            {messages.map((mensaje) => (
-              <MessageBubble key={mensaje.id} mensaje={mensaje} />
-            ))}
-          </ol>
-
-          {/* Estado visible con texto, no solo una animación (heurística #1). */}
-          <div role="status" className="text-sm text-slate-700">
-            {status === "submitted" && (
-              <p className="flex items-center gap-2">
-                <span aria-hidden="true" className="size-2 animate-pulse rounded-full bg-blue-700" />
-                El tutor está pensando…
-              </p>
-            )}
+    <>
+      <main id="chat" className="flex min-h-0 flex-1 flex-col">
+        <section aria-labelledby="titulo-conversacion" className="flex min-h-0 flex-1 flex-col">
+          <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-white px-4 py-1.5">
+            <h2 id="titulo-conversacion" className="text-sm font-medium text-slate-700">
+              Conversación con el tutor
+            </h2>
+            {/* Botón con texto: muestra qué tools usó el modelo, tokens y demora (bonus del challenge). */}
+            <button
+              ref={botonDebugRef}
+              type="button"
+              onClick={() => (debugAbierto ? cerrarDebug() : setDebugAbierto(true))}
+              aria-expanded={debugAbierto}
+              aria-controls="panel-debug"
+              className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium text-slate-800 hover:bg-slate-100"
+            >
+              <span aria-hidden="true">🛠 </span>
+              {debugAbierto ? "Ocultar debug" : "Ver debug"}
+            </button>
           </div>
-          <p aria-live="polite" className="sr-only">
-            {anuncio}
-          </p>
 
-          {error && (
-            <div role="alert" className="rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-900">
-              <p className="font-medium">
-                <span aria-hidden="true">⚠ </span>
-                {mensajeDeError(error)}
+          <div
+            ref={zonaDeMensajesRef}
+            onScroll={(evento) => alScrollear(evento.currentTarget)}
+            className="flex-1 overflow-y-auto px-4 py-6"
+          >
+            <div className="mx-auto flex max-w-3xl flex-col gap-4">
+              {messages.length === 0 && (
+                <div className="rounded-2xl border border-slate-200 bg-white p-6">
+                  <p className="text-lg font-medium text-slate-900">Hola, {nombre}. ¿Qué querés hacer?</p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Escribí lo que necesites o usá uno de los atajos de abajo: pedir un ejercicio, corregir tu
+                    resolución, resolver una f.d.p. o preguntar teoría.
+                  </p>
+                </div>
+              )}
+
+              {/* aria-live="off": mientras la respuesta llega palabra por palabra no se anuncia (sería ruido).
+              La respuesta completa la anuncia la región de abajo cuando termina. */}
+              <ol aria-label="Mensajes" aria-live="off" className="flex flex-col gap-4">
+                {messages.map((mensaje) => (
+                  <MessageBubble key={mensaje.id} mensaje={mensaje} />
+                ))}
+              </ol>
+
+              {/* Estado visible con texto, no solo una animación (heurística #1). */}
+              <div role="status" className="text-sm text-slate-700">
+                {status === "submitted" && (
+                  <p className="flex items-center gap-2">
+                    <span aria-hidden="true" className="size-2 animate-pulse rounded-full bg-blue-700" />
+                    El tutor está pensando…
+                  </p>
+                )}
+              </div>
+              <p aria-live="polite" className="sr-only">
+                {anuncio}
               </p>
-              <button
-                type="button"
-                // Reintentar vuelve a pedir la respuesta al último mensaje (el servidor no lo guarda dos veces).
-                onClick={() => void regenerate()}
-                className="mt-2 rounded-lg border border-red-400 bg-white px-3 py-1.5 font-medium text-red-900 hover:bg-red-100"
-              >
-                Reintentar
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
 
-      <div className="mx-auto w-full max-w-3xl">
-        <MessageInput
-          valor={borrador}
-          onCambio={setBorrador}
-          onEnviar={() => enviar(borrador)}
-          onDetener={stop}
-          generando={generando}
-          textareaRef={textareaRef}
-        />
-        {/* Atajos chicos debajo del campo, siempre a mano. */}
-        <ul aria-label="Atajos" className="flex flex-wrap gap-2 bg-white px-4 pb-3">
-          {ATAJOS.map((atajo) => (
-            <li key={atajo.titulo}>
-              <button
-                type="button"
-                onClick={() => usarAtajo(atajo.mensaje)}
-                disabled={generando}
-                className="rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 transition hover:border-blue-700 hover:bg-blue-50 disabled:opacity-60"
-              >
-                {atajo.titulo}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </section>
+              {error && (
+                <div role="alert" className="rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-900">
+                  <p className="font-medium">
+                    <span aria-hidden="true">⚠ </span>
+                    {mensajeDeError(error)}
+                  </p>
+                  <button
+                    type="button"
+                    // Reintentar vuelve a pedir la respuesta al último mensaje (el servidor no lo guarda dos veces).
+                    onClick={() => void regenerate()}
+                    className="mt-2 rounded-lg border border-red-400 bg-white px-3 py-1.5 font-medium text-red-900 hover:bg-red-100"
+                  >
+                    Reintentar
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mx-auto w-full max-w-3xl">
+            <MessageInput
+              valor={borrador}
+              onCambio={setBorrador}
+              onEnviar={() => enviar(borrador)}
+              onDetener={stop}
+              generando={generando}
+              textareaRef={textareaRef}
+            />
+            {/* Atajos chicos debajo del campo, siempre a mano. */}
+            <ul aria-label="Atajos" className="flex flex-wrap gap-2 bg-white px-4 pb-3">
+              {ATAJOS.map((atajo) => (
+                <li key={atajo.titulo}>
+                  <button
+                    type="button"
+                    onClick={() => usarAtajo(atajo.mensaje)}
+                    disabled={generando}
+                    className="rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 transition hover:border-blue-700 hover:bg-blue-50 disabled:opacity-60"
+                  >
+                    {atajo.titulo}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      </main>
+      <PanelDeDebug id="panel-debug" mensajes={messages} abierto={debugAbierto} onCerrar={cerrarDebug} />
+    </>
   );
 }

@@ -12,6 +12,7 @@ import { URL_API_OPENAI_POR_DEFECTO } from "@/backend/lib/env";
 import { ConversacionesModel } from "@/backend/models/conversaciones.model";
 import { EjerciciosModel } from "@/backend/models/ejercicios.model";
 import { PedidoDeChat } from "@/backend/models/pedidoDeChat.model";
+import type { MetadatosDeRespuesta } from "@/shared/chat";
 import { borrarAlumnosDePrueba, crearAlumnoLogueado } from "./helpers/alumnoDePrueba";
 import { conVariablesAsync } from "./helpers/variablesDeEntorno";
 
@@ -45,7 +46,15 @@ async function conversar(controller: ChatController, conversacionId: string, tex
   return cuerpo
     .split("\n")
     .filter((linea) => linea.startsWith("data: {"))
-    .map((linea) => JSON.parse(linea.slice(6)) as { type: string; errorText?: string; delta?: string });
+    .map(
+      (linea) =>
+        JSON.parse(linea.slice(6)) as {
+          type: string;
+          errorText?: string;
+          delta?: string;
+          messageMetadata?: MetadatosDeRespuesta;
+        }
+    );
 }
 
 /** Espera a que la respuesta del tutor quede guardada (se guarda al cerrar el stream) y devuelve los mensajes. */
@@ -105,6 +114,8 @@ describe("ChatController.responder — conversación y errores (sin gastar créd
 
     expect(error?.errorText).toContain("El tutor no está disponible");
     expect(error?.errorText).not.toMatch(/api key|401|sk-/i);
+    // Para el panel de debug: el modelo llega apenas empieza la respuesta, aunque después falle.
+    expect(eventos.find((evento) => evento.type === "start")?.messageMetadata).toEqual({ modelo: "gpt-4o-mini" });
   });
 
   it("si el modelo tarda demasiado, el stream avisa que probés de nuevo", async () => {
@@ -140,6 +151,11 @@ describe.skipIf(!hayClave)("ChatController.responder — respuestas reales (requ
 
     const eventos = await conversar(controller, id, "Hola!");
     expect(eventos.some((evento) => evento.type === "text-delta")).toBe(true);
+    // Para el panel de debug: al terminar llegan los tokens, la demora y el motivo de fin.
+    const fin = eventos.find((evento) => evento.type === "finish")?.messageMetadata;
+    expect(fin?.tokens?.total).toBeGreaterThan(0);
+    expect(fin?.ms).toBeGreaterThan(0);
+    expect(fin?.motivoDeFin).toBe("stop");
     const primeros = await mensajesGuardados(conversaciones, id, 2);
     expect(primeros.map((m) => m.role)).toEqual(["user", "assistant"]);
     expect(herramientas(primeros[1])).toEqual([]);
