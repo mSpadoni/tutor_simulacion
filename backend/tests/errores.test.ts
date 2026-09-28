@@ -1,6 +1,6 @@
-import { APICallError, RetryError } from "ai";
+import { APICallError, RetryError, type UIMessageChunk } from "ai";
 import { describe, expect, it } from "vitest";
-import { ErrorDeChat, traducirError } from "@/backend/controllers/chat.controller";
+import { ErrorDeChat, MENSAJE_TIMEOUT, timeoutComoError, traducirError } from "@/backend/tutor/errores";
 
 // Sin mocks: los errores son instancias reales de las clases del AI SDK, con el cuerpo que manda OpenAI de verdad.
 
@@ -83,5 +83,36 @@ describe("traducirError — otros errores", () => {
     const timeout = new DOMException("Step timeout of 1ms exceeded", "TimeoutError");
 
     expect(traducirError(timeout).status).toBe(504);
+  });
+});
+
+describe("timeoutComoError (el corte por timeout llega al alumno como error)", () => {
+  /** Pasa los eventos por el paso real, con un stream real, y devuelve lo que sale. */
+  async function pasarPor(eventos: UIMessageChunk[]): Promise<UIMessageChunk[]> {
+    const salida: UIMessageChunk[] = [];
+    const stream = new ReadableStream<UIMessageChunk>({
+      start(controlador) {
+        eventos.forEach((evento) => controlador.enqueue(evento));
+        controlador.close();
+      },
+    }).pipeThrough(timeoutComoError());
+    const lector = stream.getReader();
+    for (let leido = await lector.read(); !leido.done; leido = await lector.read()) salida.push(leido.value);
+    return salida;
+  }
+
+  it("un abort por TimeoutError se convierte en error con el mensaje de siempre", async () => {
+    expect(await pasarPor([{ type: "abort", reason: "TimeoutError: Step timeout exceeded" }])).toEqual([
+      { type: "error", errorText: MENSAJE_TIMEOUT },
+    ]);
+  });
+
+  it("el resto de los eventos (texto, un abort del alumno) pasan igual", async () => {
+    const eventos: UIMessageChunk[] = [
+      { type: "text-delta", id: "1", delta: "Hola" },
+      { type: "abort", reason: "AbortError" },
+    ];
+
+    expect(await pasarPor(eventos)).toEqual(eventos);
   });
 });

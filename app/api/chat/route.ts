@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { authController } from "@/backend/controllers/auth.controller";
-import { chatController, ErrorDeChat } from "@/backend/controllers/chat.controller";
+import { chatController } from "@/backend/controllers/chat.controller";
+import { ErrorDeChat } from "@/backend/tutor/errores";
 import { PedidoDeChat } from "@/backend/models/pedidoDeChat.model";
 
 // En Vercel, cuánto puede durar la función como máximo (segundos): el stream del tutor con sus tools.

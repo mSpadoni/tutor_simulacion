@@ -53,8 +53,9 @@ const reglasDeDependencia = [
         "@/backend/models/conversaciones.model",
         "@/backend/models/ejercicios.model",
         "@/backend/models/materialCatedra.model",
+        "@/backend/tutor/agente",
       ],
-      message: "Las rutas no usan Supabase ni los repositorios directamente: pasan por un controller.",
+      message: "Las rutas no usan Supabase, los repositorios ni el agente directamente: pasan por un controller.",
     }),
   },
   {

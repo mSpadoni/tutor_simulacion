@@ -51,6 +51,11 @@ describe("reglas de dependencia (ESLint)", () => {
       )
     ).toHaveLength(1);
     expect(
+      await erroresDeDependencia('import { responderComoTutor } from "@/backend/tutor/agente";', archivo)
+    ).toHaveLength(1);
+    // Los errores para el alumno sí: la ruta los traduce a JSON.
+    expect(await erroresDeDependencia('import { ErrorDeChat } from "@/backend/tutor/errores";', archivo)).toEqual([]);
+    expect(
       await erroresDeDependencia(
         'import { conversacionesController } from "@/backend/controllers/conversaciones.controller";',
         archivo
@@ -101,6 +106,7 @@ describe("server-only", () => {
   const delServidor = [
     ...archivosDe("backend/controllers"),
     ...archivosDe("backend/tools"),
+    ...archivosDe("backend/tutor"),
     "backend/models/conversaciones.model.ts",
     "backend/models/ejercicios.model.ts",
     "backend/models/materialCatedra.model.ts",
