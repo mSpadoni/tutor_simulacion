@@ -3,7 +3,7 @@ import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { getStaticToolName, isStaticToolUIPart, type ToolUIPart } from "ai";
-import type { HerramientasDelTutor, TutorUIMessage } from "@/shared/chat";
+import { textoDe, type HerramientasDelTutor, type TutorUIMessage } from "@/shared/chat";
 import { diagramaDe, herramientaFallo, TEXTOS_DE_HERRAMIENTAS, type DiagramaParaMostrar } from "./tipos";
 
 // react-markdown no renderiza HTML crudo: lo que escriba el modelo no puede inyectar scripts.
@@ -85,7 +85,7 @@ function DiagramaDeFlujo({ diagrama }: { diagrama: DiagramaParaMostrar }) {
 export default function MessageBubble({ mensaje }: { mensaje: TutorUIMessage }) {
   const esAlumno = mensaje.role === "user";
   // Un mensaje del AI SDK viene en partes: texto, tools usadas, inicio de cada paso...
-  const texto = mensaje.parts.flatMap((parte) => (parte.type === "text" ? [parte.text] : [])).join("\n\n");
+  const texto = textoDe(mensaje, "\n\n");
   const tools = mensaje.parts.filter(isStaticToolUIPart);
   const diagramas = tools.flatMap((parte) => diagramaDe(parte) ?? []);
   if (!texto && tools.length === 0) return null;

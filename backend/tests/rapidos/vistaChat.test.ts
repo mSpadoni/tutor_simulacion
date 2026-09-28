@@ -1,4 +1,8 @@
+import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
+import { textoDe, type TutorUIMessage } from "@/shared/chat";
+import { tituloDesde } from "@/shared/conversaciones";
+import { anuncioDeRespuesta, ATAJOS, atajoEstaCompleto, tituloDeLaConversacion } from "@/views/chat/respuesta";
 import { estaCercaDelFinal, mensajeDeError, siguienteScroll } from "@/views/chat/tipos";
 
 // Sin mocks: errores reales como los que arma useChat (Error con el cuerpo de la respuesta o el texto del stream).
@@ -68,5 +72,55 @@ describe("siguienteScroll (la pantalla se desliza hacia el final, sin saltos)", 
   it("si ya está en el final (o más abajo), no se mueve", () => {
     expect(siguienteScroll(1000, 1000)).toBe(1000);
     expect(siguienteScroll(1200, 1000)).toBe(1000);
+  });
+});
+
+describe("al terminar una respuesta (respuesta.ts)", () => {
+  const mensaje = (role: "user" | "assistant", ...textos: string[]): TutorUIMessage => ({
+    id: randomUUID(),
+    role,
+    parts: textos.map((text) => ({ type: "text" as const, text })),
+  });
+
+  it("textoDe junta solo las partes de texto", () => {
+    const conTool: TutorUIMessage = {
+      id: "m",
+      role: "assistant",
+      parts: [
+        { type: "text", text: "Mirá" },
+        {
+          type: "tool-consultar_modelos",
+          toolCallId: "t",
+          state: "output-available",
+          input: { tema: "colas" },
+          output: "modelo",
+        },
+        { type: "text", text: "esto" },
+      ],
+    };
+
+    expect(textoDe(conTool)).toBe("Mirá esto");
+    expect(textoDe(conTool, "\n\n")).toBe("Mirá\n\nesto");
+  });
+
+  it("el lector de pantalla lee la respuesta entera", () => {
+    expect(anuncioDeRespuesta(mensaje("assistant", "Hola,", "¿qué hacemos?"))).toBe(
+      "El tutor respondió: Hola, ¿qué hacemos?"
+    );
+  });
+
+  it("el título del sidebar sale del primer mensaje del alumno, igual que en el servidor", () => {
+    const mensajes = [
+      mensaje("user", "Dame un ejercicio de colas"),
+      mensaje("assistant", "Dale"),
+      mensaje("user", "Otro"),
+    ];
+
+    expect(tituloDeLaConversacion(mensajes)).toBe(tituloDesde("Dame un ejercicio de colas"));
+    expect(tituloDeLaConversacion([])).toBe("Conversación nueva");
+  });
+
+  it("los atajos completos se mandan directo; los que terminan en «:» esperan que el alumno complete", () => {
+    expect(ATAJOS.map((atajo) => atajoEstaCompleto(atajo.mensaje))).toEqual([true, false, false, false]);
   });
 });

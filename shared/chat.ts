@@ -38,3 +38,8 @@ export type TutorUIMessage = UIMessage<MetadatosDeRespuesta, UIDataTypes, Herram
 
 /** Una parte de un mensaje del tutor. */
 export type ParteDelTutor = TutorUIMessage["parts"][number];
+
+/** El texto de un mensaje (sus partes de texto, sin las tools), unidas con `separador`. */
+export function textoDe(mensaje: Pick<TutorUIMessage, "parts">, separador = " "): string {
+  return mensaje.parts.flatMap((parte) => (parte.type === "text" ? [parte.text] : [])).join(separador);
+}

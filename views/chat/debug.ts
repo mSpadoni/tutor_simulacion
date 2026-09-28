@@ -1,5 +1,11 @@
 import { getStaticToolName, isStaticToolUIPart } from "ai";
-import type { HerramientasDelTutor, MetadatosDeRespuesta, NombreDeHerramienta, TutorUIMessage } from "@/shared/chat";
+import {
+  textoDe,
+  type HerramientasDelTutor,
+  type MetadatosDeRespuesta,
+  type NombreDeHerramienta,
+  type TutorUIMessage,
+} from "@/shared/chat";
 import { herramientaFallo, TEXTOS_DE_HERRAMIENTAS } from "./tipos";
 
 // Qué muestra el panel de debug de cada respuesta del tutor: las tools que usó (con lo que les pasó y lo que
@@ -48,10 +54,6 @@ export function comoTextoDeDebug(valor: unknown, max = MAX_CARACTERES_EN_DEBUG):
         ) ?? String(valor));
   if (texto.length <= max) return texto;
   return `${texto.slice(0, max)}… (${texto.length - max} caracteres más)`;
-}
-
-function textoDe(mensaje: TutorUIMessage): string {
-  return mensaje.parts.flatMap((parte) => (parte.type === "text" ? [parte.text] : [])).join(" ");
 }
 
 /** Las respuestas del tutor en orden, cada una con el pedido del alumno, sus tools y los datos del modelo. */
