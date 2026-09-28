@@ -123,6 +123,18 @@ describe.skipIf(!hayClave)("ChatController.responder — respuestas reales (requ
     expect(todos.map((m) => m.role)).toEqual(["user", "assistant", "user", "assistant"]);
   });
 
+  it("la respuesta llega palabra por palabra (no en ráfagas)", async () => {
+    const { controller } = await alumnoConChat();
+
+    const eventos = await conversar(controller, randomUUID(), "Contame en dos oraciones qué es una simulación.");
+    const deltas = eventos.filter((evento) => evento.type === "text-delta").map((evento) => evento.delta ?? "");
+    const deUnaPalabra = deltas.filter((delta) => delta.trim().split(/\s+/).length <= 1);
+
+    expect(deltas.length).toBeGreaterThan(5);
+    // Casi todos los pedacitos son una sola palabra (el último puede traer lo que quedó).
+    expect(deUnaPalabra.length / deltas.length).toBeGreaterThan(0.9);
+  });
+
   it("una consulta de cómo se hace algo usa los modelos, no ejercicios", async () => {
     const { conversaciones, controller } = await alumnoConChat();
     const id = randomUUID();

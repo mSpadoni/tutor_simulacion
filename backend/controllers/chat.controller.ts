@@ -4,6 +4,7 @@ import {
   convertToModelMessages,
   createUIMessageStreamResponse,
   RetryError,
+  smoothStream,
   stepCountIs,
   streamText,
   type LanguageModel,
@@ -39,10 +40,18 @@ type Dependencias = {
   material?: () => MaterialCatedra;
   conversaciones?: () => ConversacionesModel;
   timeoutMs?: number;
+  /** Pausa entre palabras al mostrar la respuesta (ms). 0 = tan rápido como llega del modelo. */
+  pausaEntrePalabrasMs?: number;
 };
 
 /** Máximo de pasos por respuesta: hasta 3 rondas de tools y la respuesta final. Evita loops sin fin. */
 const MAXIMO_DE_PASOS = 4;
+
+/**
+ * El modelo manda el texto en ráfagas irregulares; así la respuesta se lee más cómoda: sale palabra por palabra,
+ * a un ritmo parejo (~30 palabras por segundo).
+ */
+const PAUSA_ENTRE_PALABRAS_MS = 30;
 
 /**
  * Para el contexto del modelo, de los mensajes anteriores solo va el texto: lo que devolvieron las tools
@@ -63,6 +72,7 @@ export class ChatController {
   private readonly material: () => MaterialCatedra;
   private readonly conversaciones: () => ConversacionesModel;
   private readonly timeoutMs: number;
+  private readonly pausaEntrePalabrasMs: number;
 
   // Recibe UN objeto y lo desestructura en el momento: cada propiedad con su valor por defecto (`= ...`).
   // `: Dependencias = {}` → el objeto entero es opcional: `new ChatController()` usa todo lo real.
@@ -71,11 +81,13 @@ export class ChatController {
     material = obtenerMaterialCatedra,
     conversaciones = () => conversacionesModel,
     timeoutMs = 45_000,
+    pausaEntrePalabrasMs = PAUSA_ENTRE_PALABRAS_MS,
   }: Dependencias = {}) {
     this.crearModelo = crearModelo;
     this.material = material;
     this.conversaciones = conversaciones;
     this.timeoutMs = timeoutMs;
+    this.pausaEntrePalabrasMs = pausaEntrePalabrasMs;
   }
 
   /**
@@ -115,6 +127,8 @@ export class ChatController {
       maxOutputTokens: 2000,
       maxRetries: 1,
       timeout: this.timeoutMs,
+      // Palabra por palabra, con una pausa pareja entre cada una.
+      experimental_transform: smoothStream({ delayInMs: this.pausaEntrePalabrasMs, chunking: "word" }),
       onFinish: ({ steps, totalUsage }) => {
         // Log en formato JSON con datos útiles de cada respuesta (demora, pasos, tokens, tools usadas).
         const herramientas = steps.flatMap((paso) =>

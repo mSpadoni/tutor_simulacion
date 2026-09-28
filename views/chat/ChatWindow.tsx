@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
-import { estaCercaDelFinal, mensajeDeError } from "./tipos";
+import { estaCercaDelFinal, mensajeDeError, siguienteScroll } from "./tipos";
 
 // Atajos siempre visibles debajo del campo: el alumno puede cambiar de tarea en cualquier momento (heurística #6,
 // reconocer antes que recordar). Los que terminan en ":" o en espacio se completan antes de mandar.
@@ -40,6 +40,8 @@ export default function ChatWindow({ conversacionId, mensajesIniciales, nombre }
   // ¿El alumno está mirando el final? Se guarda en un ref (no en estado) porque cambia con cada scroll y no hace
   // falta volver a dibujar por eso.
   const pegadoAlFinalRef = useRef(true);
+  const ultimoScrollRef = useRef(0); // Para saber si el alumno scrolleó para arriba.
+  const animacionRef = useRef<number | null>(null); // La animación que acompaña al texto (si hay una en curso).
 
   // El transporte se crea una sola vez (useState con función). Manda solo el mensaje nuevo y el id de la
   // conversación: el servidor lee el historial de la base.
@@ -67,13 +69,47 @@ export default function ChatWindow({ conversacionId, mensajesIniciales, nombre }
 
   const generando = status === "submitted" || status === "streaming";
 
-  // Mientras llega la respuesta, el chat queda pegado al final: salto directo, sin animación. Con animación, cada
-  // pedacito de texto arrancaba un scroll nuevo que pisaba al anterior y la pantalla subía y bajaba.
-  // Si el alumno subió a leer algo, no se lo mueve.
+  // Mientras llega la respuesta, la pantalla se desliza hacia el final con UNA sola animación que va siguiendo al
+  // texto (con requestAnimationFrame, un paso por cuadro). Antes, cada pedacito de texto arrancaba un scroll
+  // animado nuevo que pisaba al anterior y la pantalla subía y bajaba.
+  // Si el alumno subió a leer algo, no se lo mueve. Con "reducir movimiento" activado, salta directo.
   useEffect(() => {
     const zona = zonaDeMensajesRef.current;
-    if (zona && pegadoAlFinalRef.current) zona.scrollTop = zona.scrollHeight;
+    if (!zona || !pegadoAlFinalRef.current) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      zona.scrollTop = zona.scrollHeight;
+      return;
+    }
+    if (animacionRef.current !== null) return; // Ya hay una animación en curso: sigue sola hasta el nuevo final.
+
+    const paso = () => {
+      const objetivo = zona.scrollHeight - zona.clientHeight;
+      if (!pegadoAlFinalRef.current || zona.scrollTop >= objetivo - 1) {
+        animacionRef.current = null;
+        return;
+      }
+      zona.scrollTop = siguienteScroll(zona.scrollTop, objetivo);
+      ultimoScrollRef.current = zona.scrollTop;
+      animacionRef.current = requestAnimationFrame(paso);
+    };
+    animacionRef.current = requestAnimationFrame(paso);
   }, [messages, status]);
+
+  // Al salir de la conversación, se corta la animación si quedó alguna.
+  useEffect(
+    () => () => {
+      if (animacionRef.current !== null) cancelAnimationFrame(animacionRef.current);
+    },
+    []
+  );
+
+  /** El alumno scrolleó: si subió, deja de acompañar al texto; si volvió al final, lo retoma. */
+  function alScrollear(zona: HTMLDivElement) {
+    const subio = zona.scrollTop < ultimoScrollRef.current - 2;
+    ultimoScrollRef.current = zona.scrollTop;
+    if (subio) pegadoAlFinalRef.current = false;
+    else if (estaCercaDelFinal(zona)) pegadoAlFinalRef.current = true;
+  }
 
   /** Manda un mensaje del alumno (el del campo o el de un atajo). */
   function enviar(texto: string) {
@@ -103,7 +139,7 @@ export default function ChatWindow({ conversacionId, mensajesIniciales, nombre }
 
       <div
         ref={zonaDeMensajesRef}
-        onScroll={(evento) => (pegadoAlFinalRef.current = estaCercaDelFinal(evento.currentTarget))}
+        onScroll={(evento) => alScrollear(evento.currentTarget)}
         className="flex-1 overflow-y-auto px-4 py-6"
       >
         <div className="mx-auto flex max-w-3xl flex-col gap-4">

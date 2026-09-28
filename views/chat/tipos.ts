@@ -32,6 +32,17 @@ export function estaCercaDelFinal(
   return scrollHeight - scrollTop - clientHeight <= margen;
 }
 
+/**
+ * Un cuadro de la animación que acompaña al texto: avanza una parte de lo que falta hasta el final (al principio
+ * más rápido, cerca del final más despacio) y al menos 1 px, para que siempre termine de llegar.
+ * `fraccion` controla la velocidad: 0.06 ≈ un deslizamiento suave, sin saltos.
+ */
+export function siguienteScroll(actual: number, objetivo: number, fraccion = 0.06): number {
+  const falta = objetivo - actual;
+  if (falta <= 1) return objetivo;
+  return actual + Math.max(1, falta * fraccion);
+}
+
 /** Qué le mostramos al alumno mientras el tutor usa cada tool, y cuando ya la usó (heurística #1). */
 export const TEXTOS_DE_HERRAMIENTAS: Record<string, { usando: string; usada: string }> = {
   consultar_modelos: {
