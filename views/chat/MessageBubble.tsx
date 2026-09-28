@@ -1,6 +1,7 @@
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
-import type { MensajeChat } from "./tipos";
+import type { UIMessage } from "ai";
+import { TEXTOS_DE_HERRAMIENTAS } from "./tipos";
 
 // react-markdown no renderiza HTML crudo: lo que escriba el modelo no puede inyectar scripts.
 // Este objeto dice cómo dibujar cada elemento del Markdown (párrafo, lista, tabla...) con estilos propios.
@@ -33,12 +34,33 @@ const componentesMarkdown: Components = {
   a: (props) => <a className="text-blue-700 underline" target="_blank" rel="noreferrer" {...props} />,
 };
 
+/** Una parte de tool del mensaje (`tool-<nombre>`), con su estado: usándola, lista o con error. */
+type ParteDeTool = { type: string; state?: string };
+
+/** Cómo se muestra el uso de una tool: texto visible (no solo un ícono) y un indicador de estado. */
+function AvisoDeTool({ parte }: { parte: ParteDeTool }) {
+  const nombre = parte.type.slice("tool-".length);
+  const textos = TEXTOS_DE_HERRAMIENTAS[nombre] ?? { usando: `Usando ${nombre}…`, usada: `Usó ${nombre}` };
+  const lista = parte.state === "output-available";
+  const conError = parte.state === "output-error";
+  return (
+    <li className="flex items-center gap-1.5 text-xs text-slate-600">
+      <span aria-hidden="true">{conError ? "⚠" : lista ? "✓" : "…"}</span>
+      {conError ? `No se pudo: ${textos.usada.toLowerCase()}` : lista ? textos.usada : textos.usando}
+    </li>
+  );
+}
+
 /**
  * Un globo de mensaje del chat. Los del alumno van a la derecha como texto plano;
- * los del tutor a la izquierda, con el Markdown convertido a HTML (tablas, listas, negritas...).
+ * los del tutor a la izquierda, con las tools que usó y el Markdown convertido a HTML (tablas, listas, negritas...).
  */
-export default function MessageBubble({ mensaje }: { mensaje: MensajeChat }) {
-  const esAlumno = mensaje.rol === "alumno";
+export default function MessageBubble({ mensaje }: { mensaje: UIMessage }) {
+  const esAlumno = mensaje.role === "user";
+  // Un mensaje del AI SDK viene en partes: texto, tools usadas, inicio de cada paso...
+  const texto = mensaje.parts.flatMap((parte) => (parte.type === "text" ? [parte.text] : [])).join("\n\n");
+  const tools = mensaje.parts.filter((parte) => parte.type.startsWith("tool-")) as ParteDeTool[];
+  if (!texto && tools.length === 0) return null;
 
   return (
     // Las clases se arman con un template string: `${condición ? "a" : "b"}` agrega una u otra según quién escribió.
@@ -50,12 +72,21 @@ export default function MessageBubble({ mensaje }: { mensaje: MensajeChat }) {
           esAlumno ? "bg-blue-700 text-white" : "border border-slate-200 bg-white text-slate-900"
         }`}
       >
+        {tools.length > 0 && (
+          <ul aria-label="Material que consultó el tutor" className={texto ? "mb-2 space-y-0.5" : "space-y-0.5"}>
+            {tools.map((parte, indice) => (
+              <AvisoDeTool key={indice} parte={parte} />
+            ))}
+          </ul>
+        )}
         {esAlumno ? (
-          <p className="whitespace-pre-wrap">{mensaje.contenido}</p>
+          <p className="whitespace-pre-wrap">{texto}</p>
         ) : (
-          <ReactMarkdown remarkPlugins={[remarkGfm]} components={componentesMarkdown}>
-            {mensaje.contenido}
-          </ReactMarkdown>
+          texto && (
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={componentesMarkdown}>
+              {texto}
+            </ReactMarkdown>
+          )
         )}
       </div>
     </li>

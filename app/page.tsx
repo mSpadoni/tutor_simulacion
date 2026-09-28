@@ -1,6 +1,7 @@
-import { cerrarSesion, ingresarConGoogle } from "@/app/auth/actions";
+import { randomUUID } from "node:crypto";
+import { redirect } from "next/navigation";
+import { ingresarConGoogle } from "@/app/auth/actions";
 import { authController } from "@/backend/controllers/auth.controller";
-import ChatWindow from "@/views/chat/ChatWindow";
 import LoginButton from "@/views/LoginButton";
 
 /**
@@ -13,31 +14,15 @@ type Props = {
 
 /**
  * Página principal ("/"). Es un Server Component: corre en el servidor, por eso puede ser `async`
- * y consultar directamente quién está logueado. Si hay alumno muestra el chat; si no, la pantalla de login.
+ * y consultar directamente quién está logueado. Si hay alumno lo lleva a una conversación nueva; si no, muestra el login.
  */
 export default async function HomePage({ searchParams }: Props) {
   const usuario = await authController.obtenerUsuarioActual();
   const { error } = await searchParams;
 
-  // Con sesión: encabezado con el nombre y el botón de salir, y abajo el chat.
-  if (usuario) {
-    return (
-      <div className="flex h-dvh flex-col">
-        <header className="border-b border-slate-200 bg-white">
-          <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-3">
-            <h1 className="text-lg font-bold text-slate-900">Tutor Simulación</h1>
-            <div className="flex items-center gap-3">
-              <span className="hidden text-sm text-slate-700 sm:inline">{usuario.nombreVisible}</span>
-              <LoginButton accion={cerrarSesion} variante="salir" />
-            </div>
-          </div>
-        </header>
-        <main className="flex min-h-0 flex-1 flex-col">
-          <ChatWindow nombre={usuario.primerNombre} />
-        </main>
-      </div>
-    );
-  }
+  // Con sesión: una conversación nueva, con su propio id y su URL desde el principio.
+  // (No se guarda en la base hasta el primer mensaje: las conversaciones vacías no ocupan lugar.)
+  if (usuario) redirect(`/conversacion/${randomUUID()}`);
 
   // Sin sesión: pantalla de bienvenida con el botón de Google.
   return (
@@ -45,7 +30,7 @@ export default async function HomePage({ searchParams }: Props) {
       <div className="w-full rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
         <h1 className="text-2xl font-bold text-slate-900">Tutor Simulación</h1>
         <p className="mt-2 text-slate-700">
-          Practicá ejercicios de la metodología Evento a Evento con corrección paso a paso.
+          Practicá ejercicios de Simulación: ejercicios tipo parcial, corrección paso a paso y dudas de teoría.
         </p>
 
         {/* `condición && (<jsx>)`: si la condición es true muestra el bloque; si es false no muestra nada. */}

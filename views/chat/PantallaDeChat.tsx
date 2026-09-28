@@ -1,0 +1,60 @@
+import type { UIMessage } from "ai";
+import LoginButton from "@/views/LoginButton";
+import ChatWindow from "./ChatWindow";
+import SidebarConversaciones, { type ItemConversacion } from "./SidebarConversaciones";
+
+type Props = {
+  usuario: { nombreVisible: string; primerNombre: string };
+  conversaciones: ItemConversacion[];
+  conversacionId: string;
+  mensajesIniciales: UIMessage[];
+  /** Server actions que conecta la página (las views no importan código del servidor). */
+  cerrarSesion: () => Promise<void>;
+  borrarConversacion: (id: string) => Promise<void>;
+};
+
+/**
+ * La pantalla del alumno logueado: encabezado con el único <h1>, la lista de conversaciones (<nav>) al costado
+ * y el chat (<main>). Es un Server Component: solo arma el layout; el chat y la lista corren en el navegador.
+ */
+export default function PantallaDeChat({
+  usuario,
+  conversaciones,
+  conversacionId,
+  mensajesIniciales,
+  cerrarSesion,
+  borrarConversacion,
+}: Props) {
+  return (
+    <div className="flex h-dvh flex-col">
+      {/* Skip link: con Tab, lo primero es poder saltar directo al chat (WCAG 2.4.1). */}
+      <a
+        href="#chat"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-white focus:px-3 focus:py-2 focus:shadow"
+      >
+        Ir al chat
+      </a>
+      <header className="border-b border-slate-200 bg-white">
+        <div className="flex items-center justify-between gap-4 px-4 py-3">
+          <h1 className="text-lg font-bold text-slate-900">Tutor Simulación</h1>
+          <div className="flex items-center gap-3">
+            <span className="hidden text-sm text-slate-700 sm:inline">{usuario.nombreVisible}</span>
+            <LoginButton accion={cerrarSesion} variante="salir" />
+          </div>
+        </div>
+      </header>
+      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+        <SidebarConversaciones conversaciones={conversaciones} actualId={conversacionId} borrar={borrarConversacion} />
+        <main id="chat" className="flex min-h-0 flex-1 flex-col">
+          {/* key: al cambiar de conversación, el chat arranca de cero con el historial de la otra. */}
+          <ChatWindow
+            key={conversacionId}
+            conversacionId={conversacionId}
+            mensajesIniciales={mensajesIniciales}
+            nombre={usuario.primerNombre}
+          />
+        </main>
+      </div>
+    </div>
+  );
+}

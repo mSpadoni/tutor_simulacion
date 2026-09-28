@@ -1,103 +1,92 @@
 // "use client": corre en el navegador, porque maneja estado (mensajes, lo que se escribe) y clicks.
 "use client";
 
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport, type UIMessage } from "ai";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
-import { MAX_MENSAJES_CONTEXTO, type MensajeChat } from "./tipos";
+import { mensajeDeError } from "./tipos";
 
-// Una sugerencia por modo del tutor: le muestra al alumno qué puede pedir (heurística #10).
-const SUGERENCIAS = [
-  { titulo: "Dame un ejercicio nuevo", mensaje: "Dame un ejercicio nuevo para practicar." },
-  { titulo: "Corregí mi resolución", mensaje: "Quiero que me corrijas una resolución. Te la paso:" },
+// Atajos siempre visibles debajo del campo: el alumno puede cambiar de tarea en cualquier momento (heurística #6,
+// reconocer antes que recordar). Los que terminan en ":" o en espacio se completan antes de mandar.
+const ATAJOS = [
+  { titulo: "Dame un ejercicio tipo parcial", mensaje: "Dame un ejercicio nuevo para practicar, tipo parcial." },
+  { titulo: "Corregí mi resolución", mensaje: "Corregime esta resolución: " },
+  { titulo: "Resolvé esta f.d.p.", mensaje: "Resolveme esta f.d.p.: " },
   { titulo: "Tengo una duda teórica", mensaje: "Tengo una duda teórica: " },
 ];
 
-// En qué situación está el chat: listo para escribir, esperando al tutor, o con un error (que trae su mensaje).
-// Es una unión de objetos: según `tipo`, TypeScript sabe si existe `mensaje` o no.
-type Estado = { tipo: "listo" } | { tipo: "esperando" } | { tipo: "error"; mensaje: string };
+type Props = {
+  /** Id de la conversación (lo genera el servidor al abrir una nueva; se guarda con el primer mensaje). */
+  conversacionId: string;
+  /** El historial, leído de la base una sola vez al abrir la conversación. */
+  mensajesIniciales: UIMessage[];
+  nombre: string;
+};
 
-/** La ventana de chat completa: lista de mensajes, sugerencias iniciales, errores y el campo para escribir. */
-export default function ChatWindow({ nombre }: { nombre: string }) {
-  // useState guarda un valor que, al cambiar, hace que React vuelva a dibujar el componente.
-  // `const [valor, setValor] = useState(inicial)`: desestructuración de array → el valor actual y la función para cambiarlo.
-  // `useState<MensajeChat[]>([])`: el <...> indica el tipo (lista de mensajes); arranca vacía.
-  const [mensajes, setMensajes] = useState<MensajeChat[]>([]);
+/**
+ * La ventana de chat: mensajes con la respuesta en streaming, avisos de estado, errores, el campo para escribir
+ * y los atajos. useChat (Vercel AI SDK) mantiene la conversación en el navegador mientras está abierta; cada
+ * mensaje nuevo lo guarda el servidor en la base.
+ */
+export default function ChatWindow({ conversacionId, mensajesIniciales, nombre }: Props) {
+  const router = useRouter();
   const [borrador, setBorrador] = useState(""); // Lo que el alumno está escribiendo y todavía no mandó.
-  const [estado, setEstado] = useState<Estado>({ tipo: "listo" });
-  // useRef guarda una referencia a un elemento HTML real (sin redibujar al cambiar). Se conecta con `ref={...}` en el JSX.
+  const [anuncio, setAnuncio] = useState(""); // Lo que lee el lector de pantalla cuando termina una respuesta.
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const finDeLaListaRef = useRef<HTMLDivElement>(null);
 
-  // useEffect ejecuta código después de dibujar. El array del final ([mensajes, estado]) dice cuándo:
-  // cada vez que cambie alguno de esos dos. Acá: scrollear hasta el último mensaje.
+  // El transporte se crea una sola vez (useState con función). Manda solo el mensaje nuevo y el id de la
+  // conversación: el servidor lee el historial de la base.
+  const [transporte] = useState(
+    () =>
+      new DefaultChatTransport({
+        api: "/api/chat",
+        prepareSendMessagesRequest: ({ id, messages }) => ({ body: { id, mensaje: messages.at(-1) } }),
+      })
+  );
+
+  const { messages, sendMessage, status, stop, error, regenerate } = useChat({
+    id: conversacionId,
+    messages: mensajesIniciales,
+    transport: transporte,
+    onFinish: ({ message, isAbort, isError }) => {
+      if (!isAbort && !isError) {
+        const texto = message.parts.flatMap((parte) => (parte.type === "text" ? [parte.text] : [])).join(" ");
+        setAnuncio(`El tutor respondió: ${texto}`);
+      }
+      // Actualiza la lista de conversaciones del costado (la nueva aparece, la actual sube arriba).
+      router.refresh();
+    },
+  });
+
+  const generando = status === "submitted" || status === "streaming";
+
+  // Cada vez que cambian los mensajes o el estado, scrollea hasta el final.
   useEffect(() => {
     finDeLaListaRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [mensajes, estado]);
+  }, [messages, status]);
 
-  /** Manda la conversación a /api/chat y agrega la respuesta del tutor (o muestra el error). */
-  async function consultarAlTutor(conversacion: MensajeChat[]) {
-    setEstado({ tipo: "esperando" });
-    try {
-      // fetch hace el pedido HTTP al servidor. Se mandan solo los últimos MAX_MENSAJES_CONTEXTO mensajes (slice con número negativo).
-      const respuesta = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mensajes: conversacion.slice(-MAX_MENSAJES_CONTEXTO) }),
-      });
-      // Lee el JSON de la respuesta; si no se puede leer, usa un objeto vacío `({})` (los paréntesis son para que
-      // la flecha devuelva el objeto y no lo confunda con un bloque de código).
-      const datos: { respuesta?: string; error?: string } = await respuesta.json().catch(() => ({}));
-
-      if (!respuesta.ok || !datos.respuesta) {
-        setEstado({ tipo: "error", mensaje: datos.error ?? "No pudimos contactar al tutor. Probá de nuevo." });
-        return;
-      }
-      // En React no se modifica la lista existente: se crea una nueva (spread `...` + el mensaje del tutor al final).
-      setMensajes([...conversacion, { rol: "tutor", contenido: datos.respuesta }]);
-      setEstado({ tipo: "listo" });
-    } catch {
-      // fetch solo tira error si ni siquiera pudo conectarse (sin internet, servidor apagado).
-      setEstado({ tipo: "error", mensaje: "No hay conexión con el servidor. Revisá tu internet y probá de nuevo." });
-    } finally {
-      // `finally` corre siempre, haya salido bien o mal: devuelve el cursor al campo de texto.
-      textareaRef.current?.focus();
-    }
-  }
-
-  /** Agrega el mensaje del alumno a la lista, vacía el campo y le pregunta al tutor. */
-  function enviar() {
-    const conversacion: MensajeChat[] = [...mensajes, { rol: "alumno", contenido: borrador.trim() }];
-    setMensajes(conversacion);
+  /** Manda un mensaje del alumno (el del campo o el de un atajo). */
+  function enviar(texto: string) {
+    if (!texto.trim() || generando) return;
+    setAnuncio("");
+    void sendMessage({ text: texto.trim() });
     setBorrador("");
-    // `void`: se lanza la consulta sin esperarla (sin await); la pantalla se actualiza sola cuando responde.
-    void consultarAlTutor(conversacion);
+    textareaRef.current?.focus();
   }
 
-  /** Qué hacer al tocar uno de los botones de sugerencia de la pantalla inicial. */
-  function usarSugerencia(mensaje: string) {
-    // "Dame un ejercicio" se manda directo; las otras dos necesitan que el alumno complete su parte.
+  /** Un atajo: se manda directo si está completo, o se pone en el campo para que el alumno lo termine. */
+  function usarAtajo(mensaje: string) {
     if (mensaje.endsWith(".")) {
-      const conversacion: MensajeChat[] = [{ rol: "alumno", contenido: mensaje }];
-      setMensajes(conversacion);
-      void consultarAlTutor(conversacion);
+      enviar(mensaje);
     } else {
       setBorrador(mensaje);
       textareaRef.current?.focus();
     }
   }
-
-  /** Borra la charla (previa confirmación) y deja el chat como recién abierto. */
-  function nuevaConversacion() {
-    // Borrar la charla es la única acción destructiva del chat: por eso sí pide confirmación.
-    if (!window.confirm("¿Empezar una conversación nueva? Se borra lo que hablaste hasta ahora.")) return;
-    setMensajes([]);
-    setBorrador("");
-    setEstado({ tipo: "listo" });
-    textareaRef.current?.focus();
-  }
-
-  const esperando = estado.tipo === "esperando";
 
   return (
     <section aria-labelledby="titulo-conversacion" className="flex min-h-0 flex-1 flex-col">
@@ -107,67 +96,47 @@ export default function ChatWindow({ nombre }: { nombre: string }) {
 
       <div className="flex-1 overflow-y-auto px-4 py-6">
         <div className="mx-auto flex max-w-3xl flex-col gap-4">
-          {mensajes.length > 0 && (
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={nuevaConversacion}
-                disabled={esperando}
-                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-60"
-              >
-                Nueva conversación
-              </button>
-            </div>
-          )}
-
-          {mensajes.length === 0 && (
+          {messages.length === 0 && (
             <div className="rounded-2xl border border-slate-200 bg-white p-6">
               <p className="text-lg font-medium text-slate-900">Hola, {nombre}. ¿Qué querés hacer?</p>
-              <p className="mt-1 text-sm text-slate-600">Elegí una opción o escribí directamente lo que necesites.</p>
-              <ul className="mt-4 grid gap-2 sm:grid-cols-3">
-                {/* .map dibuja un botón por sugerencia. `key` es obligatorio en listas: React lo usa para identificar cada ítem. */}
-                {SUGERENCIAS.map((sugerencia) => (
-                  <li key={sugerencia.titulo}>
-                    <button
-                      type="button"
-                      // `() => ...`: se pasa una función que se ejecuta al hacer click (no se ejecuta al dibujar).
-                      onClick={() => usarSugerencia(sugerencia.mensaje)}
-                      className="h-full w-full rounded-lg border border-slate-300 px-3 py-3 text-left text-sm font-medium text-slate-800 transition hover:border-blue-700 hover:bg-blue-50"
-                    >
-                      {sugerencia.titulo}
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              <p className="mt-1 text-sm text-slate-600">
+                Escribí lo que necesites o usá uno de los atajos de abajo: pedir un ejercicio, corregir tu resolución,
+                resolver una f.d.p. o preguntar teoría.
+              </p>
             </div>
           )}
 
-          {/* role="log": los lectores de pantalla anuncian cada mensaje nuevo sin interrumpir (aria-live polite). */}
-          <ol role="log" aria-label="Mensajes" className="flex flex-col gap-4">
-            {mensajes.map((mensaje, indice) => (
-              <MessageBubble key={indice} mensaje={mensaje} />
+          {/* aria-live="off": mientras la respuesta llega palabra por palabra no se anuncia (sería ruido).
+              La respuesta completa la anuncia la región de abajo cuando termina. */}
+          <ol aria-label="Mensajes" aria-live="off" className="flex flex-col gap-4">
+            {messages.map((mensaje) => (
+              <MessageBubble key={mensaje.id} mensaje={mensaje} />
             ))}
           </ol>
 
+          {/* Estado visible con texto, no solo una animación (heurística #1). */}
           <div role="status" className="text-sm text-slate-700">
-            {esperando && (
+            {status === "submitted" && (
               <p className="flex items-center gap-2">
                 <span aria-hidden="true" className="size-2 animate-pulse rounded-full bg-blue-700" />
                 El tutor está pensando…
               </p>
             )}
           </div>
+          <p aria-live="polite" className="sr-only">
+            {anuncio}
+          </p>
 
-          {estado.tipo === "error" && (
+          {error && (
             <div role="alert" className="rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-900">
               <p className="font-medium">
                 <span aria-hidden="true">⚠ </span>
-                {estado.mensaje}
+                {mensajeDeError(error)}
               </p>
               <button
                 type="button"
-                // Reintentar vuelve a mandar la misma conversación (el último mensaje del alumno ya está en la lista).
-                onClick={() => void consultarAlTutor(mensajes)}
+                // Reintentar vuelve a pedir la respuesta al último mensaje (el servidor no lo guarda dos veces).
+                onClick={() => void regenerate()}
                 className="mt-2 rounded-lg border border-red-400 bg-white px-3 py-1.5 font-medium text-red-900 hover:bg-red-100"
               >
                 Reintentar
@@ -184,10 +153,26 @@ export default function ChatWindow({ nombre }: { nombre: string }) {
         <MessageInput
           valor={borrador}
           onCambio={setBorrador}
-          onEnviar={enviar}
-          deshabilitado={esperando}
+          onEnviar={() => enviar(borrador)}
+          onDetener={stop}
+          generando={generando}
           textareaRef={textareaRef}
         />
+        {/* Atajos chicos debajo del campo, siempre a mano. */}
+        <ul aria-label="Atajos" className="flex flex-wrap gap-2 bg-white px-4 pb-3">
+          {ATAJOS.map((atajo) => (
+            <li key={atajo.titulo}>
+              <button
+                type="button"
+                onClick={() => usarAtajo(atajo.mensaje)}
+                disabled={generando}
+                className="rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 transition hover:border-blue-700 hover:bg-blue-50 disabled:opacity-60"
+              >
+                {atajo.titulo}
+              </button>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );
