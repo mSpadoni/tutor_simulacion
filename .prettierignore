@@ -1,0 +1,9 @@
+# Material de la cátedra: lo lee el tutor tal cual, no se reformatea.
+backend/knowledge/
+complemento_teorico/
+# Generados
+.next/
+node_modules/
+next-env.d.ts
+package-lock.json
+tsconfig.tsbuildinfo
