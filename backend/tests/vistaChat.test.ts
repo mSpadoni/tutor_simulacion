@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mensajeDeError, TEXTOS_DE_HERRAMIENTAS } from "@/views/chat/tipos";
+import { estaCercaDelFinal, mensajeDeError, TEXTOS_DE_HERRAMIENTAS } from "@/views/chat/tipos";
 import { crearToolsMaterial } from "@/backend/tools/material.tools";
 import { MaterialCatedra } from "@/backend/models/materialCatedra.model";
 
@@ -22,6 +22,25 @@ describe("mensajeDeError (lo que ve el alumno cuando algo falla)", () => {
     expect(mensajeDeError(new TypeError("Failed to fetch"))).toContain("Revisá tu conexión");
     expect(mensajeDeError(new Error(JSON.stringify({ otro: 1 })))).toContain("Revisá tu conexión");
     expect(mensajeDeError(undefined)).toContain("Revisá tu conexión");
+  });
+});
+
+describe("estaCercaDelFinal (si el chat acompaña la respuesta o deja al alumno leyendo)", () => {
+  // Una zona de 500 px de alto con 2000 px de contenido: el final está en scrollTop = 1500.
+  const zona = (scrollTop: number) => ({ scrollTop, scrollHeight: 2000, clientHeight: 500 });
+
+  it("en el final, o casi (menos de 80 px), está pegado al final", () => {
+    expect(estaCercaDelFinal(zona(1500))).toBe(true);
+    expect(estaCercaDelFinal(zona(1430))).toBe(true);
+  });
+
+  it("si subió a leer algo, no está en el final (no hay que moverlo)", () => {
+    expect(estaCercaDelFinal(zona(1000))).toBe(false);
+    expect(estaCercaDelFinal(zona(0))).toBe(false);
+  });
+
+  it("si el contenido entra entero en la pantalla, está en el final", () => {
+    expect(estaCercaDelFinal({ scrollTop: 0, scrollHeight: 300, clientHeight: 500 })).toBe(true);
   });
 });
 

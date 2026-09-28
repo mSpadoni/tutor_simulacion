@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
-import { mensajeDeError } from "./tipos";
+import { estaCercaDelFinal, mensajeDeError } from "./tipos";
 
 // Atajos siempre visibles debajo del campo: el alumno puede cambiar de tarea en cualquier momento (heurística #6,
 // reconocer antes que recordar). Los que terminan en ":" o en espacio se completan antes de mandar.
@@ -36,7 +36,10 @@ export default function ChatWindow({ conversacionId, mensajesIniciales, nombre }
   const [borrador, setBorrador] = useState(""); // Lo que el alumno está escribiendo y todavía no mandó.
   const [anuncio, setAnuncio] = useState(""); // Lo que lee el lector de pantalla cuando termina una respuesta.
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const finDeLaListaRef = useRef<HTMLDivElement>(null);
+  const zonaDeMensajesRef = useRef<HTMLDivElement>(null);
+  // ¿El alumno está mirando el final? Se guarda en un ref (no en estado) porque cambia con cada scroll y no hace
+  // falta volver a dibujar por eso.
+  const pegadoAlFinalRef = useRef(true);
 
   // El transporte se crea una sola vez (useState con función). Manda solo el mensaje nuevo y el id de la
   // conversación: el servidor lee el historial de la base.
@@ -64,15 +67,19 @@ export default function ChatWindow({ conversacionId, mensajesIniciales, nombre }
 
   const generando = status === "submitted" || status === "streaming";
 
-  // Cada vez que cambian los mensajes o el estado, scrollea hasta el final.
+  // Mientras llega la respuesta, el chat queda pegado al final: salto directo, sin animación. Con animación, cada
+  // pedacito de texto arrancaba un scroll nuevo que pisaba al anterior y la pantalla subía y bajaba.
+  // Si el alumno subió a leer algo, no se lo mueve.
   useEffect(() => {
-    finDeLaListaRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    const zona = zonaDeMensajesRef.current;
+    if (zona && pegadoAlFinalRef.current) zona.scrollTop = zona.scrollHeight;
   }, [messages, status]);
 
   /** Manda un mensaje del alumno (el del campo o el de un atajo). */
   function enviar(texto: string) {
     if (!texto.trim() || generando) return;
     setAnuncio("");
+    pegadoAlFinalRef.current = true; // Al mandar un mensaje, se vuelve al final para ver la respuesta.
     void sendMessage({ text: texto.trim() });
     setBorrador("");
     textareaRef.current?.focus();
@@ -94,7 +101,11 @@ export default function ChatWindow({ conversacionId, mensajesIniciales, nombre }
         Conversación con el tutor
       </h2>
 
-      <div className="flex-1 overflow-y-auto px-4 py-6">
+      <div
+        ref={zonaDeMensajesRef}
+        onScroll={(evento) => (pegadoAlFinalRef.current = estaCercaDelFinal(evento.currentTarget))}
+        className="flex-1 overflow-y-auto px-4 py-6"
+      >
         <div className="mx-auto flex max-w-3xl flex-col gap-4">
           {messages.length === 0 && (
             <div className="rounded-2xl border border-slate-200 bg-white p-6">
@@ -143,9 +154,6 @@ export default function ChatWindow({ conversacionId, mensajesIniciales, nombre }
               </button>
             </div>
           )}
-
-          {/* Div vacío al final de la lista: el useEffect de arriba scrollea hasta acá. */}
-          <div ref={finDeLaListaRef} />
         </div>
       </div>
 

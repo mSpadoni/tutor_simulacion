@@ -21,6 +21,17 @@ export function mensajeDeError(error: Error | undefined): string {
   }
 }
 
+/**
+ * ¿El alumno está mirando el final de la conversación? (a menos de `margen` píxeles del fondo)
+ * Si está ahí, el chat lo acompaña mientras llega la respuesta; si subió a leer algo, no se lo mueve.
+ */
+export function estaCercaDelFinal(
+  { scrollTop, scrollHeight, clientHeight }: { scrollTop: number; scrollHeight: number; clientHeight: number },
+  margen = 80
+): boolean {
+  return scrollHeight - scrollTop - clientHeight <= margen;
+}
+
 /** Qué le mostramos al alumno mientras el tutor usa cada tool, y cuando ya la usó (heurística #1). */
 export const TEXTOS_DE_HERRAMIENTAS: Record<string, { usando: string; usada: string }> = {
   consultar_modelos: {
