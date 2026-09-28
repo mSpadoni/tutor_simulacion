@@ -52,7 +52,7 @@ aviso. Falta el tramo con Google real.
 - [x] `knowledge/` cargada (ver Día 2).
 - [x] Repo en GitHub (`github.com/mSpadoni/tutor_simulacion`, rama `main`),
       con `.gitattributes` para fin de línea LF.
-- [ ] Tablas `conversaciones`, `mensajes` y `ejercicios` (bloque 2b).
+- [x] Tablas `conversaciones`, `mensajes` y `ejercicios` (bloque 2b; falta correrla en la nube).
 - [ ] Deploy en Vercel (bloque 7).
 
 ---
@@ -98,17 +98,17 @@ Sacarle foto o exportar a `docs/wireframe.png`; va al README el Día 5.
 
 ## Bloque 2b — Tablas del plan nuevo (sección 4 de `PLAN-cursor.md`)
 
-- [ ] Migración nueva (sin tocar la de `20260928120000`) con:
-  - `conversaciones (id, usuario_id → auth.users, titulo, creado_en)`
+- [x] Migración `20260928140000_conversaciones_y_ejercicios.sql` con:
+  - `conversaciones (id que genera el servidor, usuario_id → auth.users, titulo, creado_en, actualizado_en)`
   - `mensajes (id, conversacion_id → conversaciones on delete cascade, rol, partes jsonb, creado_en)`
   - `ejercicios (id, usuario_id → auth.users, tema, dificultad, payload jsonb, creado_en)`,
     que reemplaza a `ejercicios_historial` (se borra en la misma migración).
   - RLS: cada alumno solo ve y escribe lo suyo (en `mensajes`, a través de
     su conversación).
-- [ ] Models `Conversacion` (persistencia), `Mensaje` y `Ejercicio`, con sus
-      tests contra la base local, sin mocks (incluido: un alumno no puede leer
-      lo de otro).
-- [ ] Regenerar `backend/types/database.ts` y correr la migración en la nube.
+- [x] Models `ConversacionesModel` y `EjerciciosModel`, con sus tests contra la
+      base local, sin mocks (incluido: un alumno no puede leer ni tocar lo de otro).
+- [x] Regenerar `backend/types/database.ts`.
+- [ ] **Correr la migración en la nube** (Supabase → SQL Editor → pegar el archivo → Run).
 
 ---
 

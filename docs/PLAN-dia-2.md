@@ -131,25 +131,26 @@ Cada punto con su test sin mocks, `npm run format`, commit y push.
 - [x] **Vercel AI SDK** (`ai` + `@ai-sdk/openai`): `ChatController` usa `generateText` con tools
       (hecho junto con las tools del material). Se mantienen el timeout, el reintento y los
       mensajes de error para el alumno.
-- [ ] Pasar de `generateText` a `streamText` y que `app/api/chat/route.ts` devuelva el stream.
-- [ ] **Streaming en la UI** con `useChat`: la respuesta aparece token a
-      token, botón **"Detener generación"**.
-- [ ] **Accesibilidad del streaming:** el lector de pantalla anuncia la
-      respuesta **cuando termina** (región `aria-live="polite"`), no cada
-      token. Revisar el `role="log"` actual para que no lea el texto parcial.
-- [ ] **Persistencia:** al enviar, se crea la conversación (título = primer
-      mensaje recortado) y se guardan los mensajes del alumno y del tutor en
-      `mensajes.partes` (tablas del bloque 2b del Día 1). Al recargar, la
-      conversación sigue ahí.
-- [ ] **Sidebar** (`<nav>`): lista de "Conversaciones" (la más reciente
-      arriba), "Nueva conversación" y borrar con confirmación (heurística #3).
-      En mobile, Drawer.
-- [ ] **Few-shot** fijo en el system prompt: 3–4 ejemplos resueltos al estilo
-      de la cátedra (f.d.p., ejercicio nuevo, corrección, consulta teórica).
-      Las fichas BM25 de `MaterialCatedra` se mantienen.
-- [ ] **Chips del estado vacío** alineados al plan: "Resolvé esta f.d.p.",
-      "Dame un ejercicio de transformada inversa", "Diagrama de flujo evento
-      a evento".
+- [x] **Streaming en el backend:** `streamText`; `/api/chat` devuelve el stream que entiende
+      `useChat`. El navegador manda solo el mensaje nuevo y el id de la conversación; el
+      historial lo lee el servidor de la base. El timeout (que el SDK manda como "abort") se
+      convierte en un error con mensaje para el alumno.
+- [x] **Streaming en la UI** con `useChat`: la respuesta aparece a medida que se genera,
+      botón **"Detener"** en el lugar de "Enviar", aviso de qué tool está usando el tutor y
+      "Reintentar" ante un error.
+- [x] **Accesibilidad del streaming:** la lista de mensajes no se anuncia token a token
+      (`aria-live="off"`); una región `aria-live="polite"` lee la respuesta completa al
+      terminar. Skip link "Ir al chat".
+- [x] **Persistencia:** la conversación se crea con el primer mensaje (título = ese mensaje
+      recortado); el mensaje del alumno se guarda al llegar y el del tutor al terminar. El
+      historial se lee de la base una vez al abrir la conversación; después `useChat` lo
+      mantiene en el navegador. Cada conversación tiene su URL (`/conversacion/<id>`).
+- [x] **Sidebar** (`<nav>`): "Nueva conversación", lista (la más reciente arriba) y borrar
+      con confirmación. En mobile, Drawer con botón de texto, foco adentro y Escape.
+- [x] **Few-shot** en el system prompt: consulta de "cómo se hace", corrección y ejercicio
+      nuevo, mostrando formato y uso de tools.
+- [x] **Atajos** chicos debajo del campo, siempre visibles: "Dame un ejercicio tipo parcial",
+      "Corregí mi resolución", "Resolvé esta f.d.p." y "Tengo una duda teórica".
 - [ ] Probar a mano en `localhost:3000`:
   - [ ] "Dame un ejercicio nuevo" → enunciado con contexto, datos con f.d.p.
         y consignas, **sin** resolución.
@@ -159,8 +160,10 @@ Cada punto con su test sin mocks, `npm run format`, commit y push.
   - [ ] Consulta teórica ("¿qué va en la condición de la TEI?") → respuesta
         corta, según la base de conocimiento.
   - [ ] Pregunta fuera de tema → lo dice y ofrece volver a la práctica.
-  - [ ] Solo teclado: Tab llega a las sugerencias, al campo y a "Enviar", con
-        foco visible.
+  - [ ] Solo teclado: Tab llega al skip link, al sidebar, al campo, a "Enviar" y a los
+        atajos, con foco visible.
+  - [ ] Recargar la página: la conversación sigue ahí y aparece en el sidebar.
+  - [ ] "Detener" corta la respuesta; borrar una conversación pide confirmación.
   - [ ] Pantalla angosta (DevTools en modo mobile): la tabla de la T.E.I.
         scrollea sola, sin romper la página.
 

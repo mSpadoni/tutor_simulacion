@@ -6,10 +6,10 @@ Challenge técnico de Gleni: **AI Tool-Calling & Integration**.
 
 ## Estado
 
-En construcción (Días 1–2): login con Google (Supabase Auth) y chat con el tutor en texto (OpenAI + base
-de conocimiento + material de la cátedra). Falta: tablas de conversaciones/mensajes/ejercicios y deploy en Vercel
-(Día 1), streaming y conversaciones guardadas (Día 2), tools `generar_diagrama_flujo` (Kroki), `verificar_fdp` y
-`generar_ejercicio` con panel de debug (Día 3).
+En construcción (Días 1–2 listos): login con Google (Supabase Auth), chat con respuestas en streaming y
+conversaciones guardadas (con sidebar), y el tutor con tools para consultar el material de la cátedra (OpenAI +
+base de conocimiento). Falta (Día 3): tools `generar_diagrama_flujo` (Kroki), `verificar_fdp` y
+`generar_ejercicio`, fórmulas con KaTeX y panel de debug.
 
 Plan general: [PLAN-cursor](docs/PLAN-cursor.md) · Planes por día: [Día 1](docs/PLAN-dia-1.md) · [Día 2](docs/PLAN-dia-2.md).
 
@@ -25,7 +25,7 @@ Ver `.env.example` para las variables requeridas.
 
 ## Credenciales
 
-1. **Supabase:** crear proyecto → SQL Editor → correr `backend/supabase/migrations/20260928120000_historial.sql`.
+1. **Supabase:** crear proyecto → SQL Editor → correr, en orden, los archivos de `backend/supabase/migrations/`.
    Copiar Project URL y publishable key a `.env.local`.
    En Authentication → URL Configuration: Site URL `http://localhost:3000` y
    Redirect URL `http://localhost:3000/auth/callback`.
@@ -46,11 +46,12 @@ rutas, así que ahí solo se "enchufa": la lógica está en las capas de MVC.
 ```
 app/                    Rutas. page.tsx compone vistas; route.ts y las server actions delegan en un controller.
 views/                  Componentes React (lo que ve el alumno). No acceden a la base.
-  chat/                 ChatWindow, MessageBubble (Markdown), MessageInput.
+  chat/                 PantallaDeChat (layout), ChatWindow (useChat + streaming), SidebarConversaciones,
+                        MessageBubble (Markdown + tools usadas), MessageInput.
 backend/
-  controllers/          Una clase por área (AuthController, ChatController) con los casos de uso. Usan models, tools y lib.
+  controllers/          Una clase por área (AuthController, ChatController, ConversacionesController) con los casos de uso.
   tools/                Tools que el modelo decide usar (consultar_modelos, buscar_ejercicio, inspiracion_para_ejercicio).
-  models/               Una clase por entidad (Usuario, Conversacion, MaterialCatedra, EjercicioHistorialModel).
+  models/               Una clase por entidad (Usuario, PedidoDeChat, ConversacionesModel, EjerciciosModel, MaterialCatedra).
   lib/supabase/         Clientes de Supabase (servidor y middleware) y su configuración.
   lib/openai.ts         Modelo de OpenAI para el Vercel AI SDK (clave, URL y modelo desde variables de entorno).
   lib/prompts/          System prompt del tutor (instrucciones + base de conocimiento).
@@ -66,7 +67,7 @@ Dependencias permitidas (siempre hacia abajo):
 Un model nunca importa un controller, y una view nunca importa un model.
 
 Cada archivo de models/ y controllers/ exporta la clase y una instancia lista
-para usar (`authController`, `ejercicioHistorialModel`). La forma de crear el
+para usar (`authController`, `conversacionesModel`). La forma de crear el
 cliente de Supabase entra por el constructor: la app usa la de Next.js
 (cookies del request) y los tests usan la de un navegador simulado.
 
@@ -139,7 +140,7 @@ npm run db:stop
   (`backend/tests/helpers/alumnoDePrueba.ts`): un cliente de `@supabase/ssr`
   igual al de la app, que lee y escribe cookies en memoria.
 - Cada archivo de tests crea sus alumnos y los borra al terminar (su
-  historial se borra en cascada).
+  conversaciones y mensajes se borran en cascada).
 - `npm run db:reset` recrea la base local desde las migraciones.
 - Los tests del chat le hablan a la API real de OpenAI. Los de errores (clave
   inválida, timeout) no gastan crédito y corren siempre; los que piden una
