@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { authController } from "@/backend/controllers/auth.controller";
 import { chatController } from "@/backend/controllers/chat.controller";
 import { ErrorDeChat } from "@/backend/tutor/errores";
-import { PedidoDeChat } from "@/backend/models/pedidoDeChat.model";
+import { PedidoDeChat } from "@/backend/models/dominio/pedidoDeChat.model";
 
 // En Vercel, cuánto puede durar la función como máximo (segundos): el stream del tutor con sus tools.
 export const maxDuration = 60;

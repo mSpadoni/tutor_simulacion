@@ -5,7 +5,7 @@ import {
   conversacionesModel,
   type ConversacionesModel,
   type ConversacionGuardada,
-} from "@/backend/models/conversaciones.model";
+} from "@/backend/models/repositorios/conversaciones.model";
 
 /** Una conversación abierta: sus datos (null si todavía no se guardó ningún mensaje) y su historial. */
 export type ConversacionAbierta = { conversacion: ConversacionGuardada | null; mensajes: TutorUIMessage[] };

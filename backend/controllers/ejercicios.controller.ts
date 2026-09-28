@@ -1,5 +1,5 @@
 import "server-only";
-import { ejerciciosModel, type EjerciciosModel } from "@/backend/models/ejercicios.model";
+import { ejerciciosModel, type EjerciciosModel } from "@/backend/models/repositorios/ejercicios.model";
 
 /** Un ejercicio para la lista "Mis ejercicios": su título y la conversación donde se generó (si todavía existe). */
 export type ItemEjercicio = { id: string; titulo: string; conversacionId: string | null };

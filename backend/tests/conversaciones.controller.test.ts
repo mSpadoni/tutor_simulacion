@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { UIMessage } from "ai";
 import { afterAll, describe, expect, it } from "vitest";
 import { ConversacionesController, esIdDeConversacion } from "@/backend/controllers/conversaciones.controller";
-import { ConversacionesModel } from "@/backend/models/conversaciones.model";
+import { ConversacionesModel } from "@/backend/models/repositorios/conversaciones.model";
 import { borrarAlumnosDePrueba, crearAlumnoLogueado } from "./helpers/alumnoDePrueba";
 
 // Sin mocks: contra la base local de Supabase, con alumnos reales logueados.

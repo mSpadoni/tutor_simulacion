@@ -46,7 +46,7 @@ describe("reglas de dependencia (ESLint)", () => {
     ).toEqual([expect.stringContaining("pasan por un controller")]);
     expect(
       await erroresDeDependencia(
-        'import { conversacionesModel } from "@/backend/models/conversaciones.model";',
+        'import { conversacionesModel } from "@/backend/models/repositorios/conversaciones.model";',
         archivo
       )
     ).toHaveLength(1);
@@ -82,7 +82,7 @@ describe("reglas de dependencia (ESLint)", () => {
   });
 
   it("el dominio es lógica pura: sin Next ni infraestructura, pero puede importar solo tipos", async () => {
-    const archivo = "backend/lib/fdp.ts";
+    const archivo = "backend/models/dominio/fdp.ts";
 
     expect(await erroresDeDependencia('import { NextResponse } from "next/server";', archivo)).toEqual([
       expect.stringContaining("El dominio es lógica pura"),
@@ -91,6 +91,13 @@ describe("reglas de dependencia (ESLint)", () => {
       await erroresDeDependencia('import { crearModeloOpenAI } from "@/backend/lib/openai";', archivo)
     ).toHaveLength(1);
     expect(await erroresDeDependencia('import type { User } from "@supabase/supabase-js";', archivo)).toEqual([]);
+    // Tampoco usa los repositorios: la regla vale para cualquier archivo nuevo de models/dominio/.
+    expect(
+      await erroresDeDependencia(
+        'import { ejerciciosModel } from "@/backend/models/repositorios/ejercicios.model";',
+        "backend/models/dominio/nuevo.ts"
+      )
+    ).toHaveLength(1);
   });
 });
 
@@ -107,8 +114,7 @@ describe("server-only", () => {
     ...archivosDe("backend/controllers"),
     ...archivosDe("backend/tools"),
     ...archivosDe("backend/tutor"),
-    "backend/models/conversaciones.model.ts",
-    "backend/models/ejercicios.model.ts",
+    ...archivosDe("backend/models/repositorios"),
     "backend/models/materialCatedra.model.ts",
     "backend/lib/openai.ts",
     "backend/lib/kroki.ts",
@@ -121,11 +127,7 @@ describe("server-only", () => {
   });
 
   it("el dominio (lógica pura) no lo usa: se puede usar desde cualquier lado", () => {
-    for (const archivo of [
-      "backend/lib/fdp.ts",
-      "backend/models/pedidoDeChat.model.ts",
-      "backend/models/usuario.model.ts",
-    ]) {
+    for (const archivo of archivosDe("backend/models/dominio")) {
       expect(readFileSync(archivo, "utf8"), archivo).not.toContain(`import "server-only"`);
     }
   });

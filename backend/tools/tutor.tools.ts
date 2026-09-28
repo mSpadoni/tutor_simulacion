@@ -1,5 +1,5 @@
 import "server-only";
-import type { EjerciciosModel } from "@/backend/models/ejercicios.model";
+import type { EjerciciosModel } from "@/backend/models/repositorios/ejercicios.model";
 import type { MaterialCatedra } from "@/backend/models/materialCatedra.model";
 import { crearToolsDiagrama } from "@/backend/tools/diagrama.tools";
 import { crearToolsEjercicio } from "@/backend/tools/ejercicio.tools";

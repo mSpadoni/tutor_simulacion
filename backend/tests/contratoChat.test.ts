@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, expectTypeOf, it } from "vitest";
-import { EjerciciosModel } from "@/backend/models/ejercicios.model";
+import { EjerciciosModel } from "@/backend/models/repositorios/ejercicios.model";
 import { MaterialCatedra } from "@/backend/models/materialCatedra.model";
 import { crearToolsTutor } from "@/backend/tools/tutor.tools";
 import type { NombreDeHerramienta, TutorUIMessage } from "@/shared/chat";

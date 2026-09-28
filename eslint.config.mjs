@@ -50,8 +50,7 @@ const reglasDeDependencia = [
       group: [
         "@supabase/*",
         "@/backend/lib/supabase/*",
-        "@/backend/models/conversaciones.model",
-        "@/backend/models/ejercicios.model",
+        "@/backend/models/repositorios/*",
         "@/backend/models/materialCatedra.model",
         "@/backend/tutor/agente",
       ],
@@ -85,10 +84,21 @@ const reglasDeDependencia = [
   {
     // Dominio: lógica pura, sin Next, Supabase, AI SDK ni infraestructura. Se permiten imports de solo tipos
     // (`import type`), que desaparecen al compilar.
-    files: ["backend/lib/fdp.ts", "backend/models/pedidoDeChat.model.ts", "backend/models/usuario.model.ts"],
+    files: ["backend/models/dominio/**/*.ts"],
     rules: prohibir(backendNoDependeDeAppNiViews, {
-      group: ["next", "next/*", "@supabase/*", "ai", "@ai-sdk/*", "@/backend/lib/*", "@/backend/lib/**", "server-only"],
-      message: "El dominio es lógica pura: sin Next, Supabase, AI SDK ni infraestructura (solo `import type`).",
+      group: [
+        "next",
+        "next/*",
+        "@supabase/*",
+        "ai",
+        "@ai-sdk/*",
+        "@/backend/lib/*",
+        "@/backend/lib/**",
+        "@/backend/models/repositorios/*",
+        "server-only",
+      ],
+      message:
+        "El dominio es lógica pura: sin Next, Supabase, AI SDK, repositorios ni infraestructura (solo `import type`).",
       allowTypeImports: true,
     }),
   },

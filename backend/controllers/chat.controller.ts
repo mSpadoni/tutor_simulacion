@@ -1,10 +1,10 @@
 import "server-only";
 import { createUIMessageStreamResponse, type LanguageModel } from "ai";
 import { crearModeloOpenAI } from "@/backend/lib/openai";
-import { conversacionesModel, type ConversacionesModel } from "@/backend/models/conversaciones.model";
-import { ejerciciosModel, type EjerciciosModel } from "@/backend/models/ejercicios.model";
+import { conversacionesModel, type ConversacionesModel } from "@/backend/models/repositorios/conversaciones.model";
+import { ejerciciosModel, type EjerciciosModel } from "@/backend/models/repositorios/ejercicios.model";
 import { obtenerMaterialCatedra, type MaterialCatedra } from "@/backend/models/materialCatedra.model";
-import type { PedidoDeChat } from "@/backend/models/pedidoDeChat.model";
+import type { PedidoDeChat } from "@/backend/models/dominio/pedidoDeChat.model";
 import { crearToolsTutor } from "@/backend/tools/tutor.tools";
 import { PAUSA_ENTRE_PALABRAS_MS, responderComoTutor } from "@/backend/tutor/agente";
 import { ErrorDeChat, traducirError } from "@/backend/tutor/errores";

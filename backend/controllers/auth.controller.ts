@@ -1,6 +1,6 @@
 import "server-only";
 import { crearClienteServidor, type ClienteSupabase } from "@/backend/lib/supabase/server";
-import { Usuario } from "@/backend/models/usuario.model";
+import { Usuario } from "@/backend/models/dominio/usuario.model";
 
 /** Todo lo relacionado con el login: iniciar sesión con Google, saber quién está logueado y cerrar sesión. */
 export class AuthController {

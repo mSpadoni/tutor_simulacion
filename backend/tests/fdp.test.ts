@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { verificarFdp } from "@/backend/lib/fdp";
+import { verificarFdp } from "@/backend/models/dominio/fdp";
 import { crearToolsFdp, verificarFdpDesdeTool } from "@/backend/tools/fdp.tools";
 
 // Sin mocks: cálculo numérico real sobre f.d.p. del TP 4 de la cátedra. Un caso por cosa que verifica.

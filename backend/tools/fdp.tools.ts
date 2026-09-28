@@ -1,7 +1,7 @@
 import "server-only";
 import { tool } from "ai";
 import { z } from "zod";
-import { verificarFdp } from "@/backend/lib/fdp";
+import { verificarFdp } from "@/backend/models/dominio/fdp";
 
 /** Los datos de la tool: lo que el modelo resolvió de la f.d.p. JSON no tiene infinito: para "x ≥ a", b = "infinito". */
 const DatosSchema = z.object({

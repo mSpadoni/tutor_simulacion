@@ -5,16 +5,16 @@ MVC sobre Next.js (App Router) + Supabase, con reglas de dependencia que se hace
 
 ## Capas
 
-| Capa            | Carpeta                                                                                         | Qué hace                                                                                                                                               | Puede usar                                     |
-| --------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------- |
-| Rutas           | `app/`                                                                                          | Páginas, Route Handlers y Server Actions. Finas: sesión, validación de entrada, delegar.                                                               | controllers, dominio, views                    |
-| Controllers     | `backend/controllers/`                                                                          | Casos de uso: orquestan repositorios, dominio y el tutor. No saben de HTTP (salvo el stream del chat, que es el contrato del AI SDK).                  | repositorios, dominio, tools, lib              |
-| Repositorios    | `backend/models/` (conversaciones, ejercicios)                                                  | Únicos que consultan Supabase. Sin interfaces: una sola implementación y los tests usan la base local real.                                            | lib/supabase                                   |
-| Dominio         | `backend/lib/fdp.ts`, `backend/models/pedidoDeChat.model.ts`, `backend/models/usuario.model.ts` | Lógica pura.                                                                                                                                           | Zod, mathjs, **solo tipos** de otras librerías |
-| Tutor (LLM)     | `backend/tutor/`, `backend/tools/`, `backend/lib/prompts/`, `backend/lib/openai.ts`             | `tutor/agente.ts`: la llamada al modelo (prompt, tools, pasos, streaming, log). `tutor/errores.ts`: qué ve el alumno si falla. Tools, prompt y modelo. | repositorios, dominio, lib                     |
-| Infraestructura | `backend/lib/` (env, supabase, openai, kroki)                                                   | Clientes y adaptadores de servicios externos.                                                                                                          | —                                              |
-| Views           | `views/`                                                                                        | Componentes React. Los datos llegan por props y las acciones como Server Actions.                                                                      | otras views                                    |
-| Compartido      | `shared/`                                                                                       | Lógica pura que usan el servidor y el navegador (ej. el título de una conversación).                                                                   | solo tipos de otras librerías                  |
+| Capa            | Carpeta                                                                             | Qué hace                                                                                                                                                                        | Puede usar                                     |
+| --------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Rutas           | `app/`                                                                              | Páginas, Route Handlers y Server Actions. Finas: sesión, validación de entrada, delegar.                                                                                        | controllers, dominio, views                    |
+| Controllers     | `backend/controllers/`                                                              | Casos de uso: orquestan repositorios, dominio y el tutor. No saben de HTTP (salvo el stream del chat, que es el contrato del AI SDK).                                           | repositorios, dominio, tools, lib              |
+| Repositorios    | `backend/models/repositorios/` (conversaciones, ejercicios)                         | Únicos que consultan Supabase (con `datosOError` de `lib/supabase/consultas.ts` para los errores). Sin interfaces: una sola implementación y los tests usan la base local real. | lib/supabase                                   |
+| Dominio         | `backend/models/dominio/` (fdp, pedidoDeChat, usuario)                              | Lógica pura.                                                                                                                                                                    | Zod, mathjs, **solo tipos** de otras librerías |
+| Tutor (LLM)     | `backend/tutor/`, `backend/tools/`, `backend/lib/prompts/`, `backend/lib/openai.ts` | `tutor/agente.ts`: la llamada al modelo (prompt, tools, pasos, streaming, log). `tutor/errores.ts`: qué ve el alumno si falla. Tools, prompt y modelo.                          | repositorios, dominio, lib                     |
+| Infraestructura | `backend/lib/` (env, supabase, openai, kroki)                                       | Clientes y adaptadores de servicios externos.                                                                                                                                   | —                                              |
+| Views           | `views/`                                                                            | Componentes React. Los datos llegan por props y las acciones como Server Actions.                                                                                               | otras views                                    |
+| Compartido      | `shared/`                                                                           | Lógica pura que usan el servidor y el navegador (ej. el título de una conversación).                                                                                            | solo tipos de otras librerías                  |
 
 ## Autenticación, autorización y datos
 
@@ -39,6 +39,8 @@ Las prueba `backend/tests/arquitectura.test.ts` con el ESLint real del proyecto.
 
 ## Plan de refactor
 
+La carpeta `backend/models/` se mantiene (es la M de MVC) y adentro separa `repositorios/` (Supabase) de `dominio/` (lógica pura). Las reglas se aplican por carpeta: un archivo nuevo en cualquiera de las dos queda cubierto solo.
+
 | #   | Etapa                                                                                                   | Estado    |
 | --- | ------------------------------------------------------------------------------------------------------- | --------- |
 | 1   | Reglas que se hacen cumplir solas (`server-only` + ESLint)                                              | Hecha     |
@@ -46,7 +48,7 @@ Las prueba `backend/tests/arquitectura.test.ts` con el ESLint real del proyecto.
 | 3   | Sacar el refetch del historial después de cada respuesta (`router.refresh`)                             | Hecha     |
 | 4   | Contrato tipado cliente↔servidor (`shared/`: nombres de tools, límites, `TutorUIMessage`)               | Hecha     |
 | 5   | Dividir `ChatController` (agente del LLM y errores aparte)                                              | Hecha     |
-| 6   | Nombres correctos (`repositories/`, `domain/`), helpers de queries                                      | Pendiente |
+| 6   | Nombres correctos (`models/repositorios/`, `models/dominio/`), helpers de queries                       | Hecha     |
 | 7   | Separar `MaterialCatedra` (parser e índice puros, lectura de disco aparte)                              | Pendiente |
 | 8   | Tests rápidos (base local) separados de los externos (OpenAI, Kroki)                                    | Pendiente |
 | 9   | Vista: hooks de scroll y anuncio, un componente por tipo de parte                                       | Pendiente |

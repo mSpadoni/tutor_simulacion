@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, describe, expect, it } from "vitest";
 import { EjerciciosController } from "@/backend/controllers/ejercicios.controller";
-import { ConversacionesModel } from "@/backend/models/conversaciones.model";
-import { EjerciciosModel } from "@/backend/models/ejercicios.model";
+import { ConversacionesModel } from "@/backend/models/repositorios/conversaciones.model";
+import { EjerciciosModel } from "@/backend/models/repositorios/ejercicios.model";
 import { crearToolsEjercicio, guardarEjercicio, type DatosEjercicio } from "@/backend/tools/ejercicio.tools";
 import { borrarAlumnosDePrueba, crearAlumnoLogueado } from "./helpers/alumnoDePrueba";
 

@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import { datosOError } from "@/backend/lib/supabase/consultas";
 import { crearClienteServidor, type ClienteSupabase } from "@/backend/lib/supabase/server";
 import type { Database } from "@/backend/types/database";
 
@@ -36,25 +37,26 @@ export class EjerciciosModel {
   async guardar(datos: NuevoEjercicio, conversacionId: string | null = null): Promise<EjercicioGuardado> {
     const ejercicio = EjercicioSchema.parse(datos);
     const supabase = await this.crearCliente();
-    const { data, error } = await supabase
-      .from("ejercicios")
-      .insert({ ...ejercicio, conversacion_id: conversacionId })
-      .select()
-      .single();
-    if (error) throw new Error(`No se pudo guardar el ejercicio: ${error.message}`);
-    return data as EjercicioGuardado;
+    const guardado = datosOError(
+      await supabase
+        .from("ejercicios")
+        .insert({ ...ejercicio, conversacion_id: conversacionId })
+        .select()
+        .single(),
+      "No se pudo guardar el ejercicio"
+    );
+    // payload es jsonb (sin tipo en la base): tiene la forma de EjercicioSchema porque se validó antes de guardarlo.
+    return guardado as EjercicioGuardado;
   }
 
   /** Los últimos ejercicios del alumno, el más reciente primero. Por defecto 7 (Ley de Miller). */
   async listarRecientes(limite = 7): Promise<EjercicioGuardado[]> {
     const supabase = await this.crearCliente();
-    const { data, error } = await supabase
-      .from("ejercicios")
-      .select("*")
-      .order("creado_en", { ascending: false })
-      .limit(limite);
-    if (error) throw new Error(`No se pudieron leer los ejercicios: ${error.message}`);
-    return data as EjercicioGuardado[];
+    const ejercicios = datosOError(
+      await supabase.from("ejercicios").select("*").order("creado_en", { ascending: false }).limit(limite),
+      "No se pudieron leer los ejercicios"
+    );
+    return ejercicios as EjercicioGuardado[];
   }
 }
 
