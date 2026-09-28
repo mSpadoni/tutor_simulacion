@@ -198,7 +198,7 @@ Al corregir, el bot debe señalar en qué paso específico está el error (no so
 
 **Qué sistemas.** Por ahora solo sistemas que se resuelven con Evento a Evento (Δt todavía no se vio). Esto es un criterio interno para elegir el sistema: **el enunciado nunca dice la metodología**, porque elegirla es parte de lo que resuelve el alumno.
 
-**De dónde sale.** El tipo de ejercicio que se le da al alumno es el de la Guía Anexa, los parciales, los ejercicios resueltos de la cátedra y la guía oficial del 9 al 12. Se puede tomar uno de esos como base (cambiando dominio, datos y complicaciones) o armarlo desde cero combinando un esqueleto de la sección 6, las clases y los modelos de la guía oficial (1 a 8). En los dos casos, **la redacción y la complejidad son las de la anexa y los parciales**. Los modelos (guía oficial 1 a 8 y los ejercicios de las clases) no se dan como ejercicio: son para explicar.
+**De dónde sale.** El tipo de ejercicio que se le da al alumno es el de la Guía Anexa, los parciales, los ejercicios resueltos de la cátedra y la guía oficial del 9 al 12. Esos ejercicios son **inspiración**: el ejercicio nuevo se crea **desde cero** (otro dominio, otro título, otra historia y otros datos), combinando el tipo de sistema y las complicaciones de la inspiración con un esqueleto de la sección 6, las clases y los modelos de la guía oficial (1 a 8). Nunca se devuelve un ejercicio de la cátedra tal cual ni cambiándole solo los números. **La redacción y la complejidad son las de la anexa y los parciales**. Los modelos (guía oficial 1 a 8 y los ejercicios de las clases) no se dan como ejercicio: son para explicar.
 
 **Cómo se redacta** (como en la Guía Anexa y los parciales):
 - Un **título corto** con el dominio ("Clínica", "Garage", "Salón de ventas").

@@ -5,7 +5,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { armarSystemPrompt } from "@/backend/lib/prompts/systemPrompt";
-import { MaterialCatedra } from "@/backend/models/materialCatedra.model";
 
 describe("armarSystemPrompt", () => {
   const prompt = armarSystemPrompt();
@@ -27,46 +26,37 @@ describe("armarSystemPrompt", () => {
     expect(prompt).toContain("> ⚠");
   });
 
-  it("sin fichas no agrega la sección de material de la cátedra", () => {
+  it("define también el modo de resolver un ejercicio", () => {
+    expect(prompt).toContain("Resolver un ejercicio");
+  });
+
+  it("no trae material fijo: el material lo pide el modelo con las tools", () => {
     expect(prompt).not.toContain("MATERIAL DE LA CÁTEDRA RELACIONADO");
     expect(armarSystemPrompt()).toBe(prompt);
   });
+});
 
-  it("con fichas, las agrega al final con su título y su fuente", () => {
-    const fichas = MaterialCatedra.cargar().buscar("remisería con tiempo comprometido");
+describe("armarSystemPrompt — herramientas", () => {
+  const prompt = armarSystemPrompt();
 
-    const conMaterial = armarSystemPrompt(fichas);
-
-    expect(conMaterial.startsWith(prompt)).toBe(true);
-    expect(conMaterial).toContain("# MATERIAL DE LA CÁTEDRA RELACIONADO CON ESTA CONSULTA");
-    for (const ficha of fichas) {
-      expect(conMaterial).toContain(`### ${ficha.titulo}`);
-      expect(conMaterial).toContain(ficha.contenido);
-    }
+  it("presenta las tres tools y deja que el modelo decida cuáles usar", () => {
+    expect(prompt).toContain("**consultar_modelos(tema)**");
+    expect(prompt).toContain("**buscar_ejercicio(nombre o descripción)**");
+    expect(prompt).toContain("**inspiracion_para_ejercicio(tema)**");
+    expect(prompt).toContain("Decidí vos cuáles usar según lo que pide el alumno");
   });
 
-  it("separa los modelos (para explicar) de los ejercicios (para practicar), cada ficha en su grupo", () => {
-    const fichas = MaterialCatedra.cargar().buscarModelosYEjercicios("tiempo comprometido con N autos");
-    const conMaterial = armarSystemPrompt(fichas);
-    const inicioModelos = conMaterial.indexOf("## Modelos de la cátedra (para explicar; no se dan como ejercicio)");
-    const inicioEjercicios = conMaterial.indexOf("## Ejercicios de la cátedra (tipo de ejercicio para practicar");
-
-    expect(inicioModelos).toBeGreaterThan(0);
-    expect(inicioEjercicios).toBeGreaterThan(inicioModelos);
-    for (const ficha of fichas) {
-      const posicion = conMaterial.indexOf(`### ${ficha.titulo}`);
-      if (ficha.tipo === "modelo") expect(posicion, ficha.titulo).toBeLessThan(inicioEjercicios);
-      else expect(posicion, ficha.titulo).toBeGreaterThan(inicioEjercicios);
-    }
+  it("para corregir o resolver, sugiere combinar los modelos con el enunciado", () => {
+    expect(prompt).toContain("**Corrección o resolución** → consultar_modelos **y** buscar_ejercicio");
   });
 
-  it("si solo hay fichas de un tipo, no aparece el título del otro grupo", () => {
-    const soloEjercicios = MaterialCatedra.cargar().buscar("garage con cocheras", { tipo: "ejercicio" });
+  it("resuelve y corrige con la teoría, nunca con resoluciones de la cátedra", () => {
+    expect(prompt).toContain("Resolvé y corregí **siempre con la base de conocimiento y los modelos**");
+  });
 
-    const conMaterial = armarSystemPrompt(soloEjercicios);
-
-    expect(conMaterial).toContain("## Ejercicios de la cátedra");
-    expect(conMaterial).not.toContain("## Modelos de la cátedra");
+  it("un ejercicio nuevo se crea desde cero, no se copia de la inspiración", () => {
+    expect(prompt).toContain("Creá uno **desde cero**: otro dominio, otro título, otra historia y otros datos");
+    expect(prompt).toContain("Nunca devuelvas un ejercicio de la cátedra tal cual");
   });
 });
 
@@ -86,8 +76,8 @@ describe("armarSystemPrompt — ejercicios nuevos", () => {
   });
 
   it("los modelos se usan para explicar y nunca se dan como ejercicio", () => {
-    expect(prompt).toContain("Usalos para **explicar**");
-    expect(prompt).toContain("**Nunca** los des como ejercicio para practicar");
+    expect(prompt).toContain("Es la **teoría**. Usala para explicar");
+    expect(prompt).toContain("Los modelos nunca se dan como ejercicio para practicar");
   });
 
   it("la presentación del tutor no nombra la metodología", () => {

@@ -108,16 +108,31 @@ describe("MaterialCatedra.buscar por tipo", () => {
     expect(material.buscar("el ejercicio 6 de la guía", { tipo: "modelo" })[0].titulo).toMatch(/^Ejercicio 6 /);
     expect(material.buscar("el ejercicio 12 de la guía", { tipo: "ejercicio" })[0].titulo).toMatch(/^Ejercicio 12 /);
   });
+});
 
-  it("buscarModelosYEjercicios trae hasta 2 de cada tipo, los modelos primero", () => {
-    const fichas = material.buscarModelosYEjercicios("colas con prioridad y arrepentimiento");
-    const tipos = fichas.map((ficha) => ficha.tipo);
+describe("MaterialCatedra.buscarPorNombre", () => {
+  const titulos = (texto: string) => material.buscarPorNombre(texto).map((ficha) => ficha.titulo);
 
-    expect(tipos.filter((tipo) => tipo === "modelo").length).toBeLessThanOrEqual(2);
-    expect(tipos.filter((tipo) => tipo === "ejercicio").length).toBeLessThanOrEqual(2);
-    expect(tipos).toContain("modelo");
-    expect(tipos).toContain("ejercicio");
-    expect(tipos.indexOf("ejercicio")).toBeGreaterThan(tipos.lastIndexOf("modelo"));
+  it("encuentra por título aunque venga dentro de una frase, sin importar tildes ni mayúsculas", () => {
+    expect(titulos("resolveme CLINICA de la anexa")).toContain("Clínica");
+    expect(titulos("Garage")).toEqual(["Garage"]);
+  });
+
+  it("encuentra el ejercicio N de la guía, sea modelo o ejercicio", () => {
+    expect(titulos("el ejercicio 3 de la guía")).toEqual([expect.stringMatching(/^Ejercicio 3 /)]);
+    expect(titulos("ejercicio nro 11 del tp")).toEqual([expect.stringMatching(/^Ejercicio 11 /)]);
+  });
+
+  it("si no hay título que coincida, busca por descripción entre los ejercicios (hasta 2)", () => {
+    const fichas = material.buscarPorNombre("boletería con dos colas y prioridad para retirar entradas");
+
+    expect(fichas.length).toBeLessThanOrEqual(2);
+    expect(fichas.every((ficha) => ficha.tipo === "ejercicio")).toBe(true);
+    expect(fichas.map((ficha) => ficha.titulo)).toContain("Teatro Barrial");
+  });
+
+  it("sin texto útil no devuelve nada", () => {
+    expect(material.buscarPorNombre("  ¿? ")).toEqual([]);
   });
 });
 

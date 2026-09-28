@@ -15,10 +15,11 @@
     "format": "prettier . --write"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^4.0.78",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
+    "ai": "^7.0.118",
     "next": "^15.2.4",
-    "openai": "^7.23.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",

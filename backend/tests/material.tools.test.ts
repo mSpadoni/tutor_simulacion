@@ -1,0 +1,111 @@
+import { describe, expect, it } from "vitest";
+import { MaterialCatedra, enunciadoDe } from "@/backend/models/materialCatedra.model";
+import {
+  buscarEjercicio,
+  consultarModelos,
+  crearToolsMaterial,
+  inspiracionParaEjercicio,
+} from "@/backend/tools/material.tools";
+
+// Sin mocks: las tools trabajan sobre el material real de backend/knowledge.
+const material = MaterialCatedra.cargar();
+const porTitulo = new Map(material.fichas.map((ficha) => [ficha.titulo, ficha]));
+
+/** Marcas de una resolución de la cátedra: si aparecen, la tool filtró una resolución. */
+const RESOLUCION = /^(Metodolog[ií]a:|- \*\*Datos:\*\*)|\| *(TEF|Evento) *\|/m;
+
+describe("enunciadoDe", () => {
+  // Solo ejercicios: los modelos (clases, TP 4) son teoría y se usan completos, con su resolución.
+  const resueltas = material.fichas.filter(
+    (ficha) => ficha.tipo === "ejercicio" && /^(Metodolog[ií]a:|- \*\*Datos:\*\*)/m.test(ficha.contenido)
+  );
+
+  it("hay 49 fichas con resolución de la cátedra (41 de la anexa resuelta y 8 ejercicios resueltos)", () => {
+    expect(resueltas).toHaveLength(49);
+  });
+
+  it("de cada una deja solo el enunciado: sin resolución y sin quedar vacío", () => {
+    for (const ficha of resueltas) {
+      const enunciado = enunciadoDe(ficha);
+      expect(enunciado.length, ficha.titulo).toBeGreaterThan(80);
+      expect(enunciado, ficha.titulo).not.toMatch(RESOLUCION);
+      expect(ficha.contenido.startsWith(enunciado), ficha.titulo).toBe(true);
+    }
+  });
+
+  it("si la ficha no tiene resolución, la devuelve entera", () => {
+    const garage = porTitulo.get("Garage")!;
+    expect(enunciadoDe(garage)).toBe(garage.contenido.trim());
+  });
+});
+
+describe("consultarModelos", () => {
+  it("solo devuelve modelos (teoría), nunca ejercicios", () => {
+    const { fichas } = consultarModelos(material, "cómo calculo el PTO en tiempo comprometido");
+
+    expect(fichas.length).toBeGreaterThan(0);
+    expect(fichas.every((titulo) => porTitulo.get(titulo)?.tipo === "modelo")).toBe(true);
+  });
+
+  it("sin modelos del tema lo dice y deriva a la base de conocimiento", () => {
+    expect(consultarModelos(material, "xyzzy qwerty").texto).toContain("No hay modelos");
+  });
+});
+
+describe("buscarEjercicio", () => {
+  it("encuentra un ejercicio de la anexa por su nombre y devuelve solo el enunciado", () => {
+    const { texto, fichas } = buscarEjercicio(material, "resolveme Clínica de la anexa");
+
+    expect(fichas).toContain("Clínica");
+    expect(texto).toContain("dos consultorios");
+    expect(texto).not.toMatch(RESOLUCION);
+  });
+
+  it("encuentra el ejercicio N de la guía oficial", () => {
+    expect(buscarEjercicio(material, "el ejercicio 10 de la guía").fichas).toEqual([
+      expect.stringMatching(/^Ejercicio 10 /),
+    ]);
+  });
+
+  it("si el alumno no lo nombra, lo encuentra por la descripción del sistema", () => {
+    const { fichas } = buscarEjercicio(material, "cocheras que quedan comprometidas un 15% después de retirar el auto");
+
+    expect(fichas).toContain("Garage");
+  });
+
+  it("si no encuentra nada, pide el enunciado al alumno", () => {
+    const { texto, fichas } = buscarEjercicio(material, "zzz");
+
+    expect(fichas).toEqual([]);
+    expect(texto).toContain("Pedile al alumno el enunciado");
+  });
+});
+
+describe("inspiracionParaEjercicio", () => {
+  it("solo devuelve ejercicios (nunca modelos), sin resoluciones, y pide crear uno desde cero", () => {
+    const { texto, fichas } = inspiracionParaEjercicio(material, "colas con arrepentimiento y N puestos");
+
+    expect(fichas.length).toBeGreaterThan(0);
+    expect(fichas.every((titulo) => porTitulo.get(titulo)?.tipo === "ejercicio")).toBe(true);
+    expect(texto).not.toMatch(RESOLUCION);
+    expect(texto).toContain("Creá uno nuevo desde cero");
+  });
+});
+
+describe("crearToolsMaterial", () => {
+  const tools = crearToolsMaterial(material);
+  const opciones = { toolCallId: "prueba", messages: [], context: {} };
+
+  it("expone las tres tools con descripción", () => {
+    expect(Object.keys(tools).sort()).toEqual(["buscar_ejercicio", "consultar_modelos", "inspiracion_para_ejercicio"]);
+    for (const herramienta of Object.values(tools)) expect(herramienta.description?.length).toBeGreaterThan(50);
+  });
+
+  it("cada tool ejecuta la función que corresponde", async () => {
+    expect(await tools.buscar_ejercicio.execute!({ nombreODescripcion: "Clínica" }, opciones)).toContain("Clínica");
+    expect(await tools.consultar_modelos.execute!({ tema: "tiempo comprometido" }, opciones)).toContain(
+      "Modelos de la cátedra"
+    );
+    expect(await tools.inspiracion_para_ejercicio.execute!({ tema: "stock" }, opciones)).toContain("inspiración");
+  });
+});

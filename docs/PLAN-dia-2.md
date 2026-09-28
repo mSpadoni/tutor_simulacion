@@ -50,8 +50,13 @@ y encontrar sus conversaciones guardadas al volver a entrar.
   - `parciales-anteriores.md`: 6 parciales y los parcialitos 2026 (consignas, sin respuestas).
 - [x] Base de conocimiento: sección 9 con lo que toman los parcialitos (HV, ITO/STO,
       vaciamiento, arrepentimiento, permanencia "método viejo" y "nuevo").
-- [x] `MaterialCatedra` (BM25): elige hasta 2 modelos y 2 ejercicios por consulta, entre 91 fichas.
-      El log `chat.respuesta` registra modelo, tiempo, tokens y fichas usadas.
+- [x] `MaterialCatedra` (BM25) sobre 91 fichas. El material lo pide el modelo con tools
+      (`backend/tools/material.tools.ts`):
+  - `consultar_modelos(tema)`: solo modelos. Para teoría, y siempre que resuelve o corrige.
+  - `buscar_ejercicio(nombre o descripción)`: el enunciado de un ejercicio de la cátedra.
+  - `inspiracion_para_ejercicio(tema)`: enunciados de anexa y parciales para crear uno nuevo desde cero.
+  - Las resoluciones de la cátedra nunca se devuelven (algunas tienen errores).
+  - El log `chat.respuesta` registra tiempo, pasos, tokens y tools usadas.
 - [x] **Dos tipos de material** (cada archivo lo declara con `> tipo:`):
   - `modelo`: guía oficial 1 a 8 (`modelos-guia-oficial.md`, por tema: colas y tiempo comprometido),
     clases de colas y TP 4. Sirven para explicar; nunca se dan como ejercicio.
@@ -120,9 +125,10 @@ y encontrar sus conversaciones guardadas al volver a entrar.
 Cada punto con su test sin mocks, `npm run format`, commit y push.
 
 - [ ] Cargar la key de OpenAI en `.env.local` y en Vercel.
-- [ ] **Vercel AI SDK** (`ai` + `@ai-sdk/openai`): `ChatController` pasa a
-      `streamText` y `app/api/chat/route.ts` devuelve el stream. Se mantienen
-      el timeout, el reintento y los mensajes de error para el alumno.
+- [x] **Vercel AI SDK** (`ai` + `@ai-sdk/openai`): `ChatController` usa `generateText` con tools
+      (hecho junto con las tools del material). Se mantienen el timeout, el reintento y los
+      mensajes de error para el alumno.
+- [ ] Pasar de `generateText` a `streamText` y que `app/api/chat/route.ts` devuelva el stream.
 - [ ] **Streaming en la UI** con `useChat`: la respuesta aparece token a
       token, botón **"Detener generación"**.
 - [ ] **Accesibilidad del streaming:** el lector de pantalla anuncia la
@@ -171,8 +177,11 @@ Cada punto con su test sin mocks, `npm run format`, commit y push.
 - **Material de la cátedra con BM25**, sin embeddings: la base de
   conocimiento va entera y se suman hasta 2 modelos y 2 ejercicios parecidos a la
   consulta. No depende de otro servicio y alcanza para 91 fichas.
-- **Modelos y ejercicios se buscan por separado.** Si se buscaran juntos, una consulta
-  como "dame un ejercicio de tiempo comprometido" podría traer solo modelos, y el tutor
-  terminaría dando un modelo como ejercicio.
+- **El material lo pide el modelo con tools**, en vez de mandarlo fijo. Así una consulta
+  teórica recibe solo modelos, un pedido de ejercicio recibe solo inspiración, y la
+  elección de la tool es la interpretación de intención. Las tools no se fuerzan
+  (`toolChoice: "auto"`): el prompt explica cuándo conviene cada una y el modelo decide.
+- **Sin resoluciones de la cátedra:** algunas tienen errores, así que el tutor resuelve y
+  corrige con la base de conocimiento y los modelos. De los ejercicios solo ve el enunciado.
 - **Contexto limitado a los últimos 20 mensajes**, para acotar costo y
   latencia.

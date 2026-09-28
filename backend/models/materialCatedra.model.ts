@@ -68,6 +68,25 @@ function raiz(palabra: string): string {
   return palabra;
 }
 
+/** Texto en minúsculas, sin tildes ni signos, con un espacio entre palabras. Para comparar títulos. */
+function soloLetras(texto: string): string {
+  return texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9ñ]+/g, " ")
+    .trim();
+}
+
+/**
+ * El enunciado de una ficha, sin la resolución de la cátedra (que puede tener errores: el tutor resuelve y
+ * corrige con la teoría). En las fichas resueltas, la resolución empieza en "Metodología:" o "- **Datos:**".
+ */
+export function enunciadoDe(ficha: Ficha): string {
+  const inicioResolucion = ficha.contenido.search(/^(Metodolog[ií]a:|- \*\*Datos:\*\*)/m);
+  return (inicioResolucion === -1 ? ficha.contenido : ficha.contenido.slice(0, inicioResolucion)).trim();
+}
+
 /** Estimación rápida de cuántos tokens ocupa un texto (~3,5 caracteres por token en español). Math.ceil redondea para arriba. */
 function aproximarTokens(texto: string): number {
   return Math.ceil(texto.length / 3.5);
@@ -192,14 +211,25 @@ export class MaterialCatedra {
   }
 
   /**
-   * El material para una consulta del chat: hasta 2 modelos (para explicar) y hasta 2 ejercicios (tipo de
-   * ejercicio y referencia de redacción), buscados por separado para que un tipo no desplace al otro.
+   * Un ejercicio que el alumno nombra ("Clínica", "el 10 de la guía") o describe ("clínica con dos consultorios").
+   * Primero busca por número de la guía o por título; si no encuentra, por parecido entre los ejercicios.
+   * Devuelve hasta 2 candidatos: el modelo decide si alguno es el que menciona el alumno.
    */
-  buscarModelosYEjercicios(consulta: string): Ficha[] {
-    return [
-      ...this.buscar(consulta, { tipo: "modelo", limite: 2, presupuestoTokens: 3000 }),
-      ...this.buscar(consulta, { tipo: "ejercicio", limite: 2, presupuestoTokens: 4000 }),
-    ];
+  buscarPorNombre(nombreODescripcion: string): Ficha[] {
+    const buscado = soloLetras(nombreODescripcion);
+    if (!buscado) return [];
+
+    const deLaGuia = this.ejercicioDeLaGuiaNombrado(nombreODescripcion);
+    if (deLaGuia) return [deLaGuia];
+
+    // Por título: igual al buscado, o contenido en él ("resolveme Clínica de la anexa" contiene "clinica").
+    const porTitulo = this.fichas.filter((ficha) => {
+      const titulo = soloLetras(ficha.titulo);
+      return titulo.length >= 4 && (titulo === buscado || buscado.includes(titulo) || titulo.includes(buscado));
+    });
+    if (porTitulo.length > 0) return porTitulo.slice(0, 2);
+
+    return this.buscar(nombreODescripcion, { tipo: "ejercicio", limite: 2 });
   }
 
   /**
@@ -213,17 +243,8 @@ export class MaterialCatedra {
     const candidatas: Ficha[] = [];
     const esDelTipo = (ficha: Ficha) => tipo === undefined || ficha.tipo === tipo;
 
-    // Detecta "ejercicio 5", "ejercicio nro 5", "ejercicio n° 5"... El número queda en ejercicioDeGuia[1].
-    const ejercicioDeGuia = consulta.match(/ejercicio\s*(?:n(?:ro|°|º|\.)?\s*)?(\d{1,2})\b/i);
-    if (ejercicioDeGuia && /gu[ií]a|tp|trabajo/i.test(consulta)) {
-      const buscada = this.fichas.find(
-        (ficha) =>
-          esDelTipo(ficha) &&
-          ficha.fuente.includes("Trabajos Prácticos") &&
-          ficha.titulo.startsWith(`Ejercicio ${Number(ejercicioDeGuia[1])} `)
-      );
-      if (buscada) candidatas.push(buscada);
-    }
+    const deLaGuia = this.ejercicioDeLaGuiaNombrado(consulta);
+    if (deLaGuia && esDelTipo(deLaGuia)) candidatas.push(deLaGuia);
 
     // `[...new Set(lista)]`: truco para sacar repetidos (Set no admite duplicados y el spread lo vuelve lista).
     const palabras = [...new Set(normalizar(consulta))];
@@ -253,6 +274,17 @@ export class MaterialCatedra {
       tokens += ficha.tokensAprox;
     }
     return elegidas;
+  }
+
+  /** Si el texto nombra "el ejercicio N de la guía" (o del TP), esa ficha; si no, undefined. */
+  private ejercicioDeLaGuiaNombrado(texto: string): Ficha | undefined {
+    // Detecta "ejercicio 5", "ejercicio nro 5", "ejercicio n° 5"... El número queda en numero[1].
+    const numero = texto.match(/ejercicio\s*(?:n(?:ro|°|º|\.)?\s*)?(\d{1,2})\b/i);
+    if (!numero || !/gu[ií]a|tp|trabajo/i.test(texto)) return undefined;
+    return this.fichas.find(
+      (ficha) =>
+        ficha.fuente.includes("Trabajos Prácticos") && ficha.titulo.startsWith(`Ejercicio ${Number(numero[1])} `)
+    );
   }
 
   /**

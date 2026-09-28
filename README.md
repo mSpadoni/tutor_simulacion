@@ -48,10 +48,11 @@ app/                    Rutas. page.tsx compone vistas; route.ts y las server ac
 views/                  Componentes React (lo que ve el alumno). No acceden a la base.
   chat/                 ChatWindow, MessageBubble (Markdown), MessageInput.
 backend/
-  controllers/          Una clase por área (AuthController, ChatController) con los casos de uso. Usan models y lib.
+  controllers/          Una clase por área (AuthController, ChatController) con los casos de uso. Usan models, tools y lib.
+  tools/                Tools que el modelo decide usar (consultar_modelos, buscar_ejercicio, inspiracion_para_ejercicio).
   models/               Una clase por entidad (Usuario, Conversacion, MaterialCatedra, EjercicioHistorialModel).
   lib/supabase/         Clientes de Supabase (servidor y middleware) y su configuración.
-  lib/openai.ts         Cliente de OpenAI y modelo a usar.
+  lib/openai.ts         Modelo de OpenAI para el Vercel AI SDK (clave, URL y modelo desde variables de entorno).
   lib/prompts/          System prompt del tutor (instrucciones + base de conocimiento).
   knowledge/            Base de conocimiento + material de la cátedra en fichas (ver "Material de la cátedra").
   types/                Tipos de la base (database.ts).
@@ -98,10 +99,17 @@ cliente de Supabase entra por el constructor: la app usa la de Next.js
   | `ejercicio` | Guía Anexa resuelta (41) · Guía Anexa 2026 (8 nuevos) · parciales y parcialitos · ejercicios resueltos de la cátedra · guía oficial 9 a 12 | Son el tipo de ejercicio que se da para practicar y la referencia de **redacción y complejidad** para inventar uno nuevo. |
   | `pendiente` | Guía oficial 13 a 22 · Guía Anexa de Δt (17)                                                                                               | No se carga todavía.                                                                                                      |
 
-  Todo junto no entra en cada consulta, así que `MaterialCatedra` (BM25, sin servicios
-  externos) elige hasta 2 modelos y 2 ejercicios parecidos a los últimos mensajes del alumno
-  (buscados por separado, con tope de tokens), y el prompt los presenta en dos grupos.
-  Si el alumno nombra "el ejercicio N de la guía", ese va primero.
+  El material no va fijo en el prompt: **el modelo lo pide con tools** (Vercel AI SDK, `generateText`)
+  según lo que quiere el alumno, y `MaterialCatedra` (BM25, sin servicios externos) lo busca:
+
+  | El alumno…                                             | Tools que usa el modelo                  | Qué recibe                                                                  |
+  | ------------------------------------------------------ | ---------------------------------------- | --------------------------------------------------------------------------- |
+  | Pregunta teoría                                        | `consultar_modelos`                      | Solo modelos                                                                |
+  | Pide resolver o corregir (nombrando el ejercicio o no) | `consultar_modelos` + `buscar_ejercicio` | Modelos + el enunciado                                                      |
+  | Pide un ejercicio nuevo                                | `inspiracion_para_ejercicio`             | Enunciados de anexa y parciales, como inspiración para crear uno desde cero |
+
+  **Las resoluciones de la cátedra nunca le llegan al modelo** (algunas tienen errores): de los
+  ejercicios se devuelve solo el enunciado, y el tutor resuelve y corrige con la base y los modelos.
 
 **Alcance actual: sistemas que se resuelven con Evento a Evento**, pero el tutor **no dice la
 metodología en los enunciados**: elegirla es parte del ejercicio. Lo de Δt queda para más adelante.

@@ -1,4 +1,4 @@
-import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
+import type { ModelMessage } from "ai";
 import { z } from "zod";
 
 /** Mensajes que se mandan como contexto. Más que esto encarece cada consulta sin mejorar la respuesta. */
@@ -53,26 +53,16 @@ export class Conversacion {
     return { ok: true, conversacion: new Conversacion(resultado.data.mensajes) };
   }
 
-  /** Los dos últimos mensajes del alumno: con eso se eligen las fichas del material de la cátedra. */
-  textoParaBuscarMaterial(): string {
-    // filter: solo los del alumno → slice(-2): los 2 últimos → map: su texto → join: todo en un solo string.
-    return this.mensajes
-      .filter((mensaje) => mensaje.rol === "alumno")
-      .slice(-2)
-      .map((mensaje) => mensaje.contenido)
-      .join("\n");
-  }
-
-  /** Traduce al formato de OpenAI: system prompt primero, "alumno" → user y "tutor" → assistant. */
-  paraOpenAI(systemPrompt: string): ChatCompletionMessageParam[] {
-    // Lista nueva: primero el system prompt y después (con el spread `...`) todos los mensajes ya traducidos.
-    // `(mensaje): ChatCompletionMessageParam => ...` indica el tipo que devuelve la función flecha.
-    return [
-      { role: "system", content: systemPrompt },
-      ...this.mensajes.map((mensaje): ChatCompletionMessageParam => ({
-        role: mensaje.rol === "alumno" ? "user" : "assistant",
-        content: mensaje.contenido,
-      })),
-    ];
+  /**
+   * Traduce al formato del modelo: "alumno" → user y "tutor" → assistant.
+   * El system prompt no va acá: el controller lo pasa aparte.
+   * `(mensaje): ModelMessage => ...` indica el tipo que devuelve la función flecha.
+   */
+  paraModelo(): ModelMessage[] {
+    return this.mensajes.map((mensaje): ModelMessage =>
+      mensaje.rol === "alumno"
+        ? { role: "user", content: mensaje.contenido }
+        : { role: "assistant", content: mensaje.contenido }
+    );
   }
 }

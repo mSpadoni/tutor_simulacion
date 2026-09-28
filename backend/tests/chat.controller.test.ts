@@ -2,10 +2,12 @@
 // - describe("tema", () => {...}): agrupa tests relacionados.
 // - it("qué debería pasar", () => {...}): un test. Si alguna línea `expect` no se cumple, el test falla.
 // - expect(valor).toBe(esperado): compara. Otros: toEqual (mismo contenido), toContain, toMatch (regex), toThrow...
-import OpenAI from "openai";
+import { createOpenAI } from "@ai-sdk/openai";
 import { describe, expect, it } from "vitest";
-import { ChatController, ErrorDeChat } from "@/backend/controllers/chat.controller";
+import { ChatController, ErrorDeChat, type RespuestaTutor } from "@/backend/controllers/chat.controller";
+import { URL_API_OPENAI_POR_DEFECTO } from "@/backend/lib/openai";
 import { Conversacion } from "@/backend/models/conversacion.model";
+import { MaterialCatedra } from "@/backend/models/materialCatedra.model";
 
 // Sin mocks: todos los tests le hablan a la API real de OpenAI (necesitan internet).
 
@@ -16,14 +18,19 @@ function conversacion(texto: string): Conversacion {
   return resultado.conversacion;
 }
 
+/** Nombres de las tools que usó el modelo, sin repetir. */
+const herramientas = (respuesta: RespuestaTutor) => [...new Set(respuesta.herramientas.map((h) => h.nombre))];
+
+/** Modelo real de OpenAI con una clave inválida: la API responde 401 sin gastar crédito. */
+const modeloConClaveInvalida = () =>
+  createOpenAI({ apiKey: "sk-clave-invalida-de-prueba", baseURL: URL_API_OPENAI_POR_DEFECTO }).chat("gpt-4o-mini");
+
 // Si no hay API key configurada, los tests que llaman al modelo de verdad se saltean (describe.skipIf).
 const hayClave = Boolean(process.env.OPENAI_API_KEY);
 
 describe("ChatController.responder — errores (con la API real, sin gastar crédito)", () => {
   it("con una clave inválida devuelve un error para el alumno, sin mostrar detalles técnicos", async () => {
-    const controller = new ChatController({
-      crearClienteOpenAI: () => new OpenAI({ apiKey: "sk-clave-invalida-de-prueba", maxRetries: 0 }),
-    });
+    const controller = new ChatController({ crearModelo: modeloConClaveInvalida });
 
     const error = await controller.responder(conversacion("Hola")).catch((e: unknown) => e);
 
@@ -34,9 +41,7 @@ describe("ChatController.responder — errores (con la API real, sin gastar cré
   });
 
   it("si OpenAI tarda demasiado, avisa que probés de nuevo (504)", async () => {
-    const controller = new ChatController({
-      crearClienteOpenAI: () => new OpenAI({ apiKey: "sk-clave-invalida-de-prueba", timeout: 1, maxRetries: 0 }),
-    });
+    const controller = new ChatController({ crearModelo: modeloConClaveInvalida, timeoutMs: 1 });
 
     await expect(controller.responder(conversacion("Hola"))).rejects.toMatchObject({
       status: 504,
@@ -46,31 +51,55 @@ describe("ChatController.responder — errores (con la API real, sin gastar cré
 });
 
 describe.skipIf(!hayClave)("ChatController.responder — respuestas reales (requiere OPENAI_API_KEY)", () => {
-  it("responde una consulta teórica usando la convención de la cátedra", async () => {
+  it("una consulta teórica usa los modelos (y solo los modelos) y respeta la convención de la cátedra", async () => {
     const respuesta = await new ChatController().responder(
-      conversacion("En una línea: ¿qué puede ir en la columna E.F.NO C. de la T.E.I.?")
+      conversacion("¿Qué puede ir en la columna E.F.NO C. de la T.E.I.? Explicámelo corto.")
     );
 
-    expect(respuesta.length).toBeGreaterThan(0);
+    expect(herramientas(respuesta)).toContain("consultar_modelos");
+    expect(herramientas(respuesta)).not.toContain("inspiracion_para_ejercicio");
     // La regla de la base de conocimiento: el mismo evento que originó la fila, o nada.
-    expect(respuesta.toLowerCase()).toMatch(/mismo evento|propio evento|sí mismo|nada|----/);
+    expect(respuesta.texto.toLowerCase()).toMatch(/mismo evento|propio evento|sí mismo|nada|----/);
   });
 
-  it("un ejercicio nuevo se redacta como la anexa y los parciales, sin revelar la metodología", async () => {
+  it("para resolver un ejercicio de la anexa busca su enunciado y usa los modelos", async () => {
+    const respuesta = await new ChatController().responder(
+      conversacion("Resolveme el análisis previo del ejercicio Garage de la Guía Anexa.")
+    );
+
+    expect(herramientas(respuesta)).toEqual(expect.arrayContaining(["buscar_ejercicio", "consultar_modelos"]));
+  });
+
+  it("un ejercicio nuevo se inspira en la cátedra pero no la copia, y no revela la metodología", async () => {
     const respuesta = await new ChatController().responder(
       conversacion("Dame un ejercicio nuevo para practicar, tipo parcial.")
     );
+    const titulosDeLaCatedra = MaterialCatedra.cargar()
+      .fichas.filter((ficha) => ficha.tipo === "ejercicio" && ficha.titulo.length >= 6)
+      .map((ficha) => ficha.titulo.toLowerCase());
+    const primeraLinea = respuesta.texto
+      .split("\n")
+      .find((linea) => linea.trim())!
+      .toLowerCase();
 
-    expect(respuesta).toMatch(/f\.?\s?d\.?\s?p/i);
-    expect(respuesta).toMatch(/se pide/i);
+    expect(herramientas(respuesta)).toContain("inspiracion_para_ejercicio");
+    expect(respuesta.texto).toMatch(/f\.?\s?d\.?\s?p/i);
+    expect(respuesta.texto).toMatch(/se pide/i);
+    // Creado desde cero: el título no es el de un ejercicio de la cátedra.
+    expect(titulosDeLaCatedra.filter((titulo) => primeraLinea.includes(titulo))).toEqual([]);
     // Lo tiene que descubrir el alumno: ni la metodología ni los nombres de eventos o variables.
-    expect(respuesta).not.toMatch(
+    expect(respuesta.texto).not.toMatch(
       /evento a evento|\bEaE\b|Δt|delta t|intervalos? constantes?|\bTPLL\b|\bTPS\b|\bTEF\b/i
     );
   });
 
   it("con un modelo que no existe devuelve el error de configuración", async () => {
-    const controller = new ChatController({ modelo: "modelo-que-no-existe" });
+    const controller = new ChatController({
+      crearModelo: () =>
+        createOpenAI({ apiKey: process.env.OPENAI_API_KEY!, baseURL: URL_API_OPENAI_POR_DEFECTO }).chat(
+          "modelo-que-no-existe"
+        ),
+    });
 
     await expect(controller.responder(conversacion("Hola"))).rejects.toMatchObject({ status: 502 });
   });

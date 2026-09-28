@@ -138,7 +138,10 @@ botón "Ver como texto" que muestra el Mermaid (WCAG 1.1.1).
   - **Ejercicios** (Guía Anexa resuelta y 2026, parciales, ejercicios
     resueltos, guía oficial 9 a 12): el tipo de ejercicio para practicar y
     la referencia de redacción y complejidad para inventar uno nuevo.
-  - Por consulta: hasta 2 de cada tipo, presentados en dos grupos. Lo de Δt
+  - El modelo pide el material con tools: `consultar_modelos` (teoría; también
+    para resolver y corregir), `buscar_ejercicio` (solo el enunciado) e
+    `inspiracion_para_ejercicio` (para crear uno nuevo desde cero). Las
+    resoluciones de la cátedra nunca se usan: algunas tienen errores. Lo de Δt
     y la guía 13 en adelante quedan en `pendientes.md`, sin cargar. Sin
     embeddings ni base vectorial.
 - **Ejercicios nuevos:** redactados como la anexa y los parciales (sección 8

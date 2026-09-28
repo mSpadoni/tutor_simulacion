@@ -56,25 +56,8 @@ describe("Conversacion.validar", () => {
   });
 });
 
-describe("Conversacion.textoParaBuscarMaterial", () => {
-  it("usa solo los dos últimos mensajes del alumno (no los del tutor)", () => {
-    const resultado = Conversacion.validar({
-      mensajes: [
-        { rol: "alumno", contenido: "primero" },
-        { rol: "tutor", contenido: "respuesta del tutor" },
-        { rol: "alumno", contenido: "segundo" },
-        { rol: "tutor", contenido: "otra respuesta" },
-        { rol: "alumno", contenido: "tercero" },
-      ],
-    });
-    if (!resultado.ok) throw new Error(resultado.error);
-
-    expect(resultado.conversacion.textoParaBuscarMaterial()).toBe("segundo\ntercero");
-  });
-});
-
-describe("Conversacion.paraOpenAI", () => {
-  it("pone el system prompt primero y traduce alumno → user, tutor → assistant", () => {
+describe("Conversacion.paraModelo", () => {
+  it("traduce alumno → user y tutor → assistant, en orden y sin system prompt", () => {
     const resultado = Conversacion.validar({
       mensajes: [
         { rol: "alumno", contenido: "Hola" },
@@ -84,8 +67,7 @@ describe("Conversacion.paraOpenAI", () => {
     });
     if (!resultado.ok) throw new Error(resultado.error);
 
-    expect(resultado.conversacion.paraOpenAI("INSTRUCCIONES")).toEqual([
-      { role: "system", content: "INSTRUCCIONES" },
+    expect(resultado.conversacion.paraModelo()).toEqual([
       { role: "user", content: "Hola" },
       { role: "assistant", content: "¿Qué querés hacer?" },
       { role: "user", content: "Un ejercicio" },
