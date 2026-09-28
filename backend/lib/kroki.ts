@@ -1,3 +1,4 @@
+import "server-only";
 // Cliente de Kroki (https://kroki.io): recibe el código Mermaid de un diagrama y devuelve la imagen en SVG.
 // Es la API externa del tutor. No necesita API key. Se puede cambiar el servidor con KROKI_URL (ej. uno propio).
 

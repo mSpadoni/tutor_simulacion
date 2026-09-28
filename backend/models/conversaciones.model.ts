@@ -1,3 +1,4 @@
+import "server-only";
 import type { UIMessage } from "ai";
 import { crearClienteServidor, type ClienteSupabase } from "@/backend/lib/supabase/server";
 import type { Database, Json } from "@/backend/types/database";

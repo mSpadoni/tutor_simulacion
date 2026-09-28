@@ -6,7 +6,12 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   // Hace que el atajo `@/` en los imports apunte a la raíz del proyecto, igual que en tsconfig.json.
   resolve: {
-    alias: { "@": fileURLToPath(new URL(".", import.meta.url)) },
+    alias: {
+      "@": fileURLToPath(new URL(".", import.meta.url)),
+      // `server-only` tira un error si se importa fuera del servidor de Next (condición "react-server").
+      // Los tests corren en Node, que es servidor: se usa el mismo archivo vacío que usa Next en el servidor.
+      "server-only": fileURLToPath(new URL("node_modules/server-only/empty.js", import.meta.url)),
+    },
   },
   test: {
     include: ["backend/tests/**/*.test.ts"],

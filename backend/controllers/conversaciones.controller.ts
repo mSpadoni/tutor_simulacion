@@ -1,3 +1,4 @@
+import "server-only";
 import type { UIMessage } from "ai";
 import { z } from "zod";
 import {

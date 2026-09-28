@@ -1,3 +1,4 @@
+import "server-only";
 import { tool } from "ai";
 import { z } from "zod";
 import { enunciadoDe, resolucionDe, type Ficha, type MaterialCatedra } from "@/backend/models/materialCatedra.model";

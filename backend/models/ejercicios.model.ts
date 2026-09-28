@@ -1,3 +1,4 @@
+import "server-only";
 import { z } from "zod";
 import { crearClienteServidor, type ClienteSupabase } from "@/backend/lib/supabase/server";
 import type { Database } from "@/backend/types/database";

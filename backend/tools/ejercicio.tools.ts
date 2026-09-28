@@ -1,3 +1,4 @@
+import "server-only";
 import { tool } from "ai";
 import { z } from "zod";
 import { EjercicioSchema, type EjerciciosModel } from "@/backend/models/ejercicios.model";

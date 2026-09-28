@@ -1,3 +1,4 @@
+import "server-only";
 import { ejerciciosModel, type EjerciciosModel } from "@/backend/models/ejercicios.model";
 
 /** Un ejercicio para la lista "Mis ejercicios": su título y la conversación donde se generó (si todavía existe). */

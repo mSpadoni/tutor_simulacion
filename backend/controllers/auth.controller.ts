@@ -1,3 +1,4 @@
+import "server-only";
 import { crearClienteServidor, type ClienteSupabase } from "@/backend/lib/supabase/server";
 import { Usuario } from "@/backend/models/usuario.model";
 
