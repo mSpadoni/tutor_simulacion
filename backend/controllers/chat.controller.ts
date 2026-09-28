@@ -90,7 +90,7 @@ export class ChatController {
  * Traduce un error técnico del proveedor a un ErrorDeChat con un mensaje para el alumno y un código HTTP.
  * `error instanceof OpenAI.X` pregunta "¿este error es de la clase X?" (cada tipo de falla tiene su clase).
  */
-function traducirError(error: unknown): ErrorDeChat {
+export function traducirError(error: unknown): ErrorDeChat {
   console.error("Error al consultar a OpenAI:", error);
 
   if (error instanceof OpenAI.APIConnectionTimeoutError) {
@@ -98,7 +98,15 @@ function traducirError(error: unknown): ErrorDeChat {
       cause: error,
     });
   }
-  if (error instanceof OpenAI.RateLimitError) {
+  // OpenAI manda "sin saldo" con el mismo 429 que "demasiadas consultas", pero esperar no lo arregla:
+  // es un problema de la cuenta, así que cae abajo, en el error de configuración.
+  // Hoy llega como type "insufficient_quota" + code "credit_balance_exhausted"; antes el code era "insufficient_quota".
+  const sinSaldo =
+    error instanceof OpenAI.RateLimitError &&
+    (error.type === "insufficient_quota" ||
+      error.code === "insufficient_quota" ||
+      error.code === "credit_balance_exhausted");
+  if (error instanceof OpenAI.RateLimitError && !sinSaldo) {
     return new ErrorDeChat("El tutor está recibiendo demasiadas consultas. Esperá un minuto y volvé a intentar.", 503, {
       cause: error,
     });
