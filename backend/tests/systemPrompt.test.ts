@@ -77,6 +77,41 @@ describe("armarSystemPrompt — herramientas", () => {
   });
 });
 
+describe("armarSystemPrompt — ejemplos (few-shot)", () => {
+  const prompt = armarSystemPrompt();
+
+  it("trae un ejemplo por cada tarea: consulta, corrección y ejercicio nuevo", () => {
+    expect(prompt).toContain("# Ejemplos");
+    expect(prompt).toContain("## Ejemplo 1 — Consulta de cómo se hace algo");
+    expect(prompt).toContain("## Ejemplo 2 — Corrección");
+    expect(prompt).toContain("## Ejemplo 3 — Ejercicio nuevo");
+  });
+
+  it("cada ejemplo usa las herramientas que corresponden a su tarea", () => {
+    const ejemplo = (numero: number) =>
+      prompt.slice(prompt.indexOf(`## Ejemplo ${numero}`), prompt.indexOf(`## Ejemplo ${numero + 1}`) >>> 0);
+
+    expect(ejemplo(1)).toContain("consultar_modelos");
+    expect(ejemplo(2)).toContain("buscar_ejercicio");
+    expect(ejemplo(2)).toContain("consultar_modelos");
+    expect(ejemplo(3)).toContain("inspiracion_para_ejercicio");
+  });
+
+  it("la corrección del ejemplo sigue el formato de la cátedra: qué va a revisar y un solo error con ⚠", () => {
+    expect(prompt).toContain('"Voy a revisar: 1) metodología 2) variables 3) T.E.I."');
+    expect(prompt).toContain('"> ⚠ **Error en las variables:**');
+  });
+
+  it("el ejercicio del ejemplo no nombra la metodología y termina en «Se pide:»", () => {
+    // Hasta el separador "---": después viene la base de conocimiento, que sí habla de la metodología.
+    const inicio = prompt.indexOf("## Ejemplo 3");
+    const ejemplo3 = prompt.slice(inicio, prompt.indexOf("\n---\n", inicio));
+
+    expect(ejemplo3).toContain("Se pide:");
+    expect(ejemplo3).not.toMatch(/evento a evento|\bEaE\b|Δt/i);
+  });
+});
+
 describe("armarSystemPrompt — ejercicios nuevos", () => {
   const prompt = armarSystemPrompt();
 
