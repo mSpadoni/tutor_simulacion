@@ -3,7 +3,8 @@
 // - it("qué debería pasar", () => {...}): un test. Si alguna línea `expect` no se cumple, el test falla.
 // - expect(valor).toBe(esperado): compara. Otros: toEqual (mismo contenido), toContain, toMatch (regex), toThrow...
 import { describe, expect, it } from "vitest";
-import { MaterialCatedra, leerFichas, type Ficha } from "@/backend/models/materialCatedra.model";
+import { leerFichas, type Ficha } from "@/backend/models/dominio/ficha";
+import { MaterialCatedra } from "@/backend/models/materialCatedra.model";
 
 // Sin mocks: se carga el material real de backend/knowledge.
 const material = MaterialCatedra.cargar();

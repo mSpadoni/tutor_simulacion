@@ -1,7 +1,8 @@
 import "server-only";
 import { tool } from "ai";
 import { z } from "zod";
-import { enunciadoDe, resolucionDe, type Ficha, type MaterialCatedra } from "@/backend/models/materialCatedra.model";
+import { enunciadoDe, resolucionDe, type Ficha } from "@/backend/models/dominio/ficha";
+import type { MaterialCatedra } from "@/backend/models/materialCatedra.model";
 
 // Tools con las que el modelo consulta el material de la cátedra. El modelo decide cuál usar según lo que pide
 // el alumno (eso es la interpretación de intención): el código no elige por él.

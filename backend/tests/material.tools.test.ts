@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { MaterialCatedra, enunciadoDe, resolucionDe } from "@/backend/models/materialCatedra.model";
+import { enunciadoDe, resolucionDe } from "@/backend/models/dominio/ficha";
+import { MaterialCatedra } from "@/backend/models/materialCatedra.model";
 import {
   buscarEjercicio,
   consultarModelos,
