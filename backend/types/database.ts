@@ -1,58 +1,226 @@
-// Tipos de la base, en el formato que genera el CLI de Supabase.
-// Escritos a mano a partir de backend/supabase/migrations. Cuando cambie el schema, regenerarlos con:
-//   npx supabase gen types typescript --local --workdir backend > backend/types/database.ts
-
-// Cómo leer este archivo:
-// - Row: cómo viene una fila al leerla (todas las columnas).
-// - Insert: qué hay que pasar al insertar. El `?` (ej. `id?:`) marca las opcionales: las completa la base con su default.
-// - Update: qué se puede pasar al actualizar (todo opcional: solo mandás lo que cambia).
-// - `{ [_ in never]: never }`: forma de decir "objeto vacío" (esta base no tiene vistas ni funciones propias).
-
-/** Cualquier valor que se puede guardar en una columna jsonb. Es recursivo: un Json puede contener otros Json. */
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never;
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      graphql: { Args: { extensions?: Json; operationName?: string; query?: string; variables?: Json }; Returns: Json };
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
+  };
   public: {
     Tables: {
-      ejercicios_historial: {
+      conversaciones: {
         Row: {
-          id: string;
-          usuario_id: string;
-          tipo_ejercicio: string;
-          enunciado: string;
-          resultado: Database["public"]["Enums"]["resultado_ejercicio"];
-          pasos_con_error: Json | null;
-          diagrama_json: Json | null;
+          actualizado_en: string;
           creado_en: string;
+          id: string;
+          titulo: string;
+          usuario_id: string;
         };
         Insert: {
-          id?: string;
-          usuario_id?: string;
-          tipo_ejercicio: string;
-          enunciado: string;
-          resultado: Database["public"]["Enums"]["resultado_ejercicio"];
-          pasos_con_error?: Json | null;
-          diagrama_json?: Json | null;
+          actualizado_en?: string;
           creado_en?: string;
+          id: string;
+          titulo: string;
+          usuario_id?: string;
         };
         Update: {
-          id?: string;
-          usuario_id?: string;
-          tipo_ejercicio?: string;
-          enunciado?: string;
-          resultado?: Database["public"]["Enums"]["resultado_ejercicio"];
-          pasos_con_error?: Json | null;
-          diagrama_json?: Json | null;
+          actualizado_en?: string;
           creado_en?: string;
+          id?: string;
+          titulo?: string;
+          usuario_id?: string;
         };
         Relationships: [];
       };
+      ejercicios: {
+        Row: {
+          creado_en: string;
+          dificultad: string;
+          id: string;
+          payload: NonNullable<Json>;
+          tema: string;
+          usuario_id: string;
+        };
+        Insert: {
+          creado_en?: string;
+          dificultad: string;
+          id?: string;
+          payload: NonNullable<Json>;
+          tema: string;
+          usuario_id?: string;
+        };
+        Update: {
+          creado_en?: string;
+          dificultad?: string;
+          id?: string;
+          payload?: NonNullable<Json>;
+          tema?: string;
+          usuario_id?: string;
+        };
+        Relationships: [];
+      };
+      mensajes: {
+        Row: {
+          conversacion_id: string;
+          creado_en: string;
+          id: string;
+          partes: NonNullable<Json>;
+          rol: string;
+        };
+        Insert: {
+          conversacion_id: string;
+          creado_en?: string;
+          id: string;
+          partes: NonNullable<Json>;
+          rol: string;
+        };
+        Update: {
+          conversacion_id?: string;
+          creado_en?: string;
+          id?: string;
+          partes?: NonNullable<Json>;
+          rol?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "mensajes_conversacion_id_fkey";
+            columns: ["conversacion_id"];
+            isOneToOne: false;
+            referencedRelation: "conversaciones";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
-    Views: { [_ in never]: never };
-    Functions: { [_ in never]: never };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      [_ in never]: never;
+    };
     Enums: {
-      resultado_ejercicio: "correcto" | "con_errores" | "abandonado";
+      [_ in never]: never;
     };
-    CompositeTypes: { [_ in never]: never };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
   };
 };
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">;
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">];
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    keyof (DefaultSchema["Tables"] & DefaultSchema["Views"]) | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R;
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] & DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R;
+      }
+      ? R
+      : never
+    : never;
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I;
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I;
+      }
+      ? I
+      : never
+    : never;
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U;
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U;
+      }
+      ? U
+      : never
+    : never;
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"] | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never) = never,
+> = DefaultSchemaEnumNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never;
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    keyof DefaultSchema["CompositeTypes"] | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never) = never,
+> = PublicCompositeTypeNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never;
+
+export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
+  public: {
+    Enums: {},
+  },
+} as const;

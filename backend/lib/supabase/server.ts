@@ -7,7 +7,7 @@ import type { Database } from "@/backend/types/database";
 /**
  * Tipo del cliente de Supabase de esta app.
  * `SupabaseClient<Database>`: el `<...>` es un genérico; le dice al cliente qué tablas y columnas existen,
- * así el editor autocompleta `.from("ejercicios_historial")` y avisa si escribís mal una columna.
+ * así el editor autocompleta `.from("conversaciones")` y avisa si escribís mal una columna.
  */
 export type ClienteSupabase = SupabaseClient<Database>;
 
