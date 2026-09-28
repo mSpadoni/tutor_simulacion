@@ -1,9 +1,7 @@
 import "server-only";
+import { envKroki } from "@/backend/lib/env";
 // Cliente de Kroki (https://kroki.io): recibe el código Mermaid de un diagrama y devuelve la imagen en SVG.
 // Es la API externa del tutor. No necesita API key. Se puede cambiar el servidor con KROKI_URL (ej. uno propio).
-
-/** Servidor público de Kroki, el que se usa si KROKI_URL está vacía. */
-export const URL_KROKI_POR_DEFECTO = "https://kroki.io";
 
 /** Largo máximo del código Mermaid: un diagrama de la materia entra de sobra; más es un error del modelo. */
 export const MAX_CARACTERES_MERMAID = 6000;
@@ -58,7 +56,7 @@ export function validarMermaid(codigo: string): ResultadoKroki | null {
 /** Pide a Kroki el SVG de un diagrama Mermaid, con timeout, reintentos y validación de la respuesta. */
 export async function renderizarMermaid(codigo: string, opciones: Opciones = {}): Promise<ResultadoKroki> {
   const {
-    endpoint = `${(process.env.KROKI_URL || URL_KROKI_POR_DEFECTO).replace(/\/$/, "")}/mermaid/svg`,
+    endpoint = `${envKroki().url}/mermaid/svg`,
     timeoutMs = 8000,
     reintentos = 1,
     maxEsperaReintentoMs = 3000,

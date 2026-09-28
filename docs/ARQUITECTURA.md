@@ -12,7 +12,7 @@ MVC sobre Next.js (App Router) + Supabase, con reglas de dependencia que se hace
 | Repositorios    | `backend/models/` (conversaciones, ejercicios)                                                  | Únicos que consultan Supabase. Sin interfaces: una sola implementación y los tests usan la base local real.                           | lib/supabase                                   |
 | Dominio         | `backend/lib/fdp.ts`, `backend/models/pedidoDeChat.model.ts`, `backend/models/usuario.model.ts` | Lógica pura.                                                                                                                          | Zod, mathjs, **solo tipos** de otras librerías |
 | Tutor (LLM)     | `backend/tools/`, `backend/lib/prompts/`, `backend/lib/openai.ts`                               | Tools, prompt y modelo.                                                                                                               | repositorios, dominio, lib                     |
-| Infraestructura | `backend/lib/` (supabase, openai, kroki)                                                        | Clientes y adaptadores de servicios externos.                                                                                         | —                                              |
+| Infraestructura | `backend/lib/` (env, supabase, openai, kroki)                                                   | Clientes y adaptadores de servicios externos.                                                                                         | —                                              |
 | Views           | `views/`                                                                                        | Componentes React. Los datos llegan por props y las acciones como Server Actions.                                                     | otras views                                    |
 
 ## Autenticación, autorización y datos
@@ -29,6 +29,7 @@ MVC sobre Next.js (App Router) + Supabase, con reglas de dependencia que se hace
 3. `app/` no usa Supabase ni los repositorios directamente: pasa por un controller.
 4. El dominio no importa Next, Supabase, el AI SDK ni `backend/lib/` (solo `import type`).
 5. Los módulos del servidor empiezan con `import "server-only"`: si un Client Component los importa, el build falla.
+6. Solo `backend/lib/env.ts` lee `process.env`: cada servicio (Supabase, OpenAI, Kroki) valida sus variables con Zod al usarlas, así una que falta de un servicio no afecta a los otros. Si falta la de Supabase, el middleware deja pasar el request en vez de tumbar el sitio.
 
 Las prueba `backend/tests/arquitectura.test.ts` con el ESLint real del proyecto.
 
@@ -37,7 +38,7 @@ Las prueba `backend/tests/arquitectura.test.ts` con el ESLint real del proyecto.
 | #   | Etapa                                                                                                   | Estado    |
 | --- | ------------------------------------------------------------------------------------------------------- | --------- |
 | 1   | Reglas que se hacen cumplir solas (`server-only` + ESLint)                                              | Hecha     |
-| 2   | Variables de entorno en un solo lugar (`lib/env.ts`, Zod); el middleware no tumba el sitio si falta una | Pendiente |
+| 2   | Variables de entorno en un solo lugar (`lib/env.ts`, Zod); el middleware no tumba el sitio si falta una | Hecha     |
 | 3   | Sacar el refetch del historial después de cada respuesta (`router.refresh`)                             | Pendiente |
 | 4   | Contrato tipado cliente↔servidor (`shared/`: nombres de tools, límites, `TutorUIMessage`)               | Pendiente |
 | 5   | Dividir `ChatController` (agente del LLM y errores aparte)                                              | Pendiente |

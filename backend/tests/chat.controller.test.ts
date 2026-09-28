@@ -7,11 +7,12 @@ import { createOpenAI } from "@ai-sdk/openai";
 import type { UIMessage } from "ai";
 import { afterAll, describe, expect, it } from "vitest";
 import { ChatController, ErrorDeChat } from "@/backend/controllers/chat.controller";
-import { URL_API_OPENAI_POR_DEFECTO } from "@/backend/lib/openai";
+import { URL_API_OPENAI_POR_DEFECTO } from "@/backend/lib/env";
 import { ConversacionesModel } from "@/backend/models/conversaciones.model";
 import { EjerciciosModel } from "@/backend/models/ejercicios.model";
 import { PedidoDeChat } from "@/backend/models/pedidoDeChat.model";
 import { borrarAlumnosDePrueba, crearAlumnoLogueado } from "./helpers/alumnoDePrueba";
+import { conVariablesAsync } from "./helpers/variablesDeEntorno";
 
 // Sin mocks: la base es la copia local de Supabase y el modelo es la API real de OpenAI (necesitan internet).
 afterAll(borrarAlumnosDePrueba);
@@ -64,6 +65,24 @@ const herramientas = (mensaje: UIMessage) => [
 /** Modelo real de OpenAI con una clave inválida: la API responde 401 sin gastar crédito. */
 const modeloConClaveInvalida = () =>
   createOpenAI({ apiKey: "sk-clave-invalida-de-prueba", baseURL: URL_API_OPENAI_POR_DEFECTO }).chat("gpt-4o-mini");
+
+describe("ChatController.responder — sin configuración de OpenAI", () => {
+  it("si falta OPENAI_API_KEY, el alumno ve «no está disponible» (502) y no se guarda nada", async () => {
+    // Sin crearModelo: usa el real, que lee la key de las variables de entorno.
+    const alumno = await crearAlumnoLogueado();
+    const conversaciones = new ConversacionesModel(alumno.navegador.crearCliente);
+    const controller = new ChatController({ conversaciones: () => conversaciones });
+    const id = randomUUID();
+
+    const error = await conVariablesAsync({ OPENAI_API_KEY: undefined }, () =>
+      conversar(controller, id, "Hola").catch((e: unknown) => e)
+    );
+
+    expect(error).toBeInstanceOf(ErrorDeChat);
+    expect(error).toMatchObject({ status: 502, mensajeParaAlumno: expect.stringContaining("no está disponible") });
+    expect(await conversaciones.obtener(id)).toBeNull();
+  });
+});
 
 describe("ChatController.responder — conversación y errores (sin gastar crédito)", () => {
   it("una conversación nueva se crea con el primer mensaje como título, y ese mensaje queda guardado", async () => {

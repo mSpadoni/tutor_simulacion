@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { leerConfigSupabase } from "@/backend/lib/supabase/config";
+import { envSupabase } from "@/backend/lib/env";
 import type { Database } from "@/backend/types/database";
 
 /**
@@ -9,7 +9,7 @@ import type { Database } from "@/backend/types/database";
  * Lo llama middleware.ts (en la raíz) antes de cada página o request a la API.
  */
 export async function actualizarSesion(request: NextRequest): Promise<NextResponse> {
-  const { url, key } = leerConfigSupabase();
+  const { url, key } = envSupabase();
   // NextResponse.next() = "seguí con el request normalmente". Es `let` porque se reemplaza abajo si hay cookies nuevas.
   let response = NextResponse.next({ request });
 

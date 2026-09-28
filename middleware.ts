@@ -1,4 +1,4 @@
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { actualizarSesion } from "@/backend/lib/supabase/middleware";
 
 /**
@@ -6,7 +6,14 @@ import { actualizarSesion } from "@/backend/lib/supabase/middleware";
  * antes de cada request (páginas y API). Acá solo se refresca la sesión de Supabase.
  */
 export async function middleware(request: NextRequest) {
-  return actualizarSesion(request);
+  try {
+    return await actualizarSesion(request);
+  } catch (error) {
+    // Si falta configuración o Supabase no responde, no se tumba todo el sitio con un 500 de Vercel: se deja pasar
+    // el request sin refrescar la sesión, y la página que necesite Supabase muestra su propio error.
+    console.error("No se pudo refrescar la sesión en el middleware:", error);
+    return NextResponse.next({ request });
+  }
 }
 
 /** Configuración que lee Next.js: en qué rutas corre el middleware. */

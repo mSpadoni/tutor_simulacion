@@ -102,7 +102,26 @@ describe("server-only", () => {
       "backend/models/pedidoDeChat.model.ts",
       "backend/models/usuario.model.ts",
     ]) {
-      expect(readFileSync(archivo, "utf8"), archivo).not.toContain("server-only");
+      expect(readFileSync(archivo, "utf8"), archivo).not.toContain(`import "server-only"`);
     }
+  });
+
+  it("lo que usa el middleware (Edge) tampoco: env.ts y el cliente de Supabase del middleware", () => {
+    for (const archivo of ["backend/lib/env.ts", "backend/lib/supabase/middleware.ts"]) {
+      expect(readFileSync(archivo, "utf8"), archivo).not.toContain(`import "server-only"`);
+    }
+  });
+});
+
+describe("variables de entorno en un solo lugar", () => {
+  it("solo backend/lib/env.ts lee process.env (fuera de los tests)", () => {
+    const leen = (carpeta: string): string[] =>
+      readdirSync(carpeta, { withFileTypes: true, recursive: true })
+        .filter((entrada) => entrada.isFile() && /\.tsx?$/.test(entrada.name))
+        .map((entrada) => path.join(entrada.parentPath, entrada.name))
+        .filter((archivo) => !archivo.includes(`${path.sep}tests${path.sep}`))
+        .filter((archivo) => readFileSync(archivo, "utf8").includes("process.env"));
+
+    expect([...leen("backend"), ...leen("app"), ...leen("views")]).toEqual([path.join("backend", "lib", "env.ts")]);
   });
 });

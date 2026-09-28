@@ -108,6 +108,15 @@ export class ChatController {
     const conversaciones = this.conversaciones();
     const { conversacionId, mensaje } = pedido;
 
+    // 0) El modelo primero: si falta configuración (ej. OPENAI_API_KEY), se corta antes de guardar nada y el
+    //    alumno ve el mensaje de siempre en vez de un 500 genérico.
+    let modelo: LanguageModel;
+    try {
+      modelo = this.crearModelo();
+    } catch (error) {
+      throw traducirError(error);
+    }
+
     // 1) La conversación: si es nueva, se crea con el primer mensaje como título.
     if (!(await conversaciones.obtener(conversacionId))) {
       // Si falla, el id ya existe pero es de otro alumno (RLS no se la deja ver).
@@ -132,7 +141,7 @@ export class ChatController {
     };
     const inicio = Date.now();
     const resultado = streamText({
-      model: this.crearModelo(),
+      model: modelo,
       system: armarSystemPrompt(),
       messages: await convertToModelMessages(mensajes.map(soloTexto)),
       tools,

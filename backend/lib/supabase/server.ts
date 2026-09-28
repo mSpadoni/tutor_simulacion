@@ -2,7 +2,7 @@ import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
-import { leerConfigSupabase } from "@/backend/lib/supabase/config";
+import { envSupabase } from "@/backend/lib/env";
 import type { Database } from "@/backend/types/database";
 
 /**
@@ -20,8 +20,8 @@ export type ClienteSupabase = SupabaseClient<Database>;
 export async function crearClienteServidor(): Promise<ClienteSupabase> {
   // cookies() primero: marca la página como dinámica antes de validar las variables de entorno.
   const cookieStore = await cookies();
-  // Desestructuración: saca `url` y `key` del objeto que devuelve leerConfigSupabase().
-  const { url, key } = leerConfigSupabase();
+  // Desestructuración: saca `url` y `key` del objeto que devuelve envSupabase().
+  const { url, key } = envSupabase();
 
   // Se le explica a Supabase cómo leer y escribir cookies en Next.js, con dos funciones:
   return createServerClient<Database>(url, key, {
