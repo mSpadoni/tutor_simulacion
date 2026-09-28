@@ -139,8 +139,7 @@ npm run db:stop
 - Cada request se simula con un `NavegadorDePrueba`
   (`backend/tests/helpers/alumnoDePrueba.ts`): un cliente de `@supabase/ssr`
   igual al de la app, que lee y escribe cookies en memoria.
-- Cada archivo de tests crea sus alumnos y los borra al terminar (su
-  conversaciones y mensajes se borran en cascada).
+- Cada archivo de tests crea sus alumnos y los borra al terminar (sus conversaciones y mensajes se borran en cascada).
 - `npm run db:reset` recrea la base local desde las migraciones.
 - Los tests del chat le hablan a la API real de OpenAI. Los de errores (clave
   inválida, timeout) no gastan crédito y corren siempre; los que piden una
