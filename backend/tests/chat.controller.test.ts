@@ -168,6 +168,20 @@ describe.skipIf(!hayClave)("ChatController.responder — respuestas reales (requ
     expect(herramientas(tutor)).not.toContain("generar_diagrama_flujo");
   });
 
+  it("al resolver una f.d.p., la verifica con verificar_fdp", async () => {
+    const { conversaciones, controller } = await alumnoConChat();
+    const id = randomUUID();
+
+    await conversar(
+      controller,
+      id,
+      "Resolveme esta f.d.p. por el método más conveniente: f(x) = k·(x − 1) entre 1 y 7."
+    );
+    const [, tutor] = await mensajesGuardados(conversaciones, id, 2);
+
+    expect(herramientas(tutor)).toContain("verificar_fdp");
+  });
+
   it("si el alumno pide el diagrama, lo dibuja con Kroki y queda guardado en el mensaje", async () => {
     const { conversaciones, controller } = await alumnoConChat();
     const id = randomUUID();

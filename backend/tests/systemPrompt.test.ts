@@ -36,6 +36,19 @@ describe("armarSystemPrompt", () => {
   });
 });
 
+describe("armarSystemPrompt — f.d.p. y fórmulas", () => {
+  const prompt = armarSystemPrompt();
+
+  it("pide verificar toda f.d.p. con verificar_fdp antes de responder", () => {
+    expect(prompt).toContain("**verificar_fdp(fx, a, b, k?, inversa?, M?)**");
+    expect(prompt).toContain("**antes de responder, verificala con verificar_fdp**");
+  });
+
+  it("pide las fórmulas en LaTeX con $...$ (lo que muestra KaTeX)", () => {
+    expect(prompt).toContain("Las fórmulas van en LaTeX: `$...$` dentro de una línea");
+  });
+});
+
 describe("armarSystemPrompt — diagramas", () => {
   const prompt = armarSystemPrompt();
 

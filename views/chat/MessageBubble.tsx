@@ -1,5 +1,7 @@
 import ReactMarkdown, { type Components } from "react-markdown";
+import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 import type { UIMessage } from "ai";
 import { diagramaDe, herramientaFallo, TEXTOS_DE_HERRAMIENTAS, type DiagramaParaMostrar } from "./tipos";
 
@@ -112,7 +114,12 @@ export default function MessageBubble({ mensaje }: { mensaje: UIMessage }) {
           <p className="whitespace-pre-wrap">{texto}</p>
         ) : (
           texto && (
-            <ReactMarkdown remarkPlugins={[remarkGfm]} components={componentesMarkdown}>
+            // remark-math + rehype-katex: las fórmulas en LaTeX ($...$) se ven como fórmulas (y con MathML accesible).
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm, remarkMath]}
+              rehypePlugins={[rehypeKatex]}
+              components={componentesMarkdown}
+            >
               {texto}
             </ReactMarkdown>
           )

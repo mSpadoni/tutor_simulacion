@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "katex/dist/katex.min.css"; // Estilos de las fórmulas (KaTeX).
 import "./globals.css"; // Importar el CSS acá lo aplica a todas las páginas.
 
 // Next.js lee esta constante y la usa para el <title> y la descripción de la pestaña del navegador.

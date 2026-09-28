@@ -61,6 +61,10 @@ export const TEXTOS_DE_HERRAMIENTAS: Record<string, { usando: string; usada: str
     usando: "Dibujando el diagrama de flujo…",
     usada: "Dibujó el diagrama de flujo",
   },
+  verificar_fdp: {
+    usando: "Verificando la f.d.p. con cálculo numérico…",
+    usada: "Verificó la f.d.p. con cálculo numérico",
+  },
 };
 
 /** Un diagrama listo para mostrar: el SVG va como data URL en un <img> (así el navegador no ejecuta nada de adentro). */

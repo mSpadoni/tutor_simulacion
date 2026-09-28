@@ -17,6 +17,7 @@ import { conversacionesModel, tituloDesde, type ConversacionesModel } from "@/ba
 import { obtenerMaterialCatedra, type MaterialCatedra } from "@/backend/models/materialCatedra.model";
 import { MAX_MENSAJES_CONTEXTO, type PedidoDeChat } from "@/backend/models/pedidoDeChat.model";
 import { crearToolsDiagrama } from "@/backend/tools/diagrama.tools";
+import { crearToolsFdp } from "@/backend/tools/fdp.tools";
 import { crearToolsMaterial } from "@/backend/tools/material.tools";
 
 /** Error con un mensaje pensado para mostrarle al alumno (qué pasó y qué hacer) y su código HTTP. */
@@ -116,7 +117,7 @@ export class ChatController {
     const mensajes = [...historial, mensaje];
 
     // 3) El modelo, en streaming.
-    const tools = { ...crearToolsMaterial(this.material()), ...crearToolsDiagrama() };
+    const tools = { ...crearToolsMaterial(this.material()), ...crearToolsDiagrama(), ...crearToolsFdp() };
     const inicio = Date.now();
     const resultado = streamText({
       model: this.crearModelo(),

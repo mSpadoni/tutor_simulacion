@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { estaCercaDelFinal, mensajeDeError, siguienteScroll, TEXTOS_DE_HERRAMIENTAS } from "@/views/chat/tipos";
+import { crearToolsDiagrama } from "@/backend/tools/diagrama.tools";
+import { crearToolsFdp } from "@/backend/tools/fdp.tools";
 import { crearToolsMaterial } from "@/backend/tools/material.tools";
 import { MaterialCatedra } from "@/backend/models/materialCatedra.model";
 
@@ -75,7 +77,11 @@ describe("siguienteScroll (la pantalla se desliza hacia el final, sin saltos)", 
 
 describe("TEXTOS_DE_HERRAMIENTAS", () => {
   it("tiene texto para cada tool del tutor (para que el alumno vea qué está haciendo)", () => {
-    const tools = Object.keys(crearToolsMaterial(MaterialCatedra.cargar()));
+    const tools = Object.keys({
+      ...crearToolsMaterial(MaterialCatedra.cargar()),
+      ...crearToolsDiagrama(),
+      ...crearToolsFdp(),
+    });
 
     for (const nombre of tools) {
       expect(TEXTOS_DE_HERRAMIENTAS[nombre]?.usando, nombre).toBeTruthy();
