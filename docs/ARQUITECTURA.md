@@ -32,10 +32,10 @@ MVC sobre Next.js (App Router) + Supabase, con reglas de dependencia que se hace
 5. Los módulos del servidor empiezan con `import "server-only"`: si un Client Component los importa, el build falla.
 6. Solo `backend/lib/env.ts` lee `process.env`: cada servicio (Supabase, OpenAI, Kroki) valida sus variables con Zod al usarlas, así una que falta de un servicio no afecta a los otros. Si falta la de Supabase, el middleware deja pasar el request en vez de tumbar el sitio.
 7. `shared/` no importa backend, views, rutas ni SDKs (salvo `import type`, que no llega al navegador): lo que está ahí se puede usar desde el navegador sin arrastrar código del servidor.
-8. El contrato del chat vive en `shared/chat.ts`: los límites y `TutorUIMessage`, derivado de las tools reales (`crearToolsTutor`). La vista no usa strings sueltos ni casts para las tools: si una cambia de nombre, datos o resultado, deja de compilar (lo prueba `backend/tests/contratoChat.test.ts`).
+8. El contrato del chat vive en `shared/chat.ts`: los límites y `TutorUIMessage`, derivado de las tools reales (`crearToolsTutor`). La vista no usa strings sueltos ni casts para las tools: si una cambia de nombre, datos o resultado, deja de compilar (lo prueba `backend/tests/rapidos/contratoChat.test.ts`).
 9. Los datos se leen en Server Components al abrir la página; después de una acción del alumno, la vista se actualiza con lo que ya sabe (sin `router.refresh()` ni volver a consultar).
 
-Las prueba `backend/tests/arquitectura.test.ts` con el ESLint real del proyecto.
+Las prueba `backend/tests/rapidos/arquitectura.test.ts` con el ESLint real del proyecto, y `npm run lint` las aplica a `app/`, `backend/`, `views/` y `shared/` (`eslint.dirs` en `next.config.ts`).
 
 ## Plan de refactor
 
@@ -50,5 +50,5 @@ La carpeta `backend/models/` se mantiene (es la M de MVC) y adentro separa `repo
 | 5   | Dividir `ChatController` (agente del LLM y errores aparte)                                              | Hecha     |
 | 6   | Nombres correctos (`models/repositorios/`, `models/dominio/`), helpers de queries                       | Hecha     |
 | 7   | Separar `MaterialCatedra` (parser e índice puros, lectura de disco aparte)                              | Hecha     |
-| 8   | Tests rápidos (base local) separados de los externos (OpenAI, Kroki)                                    | Pendiente |
+| 8   | Tests rápidos (sin Docker ni internet) separados de los externos (Supabase local, Kroki, OpenAI)        | Hecha     |
 | 9   | Vista: hooks de scroll y anuncio, un componente por tipo de parte                                       | Pendiente |

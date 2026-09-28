@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, describe, expect, it } from "vitest";
 import { datosOError } from "@/backend/lib/supabase/consultas";
-import { borrarAlumnosDePrueba, crearAlumnoLogueado, NavegadorDePrueba } from "./helpers/alumnoDePrueba";
+import { borrarAlumnosDePrueba, crearAlumnoLogueado, NavegadorDePrueba } from "../helpers/alumnoDePrueba";
 
 // Sin mocks: consultas reales a la copia local de Supabase (Docker).
 afterAll(borrarAlumnosDePrueba);

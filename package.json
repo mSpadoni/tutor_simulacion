@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
+    "test:rapidos": "vitest run --project rapidos",
+    "test:externos": "vitest run --project externos",
     "test:watch": "vitest",
     "db:start": "supabase start --workdir backend",
     "db:stop": "supabase stop --workdir backend",

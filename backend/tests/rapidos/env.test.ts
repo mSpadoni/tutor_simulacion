@@ -8,7 +8,7 @@ import {
   URL_API_OPENAI_POR_DEFECTO,
   URL_KROKI_POR_DEFECTO,
 } from "@/backend/lib/env";
-import { conVariables } from "./helpers/variablesDeEntorno";
+import { conVariables } from "../helpers/variablesDeEntorno";
 
 // Sin mocks: se cambian las variables de entorno reales y se restauran al terminar cada caso.
 

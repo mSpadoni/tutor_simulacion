@@ -99,6 +99,32 @@ describe("reglas de dependencia (ESLint)", () => {
       )
     ).toHaveLength(1);
   });
+
+  it("los tests rápidos no usan Supabase, Kroki ni OpenAI (esos van en tests/externos/)", async () => {
+    const archivo = "backend/tests/rapidos/nuevo.test.ts";
+
+    expect(
+      await erroresDeDependencia('import { crearAlumnoLogueado } from "../helpers/alumnoDePrueba";', archivo)
+    ).toEqual([expect.stringContaining("va en backend/tests/externos/")]);
+    expect(
+      await erroresDeDependencia('import { renderizarMermaid } from "@/backend/lib/kroki";', archivo)
+    ).toHaveLength(1);
+    expect(
+      await erroresDeDependencia('import type { DiagramaGenerado } from "@/backend/tools/diagrama.tools";', archivo)
+    ).toEqual([]);
+    expect(
+      await erroresDeDependencia(
+        'import { crearAlumnoLogueado } from "../helpers/alumnoDePrueba";',
+        "backend/tests/externos/nuevo.test.ts"
+      )
+    ).toEqual([]);
+  });
+
+  it("`npm run lint` y el build revisan todas las capas, no solo app/", async () => {
+    const { default: configuracion } = await import("@/next.config");
+
+    expect(configuracion.eslint?.dirs).toEqual(expect.arrayContaining(["app", "backend", "views", "shared"]));
+  });
 });
 
 /** Los .ts de una carpeta de backend (sin los tests). */

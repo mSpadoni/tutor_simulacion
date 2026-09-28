@@ -6,6 +6,11 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/api/chat": ["./backend/knowledge/**/*"],
   },
+  // Carpetas que revisa ESLint en `npm run lint` y en el build (por defecto Next solo mira app/, pages/, lib/...):
+  // así las reglas de arquitectura de eslint.config.mjs se aplican a todo el código.
+  eslint: {
+    dirs: ["app", "backend", "views", "shared"],
+  },
 };
 
 export default nextConfig;

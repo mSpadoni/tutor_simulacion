@@ -4,7 +4,7 @@ import { EjerciciosController } from "@/backend/controllers/ejercicios.controlle
 import { ConversacionesModel } from "@/backend/models/repositorios/conversaciones.model";
 import { EjerciciosModel } from "@/backend/models/repositorios/ejercicios.model";
 import { crearToolsEjercicio, guardarEjercicio, type DatosEjercicio } from "@/backend/tools/ejercicio.tools";
-import { borrarAlumnosDePrueba, crearAlumnoLogueado } from "./helpers/alumnoDePrueba";
+import { borrarAlumnosDePrueba, crearAlumnoLogueado } from "../helpers/alumnoDePrueba";
 
 // Sin mocks: contra la base local de Supabase, con alumnos reales logueados.
 afterAll(borrarAlumnosDePrueba);

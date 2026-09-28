@@ -13,8 +13,8 @@ import { ConversacionesModel } from "@/backend/models/repositorios/conversacione
 import { EjerciciosModel } from "@/backend/models/repositorios/ejercicios.model";
 import { PedidoDeChat } from "@/backend/models/dominio/pedidoDeChat.model";
 import type { MetadatosDeRespuesta } from "@/shared/chat";
-import { borrarAlumnosDePrueba, crearAlumnoLogueado } from "./helpers/alumnoDePrueba";
-import { conVariablesAsync } from "./helpers/variablesDeEntorno";
+import { borrarAlumnosDePrueba, crearAlumnoLogueado } from "../helpers/alumnoDePrueba";
+import { conVariablesAsync } from "../helpers/variablesDeEntorno";
 
 // Sin mocks: la base es la copia local de Supabase y el modelo es la API real de OpenAI (necesitan internet).
 afterAll(borrarAlumnosDePrueba);

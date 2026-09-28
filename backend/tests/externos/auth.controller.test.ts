@@ -6,7 +6,7 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { AuthController } from "@/backend/controllers/auth.controller";
 import { Usuario } from "@/backend/models/dominio/usuario.model";
-import { borrarAlumnosDePrueba, crearAlumnoLogueado, NavegadorDePrueba } from "./helpers/alumnoDePrueba";
+import { borrarAlumnosDePrueba, crearAlumnoLogueado, NavegadorDePrueba } from "../helpers/alumnoDePrueba";
 
 afterAll(borrarAlumnosDePrueba);
 

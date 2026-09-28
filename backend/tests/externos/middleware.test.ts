@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { describe, expect, inject, it } from "vitest";
 import { middleware } from "@/middleware";
-import { conVariablesAsync } from "./helpers/variablesDeEntorno";
+import { conVariablesAsync } from "../helpers/variablesDeEntorno";
 
 // Sin mocks: el middleware real de Next con un request real, contra la base local de Supabase.
 const { url, publishableKey } = inject("supabaseLocal");

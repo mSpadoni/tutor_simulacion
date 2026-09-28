@@ -5,7 +5,7 @@
 // - afterAll(fn): corre `fn` una vez al terminar todos los tests del archivo (acá, borra los alumnos de prueba).
 import { afterAll, describe, expect, it } from "vitest";
 import { Usuario } from "@/backend/models/dominio/usuario.model";
-import { borrarAlumnosDePrueba, crearAlumnoLogueado } from "./helpers/alumnoDePrueba";
+import { borrarAlumnosDePrueba, crearAlumnoLogueado } from "../helpers/alumnoDePrueba";
 
 afterAll(borrarAlumnosDePrueba);
 

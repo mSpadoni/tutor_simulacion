@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, describe, expect, it } from "vitest";
 import { ConversacionesModel } from "@/backend/models/repositorios/conversaciones.model";
 import { EjerciciosModel, type NuevoEjercicio } from "@/backend/models/repositorios/ejercicios.model";
-import { borrarAlumnosDePrueba, crearAlumnoLogueado, NavegadorDePrueba } from "./helpers/alumnoDePrueba";
+import { borrarAlumnosDePrueba, crearAlumnoLogueado, NavegadorDePrueba } from "../helpers/alumnoDePrueba";
 
 // Sin mocks: contra la base local de Supabase, con alumnos reales logueados (las políticas RLS se aplican de verdad).
 afterAll(borrarAlumnosDePrueba);

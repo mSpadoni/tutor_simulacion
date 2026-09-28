@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ErrorDeConfiguracion } from "@/backend/lib/env";
 import { crearModeloOpenAI } from "@/backend/lib/openai";
-import { conVariables } from "./helpers/variablesDeEntorno";
+import { conVariables } from "../helpers/variablesDeEntorno";
 
 // Sin mocks: se usa el proveedor real del AI SDK con la configuración de las variables de entorno.
 

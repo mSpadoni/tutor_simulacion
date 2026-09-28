@@ -58,7 +58,8 @@ backend/
   knowledge/            Base de conocimiento + material de la cátedra en fichas (ver "Material de la cátedra").
   types/                Tipos de la base (database.ts).
   supabase/             Config de la base local y migraciones SQL (con las políticas RLS).
-  tests/                Tests de controllers y models contra la base local.
+  tests/rapidos/        Tests sin Docker ni internet (lógica pura, reglas de arquitectura, vista).
+  tests/externos/       Tests contra la base local (Docker), Kroki y OpenAI.
 middleware.ts           Refresca la sesión del alumno en cada request (Next.js lo exige en la raíz).
 ```
 
@@ -120,14 +121,20 @@ podrían contradecir a la cátedra. Los originales (`complemento_teorico/`) no s
 
 ## Tests
 
-Los tests no usan mocks: corren contra una **copia local de Supabase** en
-Docker (misma migración, mismo login, mismas políticas RLS), nunca contra la
-base real.
+Los tests no usan mocks. Están en dos grupos:
+
+- **Rápidos** (`backend/tests/rapidos/`): lógica pura, reglas de arquitectura y funciones de la vista. No
+  necesitan Docker ni internet y tardan segundos. ESLint impide que un test de esta carpeta use Supabase,
+  Kroki u OpenAI.
+- **Externos** (`backend/tests/externos/`): corren contra una **copia local de Supabase** en Docker (misma
+  migración, mismo login, mismas políticas RLS, nunca la base real), Kroki y la API real de OpenAI.
 
 ```bash
-# Una vez por sesión (Docker Desktop abierto). La primera vez baja las imágenes.
+npm run test:rapidos      # mientras se programa: sin Docker, unos segundos
+
+# Los externos: una vez por sesión (Docker Desktop abierto). La primera vez baja las imágenes.
 npm run db:start
-npm test
+npm run test:externos     # o `npm test` para correr los dos grupos
 # Al terminar, para liberar memoria:
 npm run db:stop
 ```

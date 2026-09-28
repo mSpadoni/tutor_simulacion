@@ -102,6 +102,23 @@ const reglasDeDependencia = [
       allowTypeImports: true,
     }),
   },
+  {
+    // Tests rápidos: corren sin Docker ni internet. Lo que usa Supabase, Kroki u OpenAI va en tests/externos/.
+    files: ["backend/tests/rapidos/**/*.ts"],
+    rules: prohibir({
+      group: [
+        "../helpers/alumnoDePrueba",
+        "@supabase/*",
+        "@ai-sdk/*",
+        "@/backend/lib/kroki",
+        "@/backend/lib/supabase/*",
+        "@/backend/tools/diagrama.tools",
+      ],
+      message:
+        "Los tests rápidos no usan Supabase, Kroki ni OpenAI (solo `import type`): este test va en backend/tests/externos/.",
+      allowTypeImports: true,
+    }),
+  },
 ];
 
 // Usa las reglas recomendadas por Next.js (rendimiento web + TypeScript). FlatCompat adapta ese formato viejo al nuevo.

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { generarDiagramaFlujo } from "@/backend/tools/diagrama.tools";
+import type { DiagramaGenerado } from "@/backend/tools/diagrama.tools";
 import type { ParteDelTutor, TutorUIMessage } from "@/shared/chat";
 import { comoTextoDeDebug, respuestasParaDebug, totalesDeDebug } from "@/views/chat/debug";
 
-// Sin mocks: mensajes con el mismo tipo que arma useChat, y un diagrama real de Kroki (necesita internet).
+// Sin mocks: mensajes y resultados con los mismos tipos que arman useChat y las tools.
 
 const alumno = (id: string, texto: string): TutorUIMessage => ({
   id,
@@ -23,12 +23,18 @@ describe("comoTextoDeDebug", () => {
     expect(comoTextoDeDebug("a".repeat(30), 10)).toBe(`${"a".repeat(10)}… (20 caracteres más)`);
   });
 
-  it("no vuelca el SVG de un diagrama: lo resume", async () => {
-    const diagrama = await generarDiagramaFlujo("Llegada", 'flowchart TD\n  A(["Inicio"]) --> B["T = TPLL"]');
+  it("no vuelca el SVG de un diagrama: lo resume", () => {
+    // El mismo tipo que devuelve generar_diagrama_flujo (el SVG real de Kroki lo prueba diagrama.tools.test.ts).
+    const diagrama: DiagramaGenerado = {
+      ok: true,
+      titulo: "Llegada",
+      mermaid: "flowchart TD\n  A --> B",
+      svg: `<svg xmlns="http://www.w3.org/2000/svg">${"<g/>".repeat(500)}</svg>`,
+    };
 
     const texto = comoTextoDeDebug(diagrama);
 
-    expect(texto).toMatch(/\[SVG de \d+ caracteres\]/);
+    expect(texto).toContain(`[SVG de ${diagrama.ok && diagrama.svg.length} caracteres]`);
     expect(texto).not.toContain("<svg");
   });
 });
