@@ -14,7 +14,7 @@ import {
 } from "ai";
 import { crearModeloOpenAI } from "@/backend/lib/openai";
 import { armarSystemPrompt } from "@/backend/lib/prompts/systemPrompt";
-import { conversacionesModel, tituloDesde, type ConversacionesModel } from "@/backend/models/conversaciones.model";
+import { conversacionesModel, type ConversacionesModel } from "@/backend/models/conversaciones.model";
 import { ejerciciosModel, type EjerciciosModel } from "@/backend/models/ejercicios.model";
 import { obtenerMaterialCatedra, type MaterialCatedra } from "@/backend/models/materialCatedra.model";
 import { MAX_MENSAJES_CONTEXTO, type PedidoDeChat } from "@/backend/models/pedidoDeChat.model";
@@ -22,6 +22,7 @@ import { crearToolsDiagrama } from "@/backend/tools/diagrama.tools";
 import { crearToolsEjercicio } from "@/backend/tools/ejercicio.tools";
 import { crearToolsFdp } from "@/backend/tools/fdp.tools";
 import { crearToolsMaterial } from "@/backend/tools/material.tools";
+import { tituloDesde } from "@/shared/conversaciones";
 
 /** Error con un mensaje pensado para mostrarle al alumno (qué pasó y qué hacer) y su código HTTP. */
 // `extends Error`: hereda de Error, así se puede `throw` y atrapar con `catch` como cualquier error.

@@ -1,0 +1,91 @@
+import type { UIMessage } from "ai";
+import { describe, expect, it } from "vitest";
+import {
+  conActividad,
+  conEjercicios,
+  ejerciciosGuardadosEn,
+  MAX_EJERCICIOS_EN_SIDEBAR,
+  sinConversacion,
+  type EstadoSidebar,
+} from "@/views/chat/sidebar";
+
+// Sin mocks: funciones puras con los mismos datos que maneja el sidebar.
+
+const ESTADO: EstadoSidebar = {
+  conversaciones: [
+    { id: "a", titulo: "Colas" },
+    { id: "b", titulo: "Stock" },
+  ],
+  ejercicios: [{ id: "e1", titulo: "Garage", conversacionId: "b" }],
+};
+
+describe("conActividad", () => {
+  it("la conversación con actividad sube arriba, sin duplicarse ni cambiar su título", () => {
+    expect(conActividad(ESTADO, { id: "b", titulo: "otro título" }).conversaciones).toEqual([
+      { id: "b", titulo: "Stock" },
+      { id: "a", titulo: "Colas" },
+    ]);
+  });
+
+  it("una conversación nueva aparece arriba con su título", () => {
+    expect(conActividad(ESTADO, { id: "c", titulo: "Dame un ejercicio" }).conversaciones[0]).toEqual({
+      id: "c",
+      titulo: "Dame un ejercicio",
+    });
+  });
+});
+
+describe("conEjercicios", () => {
+  it("los ejercicios nuevos van arriba, sin repetir y sin pasar el máximo", () => {
+    const muchos = Array.from({ length: MAX_EJERCICIOS_EN_SIDEBAR }, (_, i) => ({
+      id: `n${i}`,
+      titulo: `Nuevo ${i}`,
+      conversacionId: "a",
+    }));
+
+    const estado = conEjercicios(ESTADO, [...muchos, { id: "e1", titulo: "Garage", conversacionId: "b" }]);
+
+    expect(estado.ejercicios).toHaveLength(MAX_EJERCICIOS_EN_SIDEBAR);
+    expect(estado.ejercicios[0].id).toBe("n0");
+  });
+
+  it("sin ejercicios nuevos, el estado no cambia", () => {
+    expect(conEjercicios(ESTADO, [])).toBe(ESTADO);
+  });
+});
+
+describe("sinConversacion", () => {
+  it("la saca de la lista y sus ejercicios quedan sin enlace (como en la base)", () => {
+    expect(sinConversacion(ESTADO, "b")).toEqual({
+      conversaciones: [{ id: "a", titulo: "Colas" }],
+      ejercicios: [{ id: "e1", titulo: "Garage", conversacionId: null }],
+    });
+  });
+});
+
+describe("ejerciciosGuardadosEn", () => {
+  const mensaje = (parts: unknown[]): UIMessage => ({ id: "m", role: "assistant", parts: parts as UIMessage["parts"] });
+
+  it("toma los ejercicios que la tool guardó bien (id del resultado, título de lo que le pasó el modelo)", () => {
+    const guardado = {
+      type: "tool-generar_ejercicio",
+      state: "output-available",
+      input: { titulo: "Taller de bicicletas" },
+      output: { ok: true, id: "e9" },
+    };
+
+    expect(ejerciciosGuardadosEn(mensaje([{ type: "text", text: "Acá va" }, guardado]), "c")).toEqual([
+      { id: "e9", titulo: "Taller de bicicletas", conversacionId: "c" },
+    ]);
+  });
+
+  it("ignora los que no se guardaron, los que están en curso y otras tools", () => {
+    const partes = [
+      { type: "tool-generar_ejercicio", state: "output-available", input: { titulo: "X" }, output: { ok: false } },
+      { type: "tool-generar_ejercicio", state: "input-available", input: { titulo: "Y" } },
+      { type: "tool-consultar_modelos", state: "output-available", input: {}, output: "texto" },
+    ];
+
+    expect(ejerciciosGuardadosEn(mensaje(partes), "c")).toEqual([]);
+  });
+});

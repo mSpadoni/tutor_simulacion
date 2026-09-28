@@ -3,16 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-
-/** Lo que el costado necesita de cada conversación. */
-export type ItemConversacion = { id: string; titulo: string };
-
-/** Un ejercicio de "Mis ejercicios": al tocarlo se vuelve a la conversación donde se generó (si todavía existe). */
-export type ItemEjercicio = { id: string; titulo: string; conversacionId: string | null };
+import { useSidebar } from "./EstadoSidebar";
+import type { ItemConversacion } from "./sidebar";
 
 type Props = {
-  conversaciones: ItemConversacion[];
-  ejercicios: ItemEjercicio[];
   /** La conversación abierta ahora (se marca con aria-current). */
   actualId: string;
   /** Server action que borra una conversación del alumno. */
@@ -20,10 +14,12 @@ type Props = {
 };
 
 /**
- * Lista de conversaciones del alumno (la más reciente arriba), con "Nueva conversación" y borrar.
+ * Lista de conversaciones del alumno (la más reciente arriba), con "Nueva conversación" y borrar, y "Mis ejercicios".
+ * Las listas vienen del estado compartido del sidebar (ver EstadoSidebar): se actualizan sin volver a consultar.
  * En escritorio queda fija al costado; en mobile es un Drawer detrás de un botón con texto (patrón de la clase 9).
  */
-export default function SidebarConversaciones({ conversaciones, ejercicios, actualId, borrar }: Props) {
+export default function SidebarConversaciones({ actualId, borrar }: Props) {
+  const { conversaciones, ejercicios, quitarConversacion } = useSidebar();
   const router = useRouter();
   const [abierto, setAbierto] = useState(false); // Solo importa en mobile.
   const [borrando, iniciarBorrado] = useTransition();
@@ -43,9 +39,9 @@ export default function SidebarConversaciones({ conversaciones, ejercicios, actu
     if (!window.confirm(`¿Borrar la conversación «${conversacion.titulo}»? No se puede deshacer.`)) return;
     iniciarBorrado(async () => {
       await borrar(conversacion.id);
-      // Si era la abierta, se pasa a una nueva; si no, solo se actualiza la lista.
+      // Si era la abierta, se pasa a una nueva; si no, se saca de la lista sin volver a consultar la base.
       if (conversacion.id === actualId) router.push("/");
-      else router.refresh();
+      else quitarConversacion(conversacion.id);
     });
   }
 

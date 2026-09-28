@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { UIMessage } from "ai";
 import { afterAll, describe, expect, it } from "vitest";
-import { ConversacionesModel, tituloDesde } from "@/backend/models/conversaciones.model";
+import { ConversacionesModel } from "@/backend/models/conversaciones.model";
+import { tituloDesde } from "@/shared/conversaciones";
 import { borrarAlumnosDePrueba, crearAlumnoLogueado, NavegadorDePrueba } from "./helpers/alumnoDePrueba";
 
 // Sin mocks: contra la base local de Supabase, con alumnos reales logueados (las políticas RLS se aplican de verdad).

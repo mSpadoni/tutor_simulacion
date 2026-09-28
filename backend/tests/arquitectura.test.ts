@@ -58,6 +58,20 @@ describe("reglas de dependencia (ESLint)", () => {
     ).toEqual([]);
   });
 
+  it("shared/ es lógica pura para servidor y navegador: no importa backend ni SDKs; las views y el backend lo usan", async () => {
+    expect(await erroresDeDependencia('import { envSupabase } from "@/backend/lib/env";', "shared/ejemplo.ts")).toEqual(
+      [expect.stringContaining("shared/ es lógica pura")]
+    );
+    expect(await erroresDeDependencia('import { streamText } from "ai";', "shared/ejemplo.ts")).toHaveLength(1);
+    expect(await erroresDeDependencia('import type { UIMessage } from "ai";', "shared/ejemplo.ts")).toEqual([]);
+    expect(
+      await erroresDeDependencia('import { tituloDesde } from "@/shared/conversaciones";', "views/chat/Ejemplo.tsx")
+    ).toEqual([]);
+    expect(
+      await erroresDeDependencia('import { tituloDesde } from "@/shared/conversaciones";', "backend/controllers/x.ts")
+    ).toEqual([]);
+  });
+
   it("el dominio es lógica pura: sin Next ni infraestructura, pero puede importar solo tipos", async () => {
     const archivo = "backend/lib/fdp.ts";
 
@@ -110,6 +124,16 @@ describe("server-only", () => {
     for (const archivo of ["backend/lib/env.ts", "backend/lib/supabase/middleware.ts"]) {
       expect(readFileSync(archivo, "utf8"), archivo).not.toContain(`import "server-only"`);
     }
+  });
+});
+
+describe("sin recargas innecesarias", () => {
+  it("ninguna view vuelve a pedir la página entera (router.refresh): el sidebar se actualiza con lo que ya sabe", () => {
+    const conRefresh = readdirSync("views", { recursive: true, encoding: "utf8" })
+      .filter((archivo) => /\.tsx?$/.test(archivo))
+      .filter((archivo) => readFileSync(path.join("views", archivo), "utf8").includes("router.refresh"));
+
+    expect(conRefresh).toEqual([]);
   });
 });
 

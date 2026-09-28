@@ -58,6 +58,30 @@ const reglasDeDependencia = [
     }),
   },
   {
+    // shared/: código que usan tanto el servidor como el navegador. Lógica pura: no puede importar nada del servidor
+    // (si no, lo arrastraría al navegador) ni de las views o rutas.
+    files: ["shared/**/*.ts"],
+    rules: prohibir({
+      group: [
+        "@/backend/*",
+        "@/backend/**",
+        "@/views/*",
+        "@/views/**",
+        "@/app/*",
+        "@/app/**",
+        "next",
+        "next/*",
+        "@supabase/*",
+        "ai",
+        "@ai-sdk/*",
+        "server-only",
+      ],
+      message:
+        "shared/ es lógica pura compartida por servidor y navegador: no importa backend, views, rutas ni SDKs (solo `import type`).",
+      allowTypeImports: true,
+    }),
+  },
+  {
     // Dominio: lógica pura, sin Next, Supabase, AI SDK ni infraestructura. Se permiten imports de solo tipos
     // (`import type`), que desaparecen al compilar.
     files: ["backend/lib/fdp.ts", "backend/models/pedidoDeChat.model.ts", "backend/models/usuario.model.ts"],

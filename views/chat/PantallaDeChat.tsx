@@ -1,7 +1,9 @@
 import type { UIMessage } from "ai";
 import LoginButton from "@/views/LoginButton";
 import ChatWindow from "./ChatWindow";
-import SidebarConversaciones, { type ItemConversacion, type ItemEjercicio } from "./SidebarConversaciones";
+import { ProveedorSidebar } from "./EstadoSidebar";
+import SidebarConversaciones from "./SidebarConversaciones";
+import type { ItemConversacion, ItemEjercicio } from "./sidebar";
 
 type Props = {
   usuario: { nombreVisible: string; primerNombre: string };
@@ -45,23 +47,22 @@ export default function PantallaDeChat({
           </div>
         </div>
       </header>
-      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        <SidebarConversaciones
-          conversaciones={conversaciones}
-          ejercicios={ejercicios}
-          actualId={conversacionId}
-          borrar={borrarConversacion}
-        />
-        <main id="chat" className="flex min-h-0 flex-1 flex-col">
-          {/* key: al cambiar de conversación, el chat arranca de cero con el historial de la otra. */}
-          <ChatWindow
-            key={conversacionId}
-            conversacionId={conversacionId}
-            mensajesIniciales={mensajesIniciales}
-            nombre={usuario.primerNombre}
-          />
-        </main>
-      </div>
+      {/* Estado compartido del sidebar: arranca con lo que leyó la página y se actualiza desde el chat sin
+          volver a consultar. key: al abrir otra conversación, arranca de nuevo con los datos frescos. */}
+      <ProveedorSidebar key={conversacionId} inicial={{ conversaciones, ejercicios }}>
+        <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+          <SidebarConversaciones actualId={conversacionId} borrar={borrarConversacion} />
+          <main id="chat" className="flex min-h-0 flex-1 flex-col">
+            {/* key: al cambiar de conversación, el chat arranca de cero con el historial de la otra. */}
+            <ChatWindow
+              key={conversacionId}
+              conversacionId={conversacionId}
+              mensajesIniciales={mensajesIniciales}
+              nombre={usuario.primerNombre}
+            />
+          </main>
+        </div>
+      </ProveedorSidebar>
     </div>
   );
 }

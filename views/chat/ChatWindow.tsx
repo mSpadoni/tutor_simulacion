@@ -3,8 +3,9 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { tituloDesde } from "@/shared/conversaciones";
+import { useSidebar } from "./EstadoSidebar";
 import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
 import { estaCercaDelFinal, mensajeDeError, siguienteScroll } from "./tipos";
@@ -32,7 +33,7 @@ type Props = {
  * mensaje nuevo lo guarda el servidor en la base.
  */
 export default function ChatWindow({ conversacionId, mensajesIniciales, nombre }: Props) {
-  const router = useRouter();
+  const { alTerminarRespuesta } = useSidebar();
   const [borrador, setBorrador] = useState(""); // Lo que el alumno está escribiendo y todavía no mandó.
   const [anuncio, setAnuncio] = useState(""); // Lo que lee el lector de pantalla cuando termina una respuesta.
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -57,13 +58,18 @@ export default function ChatWindow({ conversacionId, mensajesIniciales, nombre }
     id: conversacionId,
     messages: mensajesIniciales,
     transport: transporte,
-    onFinish: ({ message, isAbort, isError }) => {
+    onFinish: ({ message, messages: todos, isAbort, isError }) => {
       if (!isAbort && !isError) {
         const texto = message.parts.flatMap((parte) => (parte.type === "text" ? [parte.text] : [])).join(" ");
         setAnuncio(`El tutor respondió: ${texto}`);
       }
-      // Actualiza la lista de conversaciones del costado (la nueva aparece, la actual sube arriba).
-      router.refresh();
+      // El sidebar se actualiza con lo que ya sabemos, sin volver a consultar la base: la conversación sube arriba
+      // (si es nueva, con el mismo título que le puso el servidor) y aparecen los ejercicios que guardó el tutor.
+      if (!isError) {
+        const primero = todos.find((mensaje) => mensaje.role === "user");
+        const textoPrimero = primero?.parts.flatMap((parte) => (parte.type === "text" ? [parte.text] : [])).join(" ");
+        alTerminarRespuesta({ id: conversacionId, titulo: tituloDesde(textoPrimero ?? "") }, message);
+      }
     },
   });
 

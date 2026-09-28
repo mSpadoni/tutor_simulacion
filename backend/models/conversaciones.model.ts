@@ -11,13 +11,6 @@ export type ConversacionGuardada = Pick<FilaConversacion, "id" | "titulo" | "cre
 /** Largo máximo del título (el mismo límite que pone la base). */
 export const MAX_CARACTERES_TITULO = 120;
 
-/** El título de una conversación nueva: el primer mensaje del alumno, en una línea y recortado. */
-export function tituloDesde(texto: string): string {
-  const unaLinea = texto.replace(/\s+/g, " ").trim();
-  if (unaLinea.length <= 60) return unaLinea || "Conversación nueva";
-  return `${unaLinea.slice(0, 59).trimEnd()}…`;
-}
-
 /**
  * Acceso a las tablas conversaciones y mensajes.
  * No filtra por usuario a mano: las políticas RLS ya limitan todo al alumno logueado.
