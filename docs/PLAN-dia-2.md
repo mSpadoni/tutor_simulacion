@@ -53,9 +53,12 @@ y encontrar sus conversaciones guardadas al volver a entrar.
 - [x] `MaterialCatedra` (BM25) sobre 91 fichas. El material lo pide el modelo con tools
       (`backend/tools/material.tools.ts`):
   - `consultar_modelos(tema)`: solo modelos. Para teoría, y siempre que resuelve o corrige.
-  - `buscar_ejercicio(nombre o descripción)`: el enunciado de un ejercicio de la cátedra.
-  - `inspiracion_para_ejercicio(tema)`: enunciados de anexa y parciales para crear uno nuevo desde cero.
-  - Las resoluciones de la cátedra nunca se devuelven (algunas tienen errores).
+  - `buscar_ejercicio(nombre o descripción)`: el enunciado de un ejercicio de la cátedra y su resolución,
+    marcada como referencia que puede tener errores.
+  - `inspiracion_para_ejercicio(tema)`: 3 enunciados al azar entre los 8 más parecidos (sin resolución),
+    con sus dominios prohibidos, para crear uno nuevo desde cero.
+  - El prompt arranca con la regla de consultar los modelos antes de explicar, resolver o corregir
+    (en el medio del prompt, el modelo la salteaba ~1 de cada 3 veces; al principio, 12 de 12).
   - El log `chat.respuesta` registra tiempo, pasos, tokens y tools usadas.
 - [x] **Dos tipos de material** (cada archivo lo declara con `> tipo:`):
   - `modelo`: guía oficial 1 a 8 (`modelos-guia-oficial.md`, por tema: colas y tiempo comprometido),
@@ -181,7 +184,9 @@ Cada punto con su test sin mocks, `npm run format`, commit y push.
   teórica recibe solo modelos, un pedido de ejercicio recibe solo inspiración, y la
   elección de la tool es la interpretación de intención. Las tools no se fuerzan
   (`toolChoice: "auto"`): el prompt explica cuándo conviene cada una y el modelo decide.
-- **Sin resoluciones de la cátedra:** algunas tienen errores, así que el tutor resuelve y
-  corrige con la base de conocimiento y los modelos. De los ejercicios solo ve el enunciado.
+- **La resolución de la cátedra es una referencia, no la verdad:** algunas tienen errores. El
+  tutor la lee para corregir, pero la contrasta con la base de conocimiento y los modelos; si no
+  coinciden, manda la teoría y se lo avisa al alumno. Nunca marca un error solo porque no coincide
+  con esa resolución.
 - **Contexto limitado a los últimos 20 mensajes**, para acotar costo y
   latencia.

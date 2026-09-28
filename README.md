@@ -105,11 +105,12 @@ cliente de Supabase entra por el constructor: la app usa la de Next.js
   | El alumno…                                             | Tools que usa el modelo                  | Qué recibe                                                                  |
   | ------------------------------------------------------ | ---------------------------------------- | --------------------------------------------------------------------------- |
   | Pregunta teoría                                        | `consultar_modelos`                      | Solo modelos                                                                |
-  | Pide resolver o corregir (nombrando el ejercicio o no) | `consultar_modelos` + `buscar_ejercicio` | Modelos + el enunciado                                                      |
+  | Pide resolver o corregir (nombrando el ejercicio o no) | `consultar_modelos` + `buscar_ejercicio` | Modelos + el enunciado y la resolución de la cátedra (como referencia)      |
   | Pide un ejercicio nuevo                                | `inspiracion_para_ejercicio`             | Enunciados de anexa y parciales, como inspiración para crear uno desde cero |
 
-  **Las resoluciones de la cátedra nunca le llegan al modelo** (algunas tienen errores): de los
-  ejercicios se devuelve solo el enunciado, y el tutor resuelve y corrige con la base y los modelos.
+  **La resolución de la cátedra es una referencia, no la verdad** (algunas tienen errores): el
+  tutor la contrasta con la base y los modelos, y si no coinciden manda la teoría. Para inspirarse
+  en un ejercicio nuevo solo recibe enunciados, elegidos al azar entre los más parecidos.
 
 **Alcance actual: sistemas que se resuelven con Evento a Evento**, pero el tutor **no dice la
 metodología en los enunciados**: elegirla es parte del ejercicio. Lo de Δt queda para más adelante.

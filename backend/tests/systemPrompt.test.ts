@@ -39,6 +39,13 @@ describe("armarSystemPrompt", () => {
 describe("armarSystemPrompt — herramientas", () => {
   const prompt = armarSystemPrompt();
 
+  it("arranca con la regla de consultar los modelos (al principio pesa más que en el medio del prompt)", () => {
+    const inicio = prompt.slice(0, 800);
+
+    expect(inicio).toContain("**Regla más importante:**");
+    expect(inicio).toContain("**consultá los modelos de la cátedra con la herramienta consultar_modelos**");
+  });
+
   it("presenta las tres tools y deja que el modelo decida cuáles usar", () => {
     expect(prompt).toContain("**consultar_modelos(tema)**");
     expect(prompt).toContain("**buscar_ejercicio(nombre o descripción)**");
@@ -46,12 +53,22 @@ describe("armarSystemPrompt — herramientas", () => {
     expect(prompt).toContain("Decidí vos cuáles usar según lo que pide el alumno");
   });
 
+  it("las consultas de cómo se hace algo van a los modelos; una definición de la base se puede responder directo", () => {
+    expect(prompt).toContain("**Consulta teórica sobre cómo se hace algo**");
+    expect(prompt).toContain(
+      "llamá **siempre** a consultar_modelos antes de responder, **aunque creas que ya lo sabés**"
+    );
+    expect(prompt).toContain("Solo una definición que está textual en la base de conocimiento");
+  });
+
   it("para corregir o resolver, sugiere combinar los modelos con el enunciado", () => {
     expect(prompt).toContain("**Corrección o resolución** → consultar_modelos **y** buscar_ejercicio");
   });
 
-  it("resuelve y corrige con la teoría, nunca con resoluciones de la cátedra", () => {
-    expect(prompt).toContain("Resolvé y corregí **siempre con la base de conocimiento y los modelos**");
+  it("la resolución de la cátedra es una referencia a contrastar con la teoría, no la verdad", () => {
+    expect(prompt).toContain("**una referencia más, no la verdad**");
+    expect(prompt).toContain("**contrastala siempre con la base de conocimiento y los modelos**");
+    expect(prompt).toContain("Nunca marques un error del alumno solo porque no coincide con esa resolución");
   });
 
   it("un ejercicio nuevo se crea desde cero, no se copia de la inspiración", () => {

@@ -139,9 +139,9 @@ botón "Ver como texto" que muestra el Mermaid (WCAG 1.1.1).
     resueltos, guía oficial 9 a 12): el tipo de ejercicio para practicar y
     la referencia de redacción y complejidad para inventar uno nuevo.
   - El modelo pide el material con tools: `consultar_modelos` (teoría; también
-    para resolver y corregir), `buscar_ejercicio` (solo el enunciado) e
-    `inspiracion_para_ejercicio` (para crear uno nuevo desde cero). Las
-    resoluciones de la cátedra nunca se usan: algunas tienen errores. Lo de Δt
+    para resolver y corregir), `buscar_ejercicio` (enunciado + resolución de la
+    cátedra como referencia a contrastar con la teoría, porque algunas tienen
+    errores) e `inspiracion_para_ejercicio` (para crear uno nuevo desde cero). Lo de Δt
     y la guía 13 en adelante quedan en `pendientes.md`, sin cargar. Sin
     embeddings ni base vectorial.
 - **Ejercicios nuevos:** redactados como la anexa y los parciales (sección 8

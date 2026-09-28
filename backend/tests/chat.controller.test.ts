@@ -51,15 +51,23 @@ describe("ChatController.responder — errores (con la API real, sin gastar cré
 });
 
 describe.skipIf(!hayClave)("ChatController.responder — respuestas reales (requiere OPENAI_API_KEY)", () => {
-  it("una consulta teórica usa los modelos (y solo los modelos) y respeta la convención de la cátedra", async () => {
+  it("una definición de la base se responde con la convención de la cátedra (sin pedir ejercicios)", async () => {
     const respuesta = await new ChatController().responder(
       conversacion("¿Qué puede ir en la columna E.F.NO C. de la T.E.I.? Explicámelo corto.")
     );
 
-    expect(herramientas(respuesta)).toContain("consultar_modelos");
     expect(herramientas(respuesta)).not.toContain("inspiracion_para_ejercicio");
     // La regla de la base de conocimiento: el mismo evento que originó la fila, o nada.
     expect(respuesta.texto.toLowerCase()).toMatch(/mismo evento|propio evento|sí mismo|nada|----/);
+  });
+
+  it("una consulta de cómo se hace algo usa los modelos, no ejercicios", async () => {
+    const respuesta = await new ChatController().responder(
+      conversacion("¿Cómo calculo el PTO en un ejercicio de tiempo comprometido?")
+    );
+
+    expect(herramientas(respuesta)).toContain("consultar_modelos");
+    expect(herramientas(respuesta)).not.toContain("inspiracion_para_ejercicio");
   });
 
   it("para resolver un ejercicio de la anexa busca su enunciado y usa los modelos", async () => {
@@ -77,16 +85,18 @@ describe.skipIf(!hayClave)("ChatController.responder — respuestas reales (requ
     const titulosDeLaCatedra = MaterialCatedra.cargar()
       .fichas.filter((ficha) => ficha.tipo === "ejercicio" && ficha.titulo.length >= 6)
       .map((ficha) => ficha.titulo.toLowerCase());
-    const primeraLinea = respuesta.texto
-      .split("\n")
-      .find((linea) => linea.trim())!
+    // El título: la primera línea que es un encabezado de Markdown (o la primera línea, si no hay encabezados).
+    const lineas = respuesta.texto.split("\n").filter((linea) => linea.trim());
+    const titulo = (lineas.find((linea) => linea.startsWith("#")) ?? lineas[0])
+      .replace(/[#*]/g, "")
+      .trim()
       .toLowerCase();
 
     expect(herramientas(respuesta)).toContain("inspiracion_para_ejercicio");
     expect(respuesta.texto).toMatch(/f\.?\s?d\.?\s?p/i);
     expect(respuesta.texto).toMatch(/se pide/i);
     // Creado desde cero: el título no es el de un ejercicio de la cátedra.
-    expect(titulosDeLaCatedra.filter((titulo) => primeraLinea.includes(titulo))).toEqual([]);
+    expect(titulosDeLaCatedra.filter((deLaCatedra) => titulo.includes(deLaCatedra))).toEqual([]);
     // Lo tiene que descubrir el alumno: ni la metodología ni los nombres de eventos o variables.
     expect(respuesta.texto).not.toMatch(
       /evento a evento|\bEaE\b|Δt|delta t|intervalos? constantes?|\bTPLL\b|\bTPS\b|\bTEF\b/i

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MaterialCatedra, enunciadoDe } from "@/backend/models/materialCatedra.model";
+import { MaterialCatedra, enunciadoDe, resolucionDe } from "@/backend/models/materialCatedra.model";
 import {
   buscarEjercicio,
   consultarModelos,
@@ -33,9 +33,18 @@ describe("enunciadoDe", () => {
     }
   });
 
-  it("si la ficha no tiene resolución, la devuelve entera", () => {
+  it("resolucionDe devuelve el resto: enunciado + resolución arman la ficha completa", () => {
+    for (const ficha of resueltas) {
+      const resolucion = resolucionDe(ficha);
+      expect(resolucion, ficha.titulo).toMatch(/^(Metodolog[ií]a:|- \*\*Datos:\*\*)/);
+      expect(ficha.contenido.trim().endsWith(resolucion), ficha.titulo).toBe(true);
+    }
+  });
+
+  it("si la ficha no tiene resolución, el enunciado es la ficha entera y la resolución queda vacía", () => {
     const garage = porTitulo.get("Garage")!;
     expect(enunciadoDe(garage)).toBe(garage.contenido.trim());
+    expect(resolucionDe(garage)).toBe("");
   });
 });
 
@@ -53,12 +62,22 @@ describe("consultarModelos", () => {
 });
 
 describe("buscarEjercicio", () => {
-  it("encuentra un ejercicio de la anexa por su nombre y devuelve solo el enunciado", () => {
+  it("encuentra un ejercicio de la anexa por su nombre, con el enunciado y la resolución marcada como referencia", () => {
     const { texto, fichas } = buscarEjercicio(material, "resolveme Clínica de la anexa");
+    const iEnunciado = texto.indexOf("dos consultorios");
+    const iAviso = texto.indexOf("#### Resolución de la cátedra (REFERENCIA: puede tener errores");
+    const iResolucion = texto.indexOf("- **Datos:**");
 
     expect(fichas).toContain("Clínica");
-    expect(texto).toContain("dos consultorios");
-    expect(texto).not.toMatch(RESOLUCION);
+    expect(iEnunciado).toBeGreaterThan(0);
+    // El aviso va antes de la resolución: el modelo lo lee antes de leerla.
+    expect(iAviso).toBeGreaterThan(iEnunciado);
+    expect(iResolucion).toBeGreaterThan(iAviso);
+    expect(texto).toContain("contrastala con la base de conocimiento y los modelos");
+  });
+
+  it("si el ejercicio no tiene resolución publicada, lo aclara", () => {
+    expect(buscarEjercicio(material, "Garage").texto).toContain("La cátedra no publicó resolución");
   });
 
   it("encuentra el ejercicio N de la guía oficial", () => {
@@ -89,6 +108,22 @@ describe("inspiracionParaEjercicio", () => {
     expect(fichas.every((titulo) => porTitulo.get(titulo)?.tipo === "ejercicio")).toBe(true);
     expect(texto).not.toMatch(RESOLUCION);
     expect(texto).toContain("Creá uno nuevo desde cero");
+  });
+
+  it("devuelve hasta 3 y prohíbe explícitamente sus dominios y títulos", () => {
+    const { texto, fichas } = inspiracionParaEjercicio(material, "stock con reposición");
+
+    expect(fichas.length).toBeLessThanOrEqual(3);
+    expect(texto).toContain("No uses el dominio ni el título de ninguno de estos:");
+    for (const titulo of fichas) expect(texto).toContain(`«${titulo}»`);
+  });
+
+  it("varía la inspiración entre pedidos iguales (elige al azar entre los más parecidos)", () => {
+    const combinaciones = new Set(
+      Array.from({ length: 20 }, () => inspiracionParaEjercicio(material, "colas").fichas.sort().join(" | "))
+    );
+
+    expect(combinaciones.size).toBeGreaterThan(1);
   });
 });
 

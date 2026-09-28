@@ -78,13 +78,24 @@ function soloLetras(texto: string): string {
     .trim();
 }
 
-/**
- * El enunciado de una ficha, sin la resolución de la cátedra (que puede tener errores: el tutor resuelve y
- * corrige con la teoría). En las fichas resueltas, la resolución empieza en "Metodología:" o "- **Datos:**".
- */
+/** Dónde empieza la resolución de la cátedra en una ficha ("Metodología:" o "- **Datos:**"), o -1 si no tiene. */
+function inicioDeResolucion(ficha: Ficha): number {
+  return ficha.contenido.search(/^(Metodolog[ií]a:|- \*\*Datos:\*\*)/m);
+}
+
+/** El enunciado de una ficha, sin la resolución de la cátedra. */
 export function enunciadoDe(ficha: Ficha): string {
-  const inicioResolucion = ficha.contenido.search(/^(Metodolog[ií]a:|- \*\*Datos:\*\*)/m);
-  return (inicioResolucion === -1 ? ficha.contenido : ficha.contenido.slice(0, inicioResolucion)).trim();
+  const inicio = inicioDeResolucion(ficha);
+  return (inicio === -1 ? ficha.contenido : ficha.contenido.slice(0, inicio)).trim();
+}
+
+/**
+ * La resolución de la cátedra de una ficha, o "" si no tiene. Puede tener errores: el tutor la usa como
+ * referencia, verificándola con la base de conocimiento y los modelos.
+ */
+export function resolucionDe(ficha: Ficha): string {
+  const inicio = inicioDeResolucion(ficha);
+  return inicio === -1 ? "" : ficha.contenido.slice(inicio).trim();
 }
 
 /** Estimación rápida de cuántos tokens ocupa un texto (~3,5 caracteres por token en español). Math.ceil redondea para arriba. */
