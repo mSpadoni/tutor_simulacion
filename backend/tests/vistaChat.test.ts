@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { estaCercaDelFinal, mensajeDeError, siguienteScroll, TEXTOS_DE_HERRAMIENTAS } from "@/views/chat/tipos";
+import { EjerciciosModel } from "@/backend/models/ejercicios.model";
 import { crearToolsDiagrama } from "@/backend/tools/diagrama.tools";
+import { crearToolsEjercicio } from "@/backend/tools/ejercicio.tools";
 import { crearToolsFdp } from "@/backend/tools/fdp.tools";
 import { crearToolsMaterial } from "@/backend/tools/material.tools";
 import { MaterialCatedra } from "@/backend/models/materialCatedra.model";
@@ -81,6 +83,7 @@ describe("TEXTOS_DE_HERRAMIENTAS", () => {
       ...crearToolsMaterial(MaterialCatedra.cargar()),
       ...crearToolsDiagrama(),
       ...crearToolsFdp(),
+      ...crearToolsEjercicio(new EjerciciosModel(), "sin-conversacion"),
     });
 
     for (const nombre of tools) {

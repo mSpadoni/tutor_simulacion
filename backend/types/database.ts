@@ -46,6 +46,7 @@ export type Database = {
       };
       ejercicios: {
         Row: {
+          conversacion_id: string | null;
           creado_en: string;
           dificultad: string;
           id: string;
@@ -54,6 +55,7 @@ export type Database = {
           usuario_id: string;
         };
         Insert: {
+          conversacion_id?: string | null;
           creado_en?: string;
           dificultad: string;
           id?: string;
@@ -62,6 +64,7 @@ export type Database = {
           usuario_id?: string;
         };
         Update: {
+          conversacion_id?: string | null;
           creado_en?: string;
           dificultad?: string;
           id?: string;
@@ -69,7 +72,15 @@ export type Database = {
           tema?: string;
           usuario_id?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "ejercicios_conversacion_id_fkey";
+            columns: ["conversacion_id"];
+            isOneToOne: false;
+            referencedRelation: "conversaciones";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       mensajes: {
         Row: {

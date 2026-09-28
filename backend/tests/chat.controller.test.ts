@@ -9,6 +9,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { ChatController, ErrorDeChat } from "@/backend/controllers/chat.controller";
 import { URL_API_OPENAI_POR_DEFECTO } from "@/backend/lib/openai";
 import { ConversacionesModel } from "@/backend/models/conversaciones.model";
+import { EjerciciosModel } from "@/backend/models/ejercicios.model";
 import { PedidoDeChat } from "@/backend/models/pedidoDeChat.model";
 import { borrarAlumnosDePrueba, crearAlumnoLogueado } from "./helpers/alumnoDePrueba";
 
@@ -19,8 +20,13 @@ afterAll(borrarAlumnosDePrueba);
 async function alumnoConChat(dependencias: ConstructorParameters<typeof ChatController>[0] = {}) {
   const alumno = await crearAlumnoLogueado();
   const conversaciones = new ConversacionesModel(alumno.navegador.crearCliente);
-  const controller = new ChatController({ conversaciones: () => conversaciones, ...dependencias });
-  return { conversaciones, controller };
+  const ejercicios = new EjerciciosModel(alumno.navegador.crearCliente);
+  const controller = new ChatController({
+    conversaciones: () => conversaciones,
+    ejercicios: () => ejercicios,
+    ...dependencias,
+  });
+  return { conversaciones, ejercicios, controller };
 }
 
 /** Manda un mensaje como useChat, lee el stream completo y devuelve sus eventos. */
@@ -156,14 +162,16 @@ describe.skipIf(!hayClave)("ChatController.responder — respuestas reales (requ
     expect(herramientas(tutor)).toEqual(expect.arrayContaining(["buscar_ejercicio", "consultar_modelos"]));
   });
 
-  it("un ejercicio nuevo usa la inspiración de la cátedra", async () => {
-    const { conversaciones, controller } = await alumnoConChat();
+  it("un ejercicio nuevo usa la inspiración de la cátedra y queda guardado en «Mis ejercicios»", async () => {
+    const { conversaciones, ejercicios, controller } = await alumnoConChat();
     const id = randomUUID();
 
     await conversar(controller, id, "Dame un ejercicio nuevo para practicar, tipo parcial.");
     const [, tutor] = await mensajesGuardados(conversaciones, id, 2);
 
     expect(herramientas(tutor)).toContain("inspiracion_para_ejercicio");
+    expect(herramientas(tutor)).toContain("generar_ejercicio");
+    expect((await ejercicios.listarRecientes()).map((ejercicio) => ejercicio.conversacion_id)).toEqual([id]);
     // El diagrama revelaría la metodología: nunca al dar un ejercicio nuevo.
     expect(herramientas(tutor)).not.toContain("generar_diagrama_flujo");
   });

@@ -1,11 +1,12 @@
 import type { UIMessage } from "ai";
 import LoginButton from "@/views/LoginButton";
 import ChatWindow from "./ChatWindow";
-import SidebarConversaciones, { type ItemConversacion } from "./SidebarConversaciones";
+import SidebarConversaciones, { type ItemConversacion, type ItemEjercicio } from "./SidebarConversaciones";
 
 type Props = {
   usuario: { nombreVisible: string; primerNombre: string };
   conversaciones: ItemConversacion[];
+  ejercicios: ItemEjercicio[];
   conversacionId: string;
   mensajesIniciales: UIMessage[];
   /** Server actions que conecta la página (las views no importan código del servidor). */
@@ -20,6 +21,7 @@ type Props = {
 export default function PantallaDeChat({
   usuario,
   conversaciones,
+  ejercicios,
   conversacionId,
   mensajesIniciales,
   cerrarSesion,
@@ -44,7 +46,12 @@ export default function PantallaDeChat({
         </div>
       </header>
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        <SidebarConversaciones conversaciones={conversaciones} actualId={conversacionId} borrar={borrarConversacion} />
+        <SidebarConversaciones
+          conversaciones={conversaciones}
+          ejercicios={ejercicios}
+          actualId={conversacionId}
+          borrar={borrarConversacion}
+        />
         <main id="chat" className="flex min-h-0 flex-1 flex-col">
           {/* key: al cambiar de conversación, el chat arranca de cero con el historial de la otra. */}
           <ChatWindow

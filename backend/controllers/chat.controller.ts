@@ -14,9 +14,11 @@ import {
 import { crearModeloOpenAI } from "@/backend/lib/openai";
 import { armarSystemPrompt } from "@/backend/lib/prompts/systemPrompt";
 import { conversacionesModel, tituloDesde, type ConversacionesModel } from "@/backend/models/conversaciones.model";
+import { ejerciciosModel, type EjerciciosModel } from "@/backend/models/ejercicios.model";
 import { obtenerMaterialCatedra, type MaterialCatedra } from "@/backend/models/materialCatedra.model";
 import { MAX_MENSAJES_CONTEXTO, type PedidoDeChat } from "@/backend/models/pedidoDeChat.model";
 import { crearToolsDiagrama } from "@/backend/tools/diagrama.tools";
+import { crearToolsEjercicio } from "@/backend/tools/ejercicio.tools";
 import { crearToolsFdp } from "@/backend/tools/fdp.tools";
 import { crearToolsMaterial } from "@/backend/tools/material.tools";
 
@@ -41,6 +43,7 @@ type Dependencias = {
   crearModelo?: () => LanguageModel;
   material?: () => MaterialCatedra;
   conversaciones?: () => ConversacionesModel;
+  ejercicios?: () => EjerciciosModel;
   timeoutMs?: number;
   /** Pausa entre palabras al mostrar la respuesta (ms). 0 = tan rápido como llega del modelo. */
   pausaEntrePalabrasMs?: number;
@@ -73,6 +76,7 @@ export class ChatController {
   private readonly crearModelo: () => LanguageModel;
   private readonly material: () => MaterialCatedra;
   private readonly conversaciones: () => ConversacionesModel;
+  private readonly ejercicios: () => EjerciciosModel;
   private readonly timeoutMs: number;
   private readonly pausaEntrePalabrasMs: number;
 
@@ -82,12 +86,14 @@ export class ChatController {
     crearModelo = () => crearModeloOpenAI(),
     material = obtenerMaterialCatedra,
     conversaciones = () => conversacionesModel,
+    ejercicios = () => ejerciciosModel,
     timeoutMs = 45_000,
     pausaEntrePalabrasMs = PAUSA_ENTRE_PALABRAS_MS,
   }: Dependencias = {}) {
     this.crearModelo = crearModelo;
     this.material = material;
     this.conversaciones = conversaciones;
+    this.ejercicios = ejercicios;
     this.timeoutMs = timeoutMs;
     this.pausaEntrePalabrasMs = pausaEntrePalabrasMs;
   }
@@ -117,7 +123,12 @@ export class ChatController {
     const mensajes = [...historial, mensaje];
 
     // 3) El modelo, en streaming.
-    const tools = { ...crearToolsMaterial(this.material()), ...crearToolsDiagrama(), ...crearToolsFdp() };
+    const tools = {
+      ...crearToolsMaterial(this.material()),
+      ...crearToolsDiagrama(),
+      ...crearToolsFdp(),
+      ...crearToolsEjercicio(this.ejercicios(), conversacionId),
+    };
     const inicio = Date.now();
     const resultado = streamText({
       model: this.crearModelo(),

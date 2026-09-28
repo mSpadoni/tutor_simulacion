@@ -79,6 +79,10 @@ describe("armarSystemPrompt — herramientas", () => {
     expect(inicio).toContain("**consultá los modelos de la cátedra con la herramienta consultar_modelos**");
   });
 
+  it("presenta la tool que guarda el ejercicio nuevo en «Mis ejercicios»", () => {
+    expect(prompt).toContain("**generar_ejercicio(tema, dificultad, titulo, enunciado, sePide)**");
+  });
+
   it("presenta las tres tools y deja que el modelo decida cuáles usar", () => {
     expect(prompt).toContain("**consultar_modelos(tema)**");
     expect(prompt).toContain("**buscar_ejercicio(nombre o descripción)**");

@@ -1,4 +1,6 @@
+import { randomUUID } from "node:crypto";
 import { afterAll, describe, expect, it } from "vitest";
+import { ConversacionesModel } from "@/backend/models/conversaciones.model";
 import { EjerciciosModel, type NuevoEjercicio } from "@/backend/models/ejercicios.model";
 import { borrarAlumnosDePrueba, crearAlumnoLogueado, NavegadorDePrueba } from "./helpers/alumnoDePrueba";
 
@@ -18,6 +20,35 @@ function ejercicio(datos: Partial<NuevoEjercicio> = {}): NuevoEjercicio {
     ...datos,
   };
 }
+
+describe("EjerciciosModel — conversación donde se generó", () => {
+  it("guarda la conversación; si se borra la conversación, el ejercicio queda (sin enlace)", async () => {
+    const alumno = await crearAlumnoLogueado();
+    const ejercicios = new EjerciciosModel(alumno.navegador.crearCliente);
+    const conversaciones = new ConversacionesModel(alumno.navegador.crearCliente);
+    const conversacionId = randomUUID();
+    await conversaciones.crear(conversacionId, "Práctica");
+
+    const guardado = await ejercicios.guardar(ejercicio(), conversacionId);
+    expect(guardado.conversacion_id).toBe(conversacionId);
+
+    await conversaciones.borrar(conversacionId);
+    const [queda] = await ejercicios.listarRecientes();
+    expect(queda.id).toBe(guardado.id);
+    expect(queda.conversacion_id).toBeNull();
+  });
+
+  it("no se puede asociar un ejercicio a la conversación de otro alumno (RLS)", async () => {
+    const duenio = await crearAlumnoLogueado();
+    const otro = await crearAlumnoLogueado();
+    const conversacionAjena = randomUUID();
+    await new ConversacionesModel(duenio.navegador.crearCliente).crear(conversacionAjena, "Ajena");
+
+    await expect(
+      new EjerciciosModel(otro.navegador.crearCliente).guardar(ejercicio(), conversacionAjena)
+    ).rejects.toThrow("No se pudo guardar el ejercicio");
+  });
+});
 
 describe("EjerciciosModel", () => {
   it("guarda el ejercicio a nombre del alumno logueado y lo lista", async () => {

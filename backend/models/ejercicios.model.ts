@@ -28,11 +28,18 @@ export type EjercicioGuardado = Omit<FilaEjercicio, "payload"> & { payload: Nuev
 export class EjerciciosModel {
   constructor(private readonly crearCliente: () => Promise<ClienteSupabase> = crearClienteServidor) {}
 
-  /** Valida el ejercicio y lo guarda a nombre del alumno logueado. */
-  async guardar(datos: NuevoEjercicio): Promise<EjercicioGuardado> {
+  /**
+   * Valida el ejercicio y lo guarda a nombre del alumno logueado.
+   * `conversacionId`: la conversación donde se generó (para volver a ella desde "Mis ejercicios").
+   */
+  async guardar(datos: NuevoEjercicio, conversacionId: string | null = null): Promise<EjercicioGuardado> {
     const ejercicio = EjercicioSchema.parse(datos);
     const supabase = await this.crearCliente();
-    const { data, error } = await supabase.from("ejercicios").insert(ejercicio).select().single();
+    const { data, error } = await supabase
+      .from("ejercicios")
+      .insert({ ...ejercicio, conversacion_id: conversacionId })
+      .select()
+      .single();
     if (error) throw new Error(`No se pudo guardar el ejercicio: ${error.message}`);
     return data as EjercicioGuardado;
   }

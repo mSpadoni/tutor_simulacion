@@ -3,6 +3,7 @@ import { cerrarSesion } from "@/app/auth/actions";
 import { borrarConversacion } from "@/app/conversacion/actions";
 import { authController } from "@/backend/controllers/auth.controller";
 import { conversacionesController, esIdDeConversacion } from "@/backend/controllers/conversaciones.controller";
+import { ejerciciosController } from "@/backend/controllers/ejercicios.controller";
 import PantallaDeChat from "@/views/chat/PantallaDeChat";
 
 /** En Next 15 los parámetros de la URL llegan como Promise: `/conversacion/abc` → `{ id: "abc" }`. */
@@ -20,16 +21,18 @@ export default async function PaginaConversacion({ params }: Props) {
   const { id } = await params;
   if (!esIdDeConversacion(id)) notFound();
 
-  // Promise.all: las dos lecturas a la vez, no una después de la otra.
-  const [conversaciones, abierta] = await Promise.all([
+  // Promise.all: las tres lecturas a la vez, no una después de la otra.
+  const [conversaciones, abierta, ejercicios] = await Promise.all([
     conversacionesController.listar(),
     conversacionesController.abrir(id),
+    ejerciciosController.listar(),
   ]);
 
   return (
     <PantallaDeChat
       usuario={usuario}
       conversaciones={conversaciones.map(({ id, titulo }) => ({ id, titulo }))}
+      ejercicios={ejercicios}
       conversacionId={id}
       mensajesIniciales={abierta.mensajes}
       cerrarSesion={cerrarSesion}
