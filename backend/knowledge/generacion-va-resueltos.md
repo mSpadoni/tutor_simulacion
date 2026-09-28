@@ -1,5 +1,7 @@
 # Generación de variables aleatorias — TP 4 resuelto
 
+> tipo: modelo
+
 Fuente: "TP4 Resuelto" (cátedra). En cada caso: hallar la f.d.p. libre de incógnitas (área = 1), elegir el método más conveniente y obtener la fórmula generadora.
 Criterio que usa la cátedra: si F(x) se puede invertir fácil → método de la inversa; si no (polinomios de grado ≥ 2, funciones por tramos) → método del rechazo, con M = máximo de f(x) en el intervalo.
 

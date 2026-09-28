@@ -89,16 +89,22 @@ cliente de Supabase entra por el constructor: la app usa la de Next.js
 - **Base de conocimiento** (`base-conocimiento-simulacion.md`): convenciones de la cátedra,
   basada en las clases oficiales de EaE y N colas (2C 2026). Va **entera** en todas las
   consultas (~6.000 tokens).
-- **Material en fichas** (93 fichas), armado a partir de los archivos de la cátedra:
-  clases de colas (N colas, cola única, prioridades), Guía Anexa resuelta (41 ejercicios de
-  EaE con variables y T.E.I.), guía oficial de TP 2026 (22 enunciados), ejercicios resueltos de EaE,
-  TP 4 de generación de variables aleatorias, y parciales y parcialitos anteriores.
-  Todo junto no entra en cada consulta, así que `MaterialCatedra` (BM25, sin servicios
-  externos) elige las 3 fichas más parecidas a los últimos mensajes del alumno, con un
-  tope de 6.000 tokens. Si el alumno nombra "el ejercicio N de la guía", ese va primero.
+- **Material en fichas** (91 fichas), armado a partir de los archivos de la cátedra. Cada
+  archivo declara su tipo en una línea `> tipo: ...` debajo del título:
 
-**Alcance actual: solo Evento a Evento.** Los 17 ejercicios de Δt de la Guía Anexa quedan
-fuera de la búsqueda y el tutor no propone ni corrige ejercicios de Δt (todavía no se vio).
+  | Tipo        | Archivos                                                                                                                                   | Para qué lo usa el tutor                                                                                                  |
+  | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+  | `modelo`    | Guía oficial 2026, ejercicios 1 a 8 · clases de colas (PowerPoint y "Ejercicios Colas (NS)") · TP 4 de generación de variables aleatorias  | Para **explicar** ("¿cómo calculo el PTO en tiempo comprometido?"). Nunca se dan como ejercicio.                          |
+  | `ejercicio` | Guía Anexa resuelta (41) · Guía Anexa 2026 (8 nuevos) · parciales y parcialitos · ejercicios resueltos de la cátedra · guía oficial 9 a 12 | Son el tipo de ejercicio que se da para practicar y la referencia de **redacción y complejidad** para inventar uno nuevo. |
+  | `pendiente` | Guía oficial 13 a 22 · Guía Anexa de Δt (17)                                                                                               | No se carga todavía.                                                                                                      |
+
+  Todo junto no entra en cada consulta, así que `MaterialCatedra` (BM25, sin servicios
+  externos) elige hasta 2 modelos y 2 ejercicios parecidos a los últimos mensajes del alumno
+  (buscados por separado, con tope de tokens), y el prompt los presenta en dos grupos.
+  Si el alumno nombra "el ejercicio N de la guía", ese va primero.
+
+**Alcance actual: sistemas que se resuelven con Evento a Evento**, pero el tutor **no dice la
+metodología en los enunciados**: elegirla es parte del ejercicio. Lo de Δt queda para más adelante.
 Se descartaron los libros generales de otras universidades: usan convenciones distintas y
 podrían contradecir a la cátedra. Los originales (`complemento_teorico/`) no se suben al repo.
 

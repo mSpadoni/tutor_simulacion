@@ -1,5 +1,7 @@
 # Parciales y parcialitos anteriores
 
+> tipo: ejercicio
+
 Fuente: parciales de la cátedra (2011 a 2022) y parcialitos 2026. Solo consignas, **sin respuestas oficiales**.
 Sirven para saber qué se toma y con qué formato: afirmaciones de Verdadero/Falso, preguntas teóricas, generación de variables aleatorias y análisis previo de sistemas.
 Las afirmaciones V/F se copian tal cual: algunas son verdaderas y otras falsas a propósito.

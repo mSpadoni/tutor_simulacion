@@ -41,7 +41,7 @@ export class ChatController {
     crearClienteOpenAI = obtenerClienteOpenAI,
     modelo = MODELO_OPENAI,
     armarPrompt = armarSystemPrompt,
-    buscarMaterial = (consulta) => obtenerMaterialCatedra().buscar(consulta),
+    buscarMaterial = (consulta) => obtenerMaterialCatedra().buscarModelosYEjercicios(consulta),
   }: Dependencias = {}) {
     this.crearClienteOpenAI = crearClienteOpenAI;
     this.modelo = modelo;

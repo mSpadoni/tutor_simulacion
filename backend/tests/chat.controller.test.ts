@@ -56,6 +56,19 @@ describe.skipIf(!hayClave)("ChatController.responder — respuestas reales (requ
     expect(respuesta.toLowerCase()).toMatch(/mismo evento|propio evento|sí mismo|nada|----/);
   });
 
+  it("un ejercicio nuevo se redacta como la anexa y los parciales, sin revelar la metodología", async () => {
+    const respuesta = await new ChatController().responder(
+      conversacion("Dame un ejercicio nuevo para practicar, tipo parcial.")
+    );
+
+    expect(respuesta).toMatch(/f\.?\s?d\.?\s?p/i);
+    expect(respuesta).toMatch(/se pide/i);
+    // Lo tiene que descubrir el alumno: ni la metodología ni los nombres de eventos o variables.
+    expect(respuesta).not.toMatch(
+      /evento a evento|\bEaE\b|Δt|delta t|intervalos? constantes?|\bTPLL\b|\bTPS\b|\bTEF\b/i
+    );
+  });
+
   it("con un modelo que no existe devuelve el error de configuración", async () => {
     const controller = new ChatController({ modelo: "modelo-que-no-existe" });
 

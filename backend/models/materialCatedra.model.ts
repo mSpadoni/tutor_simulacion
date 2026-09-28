@@ -5,9 +5,20 @@ const DIRECTORIO_CONOCIMIENTO = path.join(process.cwd(), "backend", "knowledge")
 /** La base de conocimiento va siempre entera en el system prompt: no se busca en ella. */
 const ARCHIVO_BASE = "base-conocimiento-simulacion.md";
 
+/**
+ * Para qué sirve una ficha. Cada archivo lo declara en una línea "> tipo: ..." debajo del título.
+ * - modelo: modelos de la cátedra (guía oficial 1 a 8, clases). Sirven para explicar; no se dan como ejercicio.
+ * - ejercicio: anexa, parciales, ejercicios resueltos, guía oficial 9 a 12. Son lo que se le da al alumno para
+ *   practicar y la referencia de redacción y complejidad para inventar ejercicios nuevos.
+ * - pendiente: material que todavía no se usa (Δt, guía oficial 13 en adelante). No se carga.
+ */
+export const TIPOS_DE_FICHA = ["modelo", "ejercicio", "pendiente"] as const;
+export type TipoDeFicha = (typeof TIPOS_DE_FICHA)[number];
+
 /** Un ejercicio o apunte del material de la cátedra (una sección "###" de los archivos de backend/knowledge). */
 export type Ficha = {
   id: string;
+  tipo: TipoDeFicha;
   fuente: string;
   categoria: string;
   titulo: string;
@@ -16,7 +27,7 @@ export type Ficha = {
 };
 
 /** Opciones de buscar(). El `?` las hace opcionales: si no se pasan, se usan los valores por defecto. */
-type OpcionesBusqueda = { limite?: number; presupuestoTokens?: number };
+type OpcionesBusqueda = { limite?: number; presupuestoTokens?: number; tipo?: TipoDeFicha };
 
 // Palabras que no ayudan a distinguir una ficha de otra.
 // Un Set es una colección sin repetidos que responde muy rápido "¿está esta palabra?" con .has(palabra).
@@ -62,8 +73,18 @@ function aproximarTokens(texto: string): number {
   return Math.ceil(texto.length / 3.5);
 }
 
+/** Lee la línea "> tipo: ..." del archivo. Sin esa línea el archivo está mal armado: mejor fallar al cargar. */
+function leerTipo(nombreArchivo: string, texto: string): TipoDeFicha {
+  const tipo = texto.match(/^> tipo: *(\S+) *$/m)?.[1];
+  if (!TIPOS_DE_FICHA.includes(tipo as TipoDeFicha)) {
+    throw new Error(`${nombreArchivo}: falta la línea "> tipo: modelo | ejercicio | pendiente" debajo del título`);
+  }
+  return tipo as TipoDeFicha;
+}
+
 /** Parte un archivo Markdown en fichas: "# fuente", "## categoría", "### ficha". */
-function leerFichas(nombreArchivo: string, texto: string): Ficha[] {
+export function leerFichas(nombreArchivo: string, texto: string): Ficha[] {
+  const tipo = leerTipo(nombreArchivo, texto);
   // Busca la primera línea "# ..." y toma lo que sigue (grupo [1] de la expresión regular).
   // Si no hay (`?.` da undefined), `??` usa el nombre del archivo como fuente.
   const fuente = texto.match(/^# (.+)$/m)?.[1].trim() ?? nombreArchivo;
@@ -78,6 +99,7 @@ function leerFichas(nombreArchivo: string, texto: string): Ficha[] {
     const contenido = actual.lineas.join("\n").trim();
     fichas.push({
       id: `${nombreArchivo}#${fichas.length + 1}`,
+      tipo,
       fuente,
       categoria,
       titulo: actual.titulo,
@@ -164,25 +186,39 @@ export class MaterialCatedra {
       .filter((archivo) => archivo.endsWith(".md") && archivo !== ARCHIVO_BASE)
       .sort()
       .flatMap((archivo) => leerFichas(archivo, readFileSync(path.join(directorio, archivo), "utf8")))
-      // Por ahora el alumno solo vio Evento a Evento: los ejercicios de Δt no se usan como referencia.
-      .filter((ficha) => !ficha.categoria.includes("Δt"));
+      // Lo pendiente (Δt, guía oficial 13 en adelante) todavía no se usa.
+      .filter((ficha) => ficha.tipo !== "pendiente");
     return new MaterialCatedra(fichas);
+  }
+
+  /**
+   * El material para una consulta del chat: hasta 2 modelos (para explicar) y hasta 2 ejercicios (tipo de
+   * ejercicio y referencia de redacción), buscados por separado para que un tipo no desplace al otro.
+   */
+  buscarModelosYEjercicios(consulta: string): Ficha[] {
+    return [
+      ...this.buscar(consulta, { tipo: "modelo", limite: 2, presupuestoTokens: 3000 }),
+      ...this.buscar(consulta, { tipo: "ejercicio", limite: 2, presupuestoTokens: 4000 }),
+    ];
   }
 
   /**
    * Las fichas más relacionadas con la consulta, sin pasarse del presupuesto de tokens.
    * Si el alumno nombra "el ejercicio N de la guía", ese enunciado va primero.
+   * Con `tipo`, solo se buscan fichas de ese tipo (modelo o ejercicio); sin `tipo`, entre todas.
    * `{ limite = 3, presupuestoTokens = 6000 }: OpcionesBusqueda = {}`: el segundo parámetro es un objeto opcional
    * que se desestructura en el momento, con valores por defecto para cada propiedad. Ej: buscar("colas", { limite: 5 }).
    */
-  buscar(consulta: string, { limite = 3, presupuestoTokens = 6000 }: OpcionesBusqueda = {}): Ficha[] {
+  buscar(consulta: string, { limite = 3, presupuestoTokens = 6000, tipo }: OpcionesBusqueda = {}): Ficha[] {
     const candidatas: Ficha[] = [];
+    const esDelTipo = (ficha: Ficha) => tipo === undefined || ficha.tipo === tipo;
 
     // Detecta "ejercicio 5", "ejercicio nro 5", "ejercicio n° 5"... El número queda en ejercicioDeGuia[1].
     const ejercicioDeGuia = consulta.match(/ejercicio\s*(?:n(?:ro|°|º|\.)?\s*)?(\d{1,2})\b/i);
     if (ejercicioDeGuia && /gu[ií]a|tp|trabajo/i.test(consulta)) {
       const buscada = this.fichas.find(
         (ficha) =>
+          esDelTipo(ficha) &&
           ficha.fuente.includes("Trabajos Prácticos") &&
           ficha.titulo.startsWith(`Ejercicio ${Number(ejercicioDeGuia[1])} `)
       );
@@ -194,6 +230,7 @@ export class MaterialCatedra {
     if (palabras.length > 0) {
       // Puntúa todas las fichas, descarta las de puntaje 0 y ordena de mayor a menor (b - a = descendente).
       const puntajes = this.indice
+        .filter((doc) => esDelTipo(doc.ficha))
         .map((doc) => ({ ficha: doc.ficha, puntaje: this.puntuar(doc, palabras) }))
         .filter(({ puntaje }) => puntaje > 0)
         .sort((a, b) => b.puntaje - a.puntaje);

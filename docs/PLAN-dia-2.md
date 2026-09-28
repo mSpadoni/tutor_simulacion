@@ -50,8 +50,18 @@ y encontrar sus conversaciones guardadas al volver a entrar.
   - `parciales-anteriores.md`: 6 parciales y los parcialitos 2026 (consignas, sin respuestas).
 - [x] Base de conocimiento: sección 9 con lo que toman los parcialitos (HV, ITO/STO,
       vaciamiento, arrepentimiento, permanencia "método viejo" y "nuevo").
-- [x] `MaterialCatedra` (BM25): elige 3 fichas por consulta (tope 6.000 tokens), entre 93.
+- [x] `MaterialCatedra` (BM25): elige hasta 2 modelos y 2 ejercicios por consulta, entre 91 fichas.
       El log `chat.respuesta` registra modelo, tiempo, tokens y fichas usadas.
+- [x] **Dos tipos de material** (cada archivo lo declara con `> tipo:`):
+  - `modelo`: guía oficial 1 a 8 (`modelos-guia-oficial.md`, por tema: colas y tiempo comprometido),
+    clases de colas y TP 4. Sirven para explicar; nunca se dan como ejercicio.
+  - `ejercicio`: Guía Anexa resuelta, Guía Anexa 2026 (`guia-anexa-2026.md`, los 8 que no estaban),
+    parciales, ejercicios resueltos y guía oficial 9 a 12. Tipo de ejercicio para practicar y
+    referencia de redacción.
+  - `pendiente` (`pendientes.md`, no se carga): guía oficial 13 a 22 y los 17 de Δt de la anexa.
+- [x] **Ejercicios nuevos redactados como la anexa y los parciales** (sección 8 de la base): título,
+      relato del sistema, datos con f.d.p., qué se busca decidir y "Se pide:", con complejidad de
+      parcial. **Nunca dicen la metodología** ni nombran eventos o variables: lo descubre el alumno.
 - [x] Clases oficiales "Clase EaE" y "Clase N Colas" (2C 2026, .ppsx) incorporadas:
   - Base de conocimiento según lo oficial: `TPLL ≤ TPS` (con empate, va la llegada), la
     columna Condición como anexa, "los datos son funciones, no porcentajes fijos", C.I. con
@@ -60,8 +70,8 @@ y encontrar sus conversaciones guardadas al volver a entrar.
     "anterior" y "nuevo" (SPS), con el ejemplo numérico de la clase.
   - `colas-resumen-catedra.md` armado desde las clases: N colas, cola única (y por qué
     NS ≤ N / NS ≥ N), rutinas MENOR TPS(i), MENOR NS(i) y HV EN TPS(i), y prioridades.
-- [x] Solo EaE: el tutor no propone ni corrige Δt, y los 17 ejercicios de Δt de la
-      Guía Anexa quedan fuera de la búsqueda. De la guía oficial, por ahora 1 a 12.
+- [x] Solo sistemas de Evento a Evento: el tutor no propone ni corrige Δt. De la guía oficial,
+      por ahora 1 a 12.
 - **No incluido:** los libros generales (otras universidades, otras convenciones) y las
   13 fotos de resoluciones a mano. Las fotos son de un alumno, con correcciones del
   docente, y algunas tienen errores. Podrían servir más adelante como "errores típicos",
@@ -159,7 +169,10 @@ Cada punto con su test sin mocks, `npm run format`, commit y push.
 - **La conversación se guarda** en Supabase (`conversaciones` + `mensajes`),
   como exige el challenge ("historial de conversación persistente").
 - **Material de la cátedra con BM25**, sin embeddings: la base de
-  conocimiento va entera y se suman las 3 fichas más parecidas a la consulta.
-  No depende de otro servicio y alcanza para 93 fichas.
+  conocimiento va entera y se suman hasta 2 modelos y 2 ejercicios parecidos a la
+  consulta. No depende de otro servicio y alcanza para 91 fichas.
+- **Modelos y ejercicios se buscan por separado.** Si se buscaran juntos, una consulta
+  como "dame un ejercicio de tiempo comprometido" podría traer solo modelos, y el tutor
+  terminaría dando un modelo como ejercicio.
 - **Contexto limitado a los últimos 20 mensajes**, para acotar costo y
   latencia.

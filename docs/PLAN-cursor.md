@@ -131,9 +131,19 @@ botón "Ver como texto" que muestra el Mermaid (WCAG 1.1.1).
 ## 6. System prompt y contexto de la materia
 
 - **Base de conocimiento** entera en el system prompt (convenciones de la cátedra).
-- **Fichas de la cátedra** (BM25 en `MaterialCatedra`, ya hecho): 3 fichas
-  por consulta según lo que pregunta el alumno. Sin embeddings ni base
-  vectorial.
+- **Fichas de la cátedra** (BM25 en `MaterialCatedra`, ya hecho), de dos tipos
+  que cada archivo declara con `> tipo:`:
+  - **Modelos** (guía oficial 1 a 8, clases, TP 4): para explicar teoría;
+    nunca se dan como ejercicio.
+  - **Ejercicios** (Guía Anexa resuelta y 2026, parciales, ejercicios
+    resueltos, guía oficial 9 a 12): el tipo de ejercicio para practicar y
+    la referencia de redacción y complejidad para inventar uno nuevo.
+  - Por consulta: hasta 2 de cada tipo, presentados en dos grupos. Lo de Δt
+    y la guía 13 en adelante quedan en `pendientes.md`, sin cargar. Sin
+    embeddings ni base vectorial.
+- **Ejercicios nuevos:** redactados como la anexa y los parciales (sección 8
+  de la base de conocimiento), solo de sistemas de Evento a Evento pero **sin
+  decir nunca la metodología**: elegirla es parte del ejercicio.
 - **Few-shot:** 3–4 ejemplos resueltos al estilo de la cátedra (f.d.p.,
   ejercicio nuevo, corrección, diagrama), fijos en el prompt.
 - **Cuándo usar cada tool:** `verificar_fdp` siempre que se resuelva una

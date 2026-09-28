@@ -1,9 +1,11 @@
-# Ejercicios resueltos de Evento a Evento (cátedra)
+# Ejercicios resueltos (cátedra)
+
+> tipo: ejercicio
 
 Fuente: "Ej Resueltos EaE" (material de la cátedra). Análisis previo completo y, cuando el original lo trae, el diagrama de flujo pasado a pasos.
 Las aclaraciones marcadas como "Nota" no están en el original: se agregaron para que el ejercicio se entienda sin el dibujo.
 
-## Ejercicios resueltos — Metodología EaE
+## Ejercicios resueltos
 
 ### Servidor web y base de datos (WBD)
 

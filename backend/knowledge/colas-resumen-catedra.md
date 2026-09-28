@@ -1,4 +1,6 @@
-# Clases de la cátedra: sistemas de colas (EaE, 2C 2026)
+# Clases de la cátedra: sistemas de colas (2C 2026)
+
+> tipo: modelo
 
 Fuente: clases "Clase EaE" y "Clase N Colas" de la cátedra (Ing. Milin – Ing. Mammana, 2C 2026), más el resumen "Ejercicios Colas (NS)". Es material oficial: los diagramas se pasaron a pasos.
 Nomenclatura de las clases: SPS = sumatoria de permanencia en el sistema (método "nuevo"), HV = high value, ITO/STO = inicio/sumatoria de tiempo ocioso, CLL = cantidad de llegadas.

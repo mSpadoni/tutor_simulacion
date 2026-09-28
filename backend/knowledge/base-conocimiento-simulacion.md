@@ -196,7 +196,21 @@ Al corregir, el bot debe señalar en qué paso específico está el error (no so
 
 ## 8. CÓMO GENERAR UN EJERCICIO NUEVO (para modo simulacro)
 
-Solo ejercicios de Evento a Evento (Δt todavía no se vio). Elegir un "esqueleto" de la sección 6 (colas simples, colas con prioridad, N puestos, tiempo comprometido, transporte, mantenimiento, almacenamiento intermedio con eventos) y variar: el dominio (contexto narrativo), los tipos de f.d.p. de los datos (uniforme, lineal, exponencial), y qué se pide como resultado. Mantener siempre la consigna en el formato de las diapositivas: contexto → datos con su f.d.p. → qué se pide (a. Clasificar variables, TEI/TEF b. Diagrama de flujo, c. eventualmente resolver la generación de alguna variable aleatoria).
+**Qué sistemas.** Por ahora solo sistemas que se resuelven con Evento a Evento (Δt todavía no se vio). Esto es un criterio interno para elegir el sistema: **el enunciado nunca dice la metodología**, porque elegirla es parte de lo que resuelve el alumno.
+
+**De dónde sale.** El tipo de ejercicio que se le da al alumno es el de la Guía Anexa, los parciales, los ejercicios resueltos de la cátedra y la guía oficial del 9 al 12. Se puede tomar uno de esos como base (cambiando dominio, datos y complicaciones) o armarlo desde cero combinando un esqueleto de la sección 6, las clases y los modelos de la guía oficial (1 a 8). En los dos casos, **la redacción y la complejidad son las de la anexa y los parciales**. Los modelos (guía oficial 1 a 8 y los ejercicios de las clases) no se dan como ejercicio: son para explicar.
+
+**Cómo se redacta** (como en la Guía Anexa y los parciales):
+- Un **título corto** con el dominio ("Clínica", "Garage", "Salón de ventas").
+- El **sistema contado en prosa**, en lenguaje del dominio (clientes, pacientes, pedidos, vehículos), sin vocabulario de la materia. Puede ser un pedido en primera persona (como el mail del gerente en "WBD").
+- Los **datos**: "responde a una f.d.p. conocida" o, cuando se pide resolverla, la f.d.p. explícita en el estilo de la cátedra ("equiprobable entre 10 y 35 minutos", "lineal donde f(20) = 2·f(10)", "entre 2 y 8 horas con f(x) = (x−1)/24"). Se pueden dar siglas solo para los datos, entre paréntesis: (IA), (TA), (CC).
+- **Porcentajes y reglas del dominio** que generan las complicaciones: arrepentimiento según la cola, prioridades, rotura o rechazo con probabilidad, asignación al puesto que se desocupa primero o al de menor cola, reposición cada cierto tiempo.
+- **Qué se busca decidir** (las variables de control, sin llamarlas así) y **qué se quiere medir**: "Se desea determinar la cantidad N de …, para ello se estudiará el porcentaje de … y el promedio de …".
+- La **consigna**, como en la guía y los parciales: "Se pide: a) Análisis completo: Metodología, clasificación de variables, tabla de eventos independientes, tabla de eventos futuros. b) Diagrama de flujo. c) Resolver las f.d.p. por el método más conveniente."
+
+**Complejidad de parcial.** Dos o tres complicaciones combinadas (no un sistema de cola simple), como en los parciales: por ejemplo, N puestos + arrepentimiento, o stock + reposición anticipada + rechazo.
+
+**Qué no va nunca en el enunciado:** el nombre de la metodología ("evento a evento", "EaE", "intervalos constantes", "Δt"); nombres de eventos, variables de estado o de tiempo (TPLL, TPS, NS, TC, TEF, TEI); la clasificación de variables; ni pistas de cómo se resuelve.
 
 ## 9. CONCEPTOS QUE SE TOMAN EN LOS PARCIALITOS
 
