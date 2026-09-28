@@ -1,7 +1,7 @@
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { UIMessage } from "ai";
-import { TEXTOS_DE_HERRAMIENTAS } from "./tipos";
+import { diagramaDe, herramientaFallo, TEXTOS_DE_HERRAMIENTAS, type DiagramaParaMostrar } from "./tipos";
 
 // react-markdown no renderiza HTML crudo: lo que escriba el modelo no puede inyectar scripts.
 // Este objeto dice cómo dibujar cada elemento del Markdown (párrafo, lista, tabla...) con estilos propios.
@@ -34,20 +34,45 @@ const componentesMarkdown: Components = {
   a: (props) => <a className="text-blue-700 underline" target="_blank" rel="noreferrer" {...props} />,
 };
 
-/** Una parte de tool del mensaje (`tool-<nombre>`), con su estado: usándola, lista o con error. */
-type ParteDeTool = { type: string; state?: string };
+/** Una parte de tool del mensaje (`tool-<nombre>`), con su estado (usándola, lista o con error) y su resultado. */
+type ParteDeTool = { type: string; state?: string; output?: unknown };
 
 /** Cómo se muestra el uso de una tool: texto visible (no solo un ícono) y un indicador de estado. */
 function AvisoDeTool({ parte }: { parte: ParteDeTool }) {
   const nombre = parte.type.slice("tool-".length);
   const textos = TEXTOS_DE_HERRAMIENTAS[nombre] ?? { usando: `Usando ${nombre}…`, usada: `Usó ${nombre}` };
-  const lista = parte.state === "output-available";
-  const conError = parte.state === "output-error";
+  const conError = herramientaFallo(parte);
+  const lista = parte.state === "output-available" && !conError;
   return (
     <li className="flex items-center gap-1.5 text-xs text-slate-600">
       <span aria-hidden="true">{conError ? "⚠" : lista ? "✓" : "…"}</span>
       {conError ? `No se pudo: ${textos.usada.toLowerCase()}` : lista ? textos.usada : textos.usando}
     </li>
+  );
+}
+
+/**
+ * Un diagrama de flujo generado con Kroki. Va como <img> (el SVG no se inserta como HTML, así no se ejecuta nada
+ * que venga adentro), con un alt que dice de qué es, la fuente citada y el Mermaid como alternativa en texto.
+ */
+function DiagramaDeFlujo({ diagrama }: { diagrama: DiagramaParaMostrar }) {
+  return (
+    <figure className="my-2 rounded-lg border border-slate-200 bg-white p-2">
+      <div className="overflow-x-auto">
+        {/* eslint-disable-next-line @next/next/no-img-element -- es un data URL generado en el momento. */}
+        <img src={diagrama.src} alt={`Diagrama de flujo: ${diagrama.titulo}`} className="mx-auto max-w-none" />
+      </div>
+      <figcaption className="mt-2 text-xs text-slate-600">
+        {diagrama.titulo} · Renderizado con{" "}
+        <a href="https://kroki.io" target="_blank" rel="noreferrer" className="text-blue-700 underline">
+          Kroki
+        </a>
+        <details className="mt-1">
+          <summary className="cursor-pointer text-slate-700">Ver como texto (Mermaid)</summary>
+          <pre className="mt-1 overflow-x-auto rounded bg-slate-100 p-2 text-[0.8rem]">{diagrama.mermaid}</pre>
+        </details>
+      </figcaption>
+    </figure>
   );
 }
 
@@ -60,6 +85,7 @@ export default function MessageBubble({ mensaje }: { mensaje: UIMessage }) {
   // Un mensaje del AI SDK viene en partes: texto, tools usadas, inicio de cada paso...
   const texto = mensaje.parts.flatMap((parte) => (parte.type === "text" ? [parte.text] : [])).join("\n\n");
   const tools = mensaje.parts.filter((parte) => parte.type.startsWith("tool-")) as ParteDeTool[];
+  const diagramas = tools.flatMap((parte) => diagramaDe(parte) ?? []);
   if (!texto && tools.length === 0) return null;
 
   return (
@@ -79,6 +105,9 @@ export default function MessageBubble({ mensaje }: { mensaje: UIMessage }) {
             ))}
           </ul>
         )}
+        {diagramas.map((diagrama, indice) => (
+          <DiagramaDeFlujo key={indice} diagrama={diagrama} />
+        ))}
         {esAlumno ? (
           <p className="whitespace-pre-wrap">{texto}</p>
         ) : (

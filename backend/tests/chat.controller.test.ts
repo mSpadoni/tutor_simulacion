@@ -164,6 +164,26 @@ describe.skipIf(!hayClave)("ChatController.responder — respuestas reales (requ
     const [, tutor] = await mensajesGuardados(conversaciones, id, 2);
 
     expect(herramientas(tutor)).toContain("inspiracion_para_ejercicio");
+    // El diagrama revelaría la metodología: nunca al dar un ejercicio nuevo.
+    expect(herramientas(tutor)).not.toContain("generar_diagrama_flujo");
+  });
+
+  it("si el alumno pide el diagrama, lo dibuja con Kroki y queda guardado en el mensaje", async () => {
+    const { conversaciones, controller } = await alumnoConChat();
+    const id = randomUUID();
+
+    await conversar(
+      controller,
+      id,
+      "Dibujame el diagrama de flujo de la rutina de LLEGADA de un sistema con un puesto y una cola."
+    );
+    const [, tutor] = await mensajesGuardados(conversaciones, id, 2);
+    const diagrama = tutor.parts.find((parte) => parte.type === "tool-generar_diagrama_flujo") as
+      { state: string; output: { ok: boolean; svg?: string } } | undefined;
+
+    expect(diagrama?.state).toBe("output-available");
+    expect(diagrama?.output.ok).toBe(true);
+    expect(diagrama?.output.svg).toContain("<svg");
   });
 
   it("con un modelo que no existe, el stream trae el error de configuración", async () => {

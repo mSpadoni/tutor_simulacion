@@ -36,6 +36,26 @@ describe("armarSystemPrompt", () => {
   });
 });
 
+describe("armarSystemPrompt — diagramas", () => {
+  const prompt = armarSystemPrompt();
+
+  it("presenta la herramienta de diagramas y prohíbe usarla al dar un ejercicio nuevo", () => {
+    expect(prompt).toContain("**generar_diagrama_flujo(titulo, mermaid)**");
+    expect(prompt).toContain("**Nunca al dar un ejercicio nuevo**");
+  });
+
+  it("explica cómo escribir el Mermaid con la convención de símbolos de la cátedra", () => {
+    expect(prompt).toContain("# Cómo dibujar un diagrama");
+    expect(prompt).toContain("Empezá con `flowchart TD`");
+    expect(prompt).toContain("generación de una variable aleatoria → óvalo");
+    expect(prompt).toContain("decisión → rombo");
+  });
+
+  it("ya no dice que no puede dibujar", () => {
+    expect(prompt).not.toContain("Por ahora no podés dibujar");
+  });
+});
+
 describe("armarSystemPrompt — herramientas", () => {
   const prompt = armarSystemPrompt();
 

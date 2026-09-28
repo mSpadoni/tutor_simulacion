@@ -57,4 +57,32 @@ export const TEXTOS_DE_HERRAMIENTAS: Record<string, { usando: string; usada: str
     usando: "Buscando ejercicios de la cátedra para inspirarse…",
     usada: "Se inspiró en ejercicios de la cátedra",
   },
+  generar_diagrama_flujo: {
+    usando: "Dibujando el diagrama de flujo…",
+    usada: "Dibujó el diagrama de flujo",
+  },
 };
+
+/** Un diagrama listo para mostrar: el SVG va como data URL en un <img> (así el navegador no ejecuta nada de adentro). */
+export type DiagramaParaMostrar = { titulo: string; mermaid: string; src: string };
+
+/**
+ * Si la parte del mensaje es un diagrama que Kroki generó bien, sus datos para mostrarlo; si no, null
+ * (todavía se está generando, o falló: eso lo muestra el aviso de la tool).
+ */
+export function diagramaDe(parte: { type: string; state?: string; output?: unknown }): DiagramaParaMostrar | null {
+  if (parte.type !== "tool-generar_diagrama_flujo" || parte.state !== "output-available") return null;
+  const salida = parte.output as { ok?: boolean; svg?: unknown; titulo?: unknown; mermaid?: unknown } | undefined;
+  if (!salida?.ok || typeof salida.svg !== "string") return null;
+  return {
+    titulo: String(salida.titulo ?? "Diagrama de flujo"),
+    mermaid: String(salida.mermaid ?? ""),
+    src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(salida.svg)}`,
+  };
+}
+
+/** ¿La tool terminó pero falló? (ej. el diagrama no se pudo generar) — para mostrar el aviso con ⚠. */
+export function herramientaFallo(parte: { state?: string; output?: unknown }): boolean {
+  if (parte.state === "output-error") return true;
+  return parte.state === "output-available" && (parte.output as { ok?: boolean } | undefined)?.ok === false;
+}
