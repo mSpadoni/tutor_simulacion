@@ -35,8 +35,8 @@ export function crearToolsDiagrama() {
   return {
     generar_diagrama_flujo: tool({
       description:
-        "Dibuja un diagrama de flujo (Mermaid → imagen con Kroki) y se lo muestra al alumno. Usala cuando resolvés o " +
-        "corregís el diagrama de un ejercicio, o cuando el alumno pide ver uno. NUNCA al dar un ejercicio nuevo.",
+        "Dibuja un diagrama de flujo (Mermaid → imagen con Kroki) y se lo muestra al alumno. Usala SIEMPRE al resolver " +
+        "un ejercicio (como último paso), al corregir un diagrama o cuando el alumno pide ver uno. NUNCA al dar un ejercicio nuevo.",
       inputSchema: z.object({
         titulo: z.string().min(2).max(120).describe("De qué es el diagrama, ej: 'Clínica — diagrama completo'"),
         mermaid: z

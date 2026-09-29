@@ -211,6 +211,17 @@ describe.skipIf(!hayClave)("ChatController.responder — respuestas reales (requ
     expect(herramientas(tutor)).toEqual(expect.arrayContaining(["buscar_ejercicio", "consultar_modelos"]));
   });
 
+  it("al resolver un ejercicio completo, termina mostrando el diagrama de flujo", async () => {
+    // Sin pausa entre palabras: una resolución completa es larga y acá solo importa qué tools usó.
+    const { conversaciones, controller } = await alumnoConChat({ pausaEntrePalabrasMs: 0 });
+    const id = randomUUID();
+
+    await conversar(controller, id, "Resolveme el ejercicio Clínica de la Guía Anexa.");
+    const [, tutor] = await mensajesGuardados(conversaciones, id, 2);
+
+    expect(herramientas(tutor)).toContain("generar_diagrama_flujo");
+  }, 90_000);
+
   it("un ejercicio nuevo usa la inspiración de la cátedra y queda guardado en «Mis ejercicios»", async () => {
     const { conversaciones, ejercicios, controller } = await alumnoConChat();
     const id = randomUUID();

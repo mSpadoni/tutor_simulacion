@@ -17,8 +17,11 @@ import type { MetadatosDeRespuesta, TutorUIMessage } from "@/shared/chat";
 // El agente: todo lo que tiene que ver con el LLM (prompt, tools, pasos, streaming, log).
 // No sabe de conversaciones ni de la base: recibe los mensajes y avisa cuando termina la respuesta.
 
-/** Máximo de pasos por respuesta: hasta 3 rondas de tools y la respuesta final. Evita loops sin fin. */
-const MAXIMO_DE_PASOS = 4;
+/**
+ * Máximo de pasos por respuesta: hasta 5 rondas de tools y la respuesta final. Resolver un ejercicio usa varias
+ * (buscar el enunciado, los modelos, a veces verificar la f.d.p., y el diagrama al final). Evita loops sin fin.
+ */
+const MAXIMO_DE_PASOS = 6;
 
 /**
  * El modelo manda el texto en ráfagas irregulares; así la respuesta se lee más cómoda: sale palabra por palabra,
