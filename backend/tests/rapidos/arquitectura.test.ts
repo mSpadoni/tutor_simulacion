@@ -1,12 +1,16 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { ESLint } from "eslint";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 // Sin mocks: el ESLint real del proyecto (eslint.config.mjs) revisa código de ejemplo como si estuviera en cada carpeta.
 // Así se prueba que las reglas de dependencia de la arquitectura de verdad se cumplen solas.
 
 const eslint = new ESLint({ cwd: process.cwd() });
+
+// La primera pasada carga ESLint, el parser de TypeScript y los plugins (lento en frío, más con otros tests
+// corriendo en paralelo). Se hace una vez acá, con margen, para que cada test mida solo su regla.
+beforeAll(() => eslint.lintText("export {};", { filePath: "views/calentamiento.ts" }), 60_000);
 
 /** Los errores de dependencia que ESLint marca para `codigo` si estuviera en `archivo`. */
 async function erroresDeDependencia(codigo: string, archivo: string): Promise<string[]> {
