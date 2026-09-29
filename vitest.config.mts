@@ -2,11 +2,12 @@ import { fileURLToPath } from "node:url";
 import { loadEnv } from "vite";
 import { defineConfig } from "vitest/config";
 
-// Configuración de Vitest. Tres grupos de tests, cada uno en su carpeta:
+// Configuración de Vitest. Cuatro grupos de tests, cada uno en su carpeta:
 // - rapidos: lógica pura, reglas del proyecto y componentes. Sin Docker ni internet; tardan segundos.
 // - integracion: contra la copia local de Supabase (Docker): repositorios, RLS, auth, middleware. Sin internet.
-// - externos: servicios de internet de verdad (OpenAI, Kroki). Pueden fallar por la red o por la cuenta de OpenAI.
-// `npm test` corre rapidos + integracion (lo confiable); `npm run test:externos`, los de internet.
+// - externos: el contrato con los servicios reales (OpenAI, Kroki). Necesitan internet.
+// - evals: la conducta del modelo real (qué tools elige), varias corridas por caso. Gastan crédito.
+// `npm test` corre rapidos + integracion (lo confiable, sin internet); `test:externos` y `test:evals`, aparte.
 
 /** Lo que comparten los grupos que usan la base local. */
 const conSupabaseLocal = {
@@ -50,6 +51,16 @@ export default defineConfig({
         extends: true,
         // El chat también guarda en la base local, por eso usa el mismo setup.
         test: { name: "externos", include: ["backend/tests/externos/**/*.test.ts"], ...conSupabaseLocal },
+      },
+      {
+        extends: true,
+        // Conducta del modelo real con varias corridas por caso: lento y gasta crédito (`npm run test:evals`).
+        test: {
+          name: "evals",
+          include: ["backend/tests/evals/**/*.test.ts"],
+          ...conSupabaseLocal,
+          testTimeout: 300_000,
+        },
       },
     ],
   },

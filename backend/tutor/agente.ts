@@ -35,6 +35,8 @@ export type ConfiguracionDelAgente = {
   timeoutMs?: number;
   /** Pausa entre palabras al mostrar la respuesta (ms). 0 = tan rápido como llega del modelo. */
   pausaEntrePalabrasMs?: number;
+  /** Temperatura del modelo (0 = lo más predecible). Sin valor, la del proveedor. Las evals usan 0. */
+  temperatura?: number;
 };
 
 /** Lo que cambia en cada respuesta: el modelo, la conversación, las tools del pedido y qué hacer al terminar. */
@@ -99,10 +101,16 @@ export function medidorDeRespuesta(modelo: string, inicio = Date.now()) {
 export class AgenteTutor {
   private readonly timeoutMs: number;
   private readonly pausaEntrePalabrasMs: number;
+  private readonly temperatura: number | undefined;
 
-  constructor({ timeoutMs = 45_000, pausaEntrePalabrasMs = PAUSA_ENTRE_PALABRAS_MS }: ConfiguracionDelAgente = {}) {
+  constructor({
+    timeoutMs = 45_000,
+    pausaEntrePalabrasMs = PAUSA_ENTRE_PALABRAS_MS,
+    temperatura,
+  }: ConfiguracionDelAgente = {}) {
     this.timeoutMs = timeoutMs;
     this.pausaEntrePalabrasMs = pausaEntrePalabrasMs;
+    this.temperatura = temperatura;
   }
 
   /**
@@ -111,7 +119,7 @@ export class AgenteTutor {
    * Si el modelo falla en el medio, el error llega dentro del stream con su código.
    */
   async responder({ modelo, mensajes, tools, alTerminar }: PedidoAlAgente) {
-    const { timeoutMs, pausaEntrePalabrasMs } = this;
+    const { timeoutMs, pausaEntrePalabrasMs, temperatura } = this;
     const inicio = Date.now();
     const medir = medidorDeRespuesta(nombreDelModelo(modelo), inicio);
     const resultado = streamText({
@@ -123,6 +131,7 @@ export class AgenteTutor {
       stopWhen: stepCountIs(MAXIMO_DE_PASOS),
       maxOutputTokens: 2000,
       maxRetries: 1,
+      temperature: temperatura,
       timeout: timeoutMs,
       // Palabra por palabra, con una pausa pareja entre cada una.
       experimental_transform: smoothStream({ delayInMs: pausaEntrePalabrasMs, chunking: "word" }),

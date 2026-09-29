@@ -129,16 +129,20 @@ Los tests no usan mocks. Están en tres grupos:
   Supabase, Kroki u OpenAI.
 - **Integración** (`backend/tests/integracion/`): repositorios, RLS, auth y middleware contra una **copia local
   de Supabase** en Docker (misma migración, mismo login, mismas políticas RLS, nunca la base real). Sin internet.
-- **Externos** (`backend/tests/externos/`): los que hablan con servicios de internet de verdad (OpenAI y Kroki).
-  Pueden fallar por la red o por la cuenta de OpenAI, por eso van aparte.
+- **Externos** (`backend/tests/externos/`): el contrato con los servicios reales (OpenAI y Kroki): que respondan
+  como esperamos y que sus errores reales se traduzcan a nuestros códigos. Necesitan internet.
+- **Evals** (`backend/tests/evals/`): la conducta del modelo real (qué tool elige ante cada pedido). Es
+  probabilística, así que cada caso se corre 3 veces con temperatura 0 y se exige que pase al menos 2. Gastan
+  crédito: se corren al cambiar el prompt o las tools. Sin `OPENAI_API_KEY` fallan (no se saltean en silencio).
 
 ```bash
 # Una vez por sesión (Docker Desktop abierto). La primera vez baja las imágenes.
 npm run db:start
 npm test                  # rápidos + integración: lo confiable, sin internet
 npm run test:externos     # OpenAI y Kroki (necesitan internet; los de OpenAI, OPENAI_API_KEY)
+npm run test:evals        # conducta del modelo (gasta crédito; al cambiar el prompt o las tools)
 npm run test:rapidos      # solo los rápidos, sin Docker (mientras se programa)
-npm run test:todo         # los tres grupos
+npm run test:todo         # rápidos, integración y externos (sin las evals)
 # Al terminar, para liberar memoria:
 npm run db:stop
 ```

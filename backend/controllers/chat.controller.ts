@@ -25,6 +25,8 @@ type Dependencias = {
   timeoutMs?: number;
   /** Pausa entre palabras al mostrar la respuesta (ms). 0 = tan rápido como llega del modelo. */
   pausaEntrePalabrasMs?: number;
+  /** Temperatura del modelo (ver AgenteTutor). */
+  temperatura?: number;
   /** Cuántos mensajes puede mandar un alumno por minuto y por día. */
   limites?: LimitesDeUso;
 };
@@ -51,6 +53,7 @@ export class ChatController {
     ejercicios = () => ejerciciosModel,
     timeoutMs,
     pausaEntrePalabrasMs,
+    temperatura,
     limites = LIMITES_DE_USO,
   }: Dependencias = {}) {
     this.crearModelo = crearModelo;
@@ -58,7 +61,7 @@ export class ChatController {
     this.conversaciones = conversaciones;
     this.ejercicios = ejercicios;
     // El agente se configura una vez (timeout y ritmo del texto); sin valores, usa los suyos.
-    this.agente = new AgenteTutor({ timeoutMs, pausaEntrePalabrasMs });
+    this.agente = new AgenteTutor({ timeoutMs, pausaEntrePalabrasMs, temperatura });
     this.limites = limites;
   }
 
