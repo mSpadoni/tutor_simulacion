@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import type { UIMessage } from "ai";
 import { afterAll, describe, expect, it } from "vitest";
 import { ConversacionesModel } from "@/backend/models/repositorios/conversaciones.model";
-import { tituloDesde } from "@/shared/conversaciones";
 import { borrarAlumnosDePrueba, crearAlumnoLogueado, NavegadorDePrueba } from "../helpers/alumnoDePrueba";
 
 // Sin mocks: contra la base local de Supabase, con alumnos reales logueados (las políticas RLS se aplican de verdad).
@@ -18,16 +17,6 @@ async function alumnoConModel() {
   const alumno = await crearAlumnoLogueado();
   return { alumno, conversaciones: new ConversacionesModel(alumno.navegador.crearCliente) };
 }
-
-describe("tituloDesde", () => {
-  it("usa el primer mensaje en una sola línea y recorta los largos", () => {
-    expect(tituloDesde("  Dame un ejercicio\n de colas  ")).toBe("Dame un ejercicio de colas");
-    const largo = tituloDesde("a".repeat(100));
-    expect(largo).toHaveLength(60);
-    expect(largo.endsWith("…")).toBe(true);
-    expect(tituloDesde("   ")).toBe("Conversación nueva");
-  });
-});
 
 describe("ConversacionesModel", () => {
   it("crea una conversación del alumno con el id del navegador y la puede leer", async () => {

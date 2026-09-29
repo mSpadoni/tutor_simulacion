@@ -83,7 +83,8 @@ describe("AuthController.urlDeLoginConGoogle", () => {
     expect(destino.searchParams.get("provider")).toBe("google");
     expect(destino.searchParams.get("redirect_to")).toBe("http://localhost:3000/auth/callback");
     expect(destino.searchParams.get("code_challenge_method")).toBe("s256");
-    expect(destino.searchParams.get("code_challenge")).toBeTruthy();
+    // SHA-256 del verificador en base64url: 43 caracteres.
+    expect(destino.searchParams.get("code_challenge")).toMatch(/^[A-Za-z0-9_-]{43}$/);
     // El verificador PKCE queda en las cookies para canjear el code en /auth/callback.
     expect(navegador.nombresDeCookies().some((nombre) => nombre.endsWith("code-verifier"))).toBe(true);
   });

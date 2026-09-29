@@ -68,8 +68,12 @@ describe("EjerciciosModel", () => {
     const ejercicios = new EjerciciosModel(alumno.navegador.crearCliente);
 
     // @ts-expect-error: a propósito, un valor que TypeScript no permite.
-    await expect(ejercicios.guardar(ejercicio({ dificultad: "imposible" }))).rejects.toThrow();
-    await expect(ejercicios.guardar(ejercicio({ payload: { ...ejercicio().payload, sePide: [] } }))).rejects.toThrow();
+    await expect(ejercicios.guardar(ejercicio({ dificultad: "imposible" }))).rejects.toMatchObject({
+      name: "ZodError",
+    });
+    await expect(
+      ejercicios.guardar(ejercicio({ payload: { ...ejercicio().payload, sePide: [] } }))
+    ).rejects.toMatchObject({ name: "ZodError" });
     expect(await ejercicios.listarRecientes()).toEqual([]);
   });
 

@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import type { UIMessage } from "ai";
 import { afterAll, describe, expect, it } from "vitest";
 import { ConversacionesController } from "@/backend/controllers/conversaciones.controller";
-import { esIdDeConversacion } from "@/backend/controllers/validaciones";
 import { ConversacionesModel } from "@/backend/models/repositorios/conversaciones.model";
 import { borrarAlumnosDePrueba, crearAlumnoLogueado } from "../helpers/alumnoDePrueba";
 
@@ -20,14 +19,6 @@ async function alumnoConController() {
   const model = new ConversacionesModel(alumno.navegador.crearCliente);
   return { model, controller: new ConversacionesController(() => model) };
 }
-
-describe("esIdDeConversacion", () => {
-  it("acepta UUIDs y rechaza cualquier otra cosa", () => {
-    expect(esIdDeConversacion(randomUUID())).toBe(true);
-    expect(esIdDeConversacion("123")).toBe(false);
-    expect(esIdDeConversacion("../admin")).toBe(false);
-  });
-});
 
 describe("ConversacionesController", () => {
   it("abrir una conversación que todavía no existe la devuelve vacía (se guarda con el primer mensaje)", async () => {

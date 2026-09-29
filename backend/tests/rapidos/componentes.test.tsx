@@ -150,7 +150,7 @@ describe("PanelDeDebug", () => {
 
     expect(within(panel).getByText("Consultó los modelos de la cátedra")).toBeInTheDocument();
     expect(within(panel).getByText("consultar_modelos")).toBeInTheDocument();
-    expect(within(panel).getByText(/800/)).toBeInTheDocument();
+    expect(within(panel).getByText("800 / 200")).toBeInTheDocument(); // tokens de entrada / salida
   });
 
   it("al abrirse lleva el foco al botón de cerrar, y Escape lo cierra (teclado)", async () => {
