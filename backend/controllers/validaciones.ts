@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { ErrorDeAplicacion } from "@/backend/errores";
+import { MAX_CARACTERES_MERMAID } from "@/backend/models/dominio/mermaid";
 import { MAX_CARACTERES_MENSAJE, type TutorUIMessage } from "@/shared/chat";
 
 // Todo lo que manda el navegador se valida acá, con Zod, antes de que el controller haga nada: ningún dato del
@@ -63,6 +64,25 @@ export type PedidoDeChat = { conversacionId: string; mensaje: TutorUIMessage; te
 export function validarPedidoDeChat(cuerpo: unknown): PedidoDeChat {
   const { id, mensaje } = validar(PedidoDeChatSchema, cuerpo);
   return { conversacionId: id, mensaje, texto: mensaje.parts[0].text };
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Un diagrama que el tutor escribió como texto en su respuesta (POST /api/diagrama)
+
+const PedidoDeDiagramaSchema = z.object(
+  {
+    mermaid: z
+      .string()
+      .trim()
+      .min(10, "El diagrama está vacío.")
+      .max(MAX_CARACTERES_MERMAID, `Un diagrama no puede superar los ${MAX_CARACTERES_MERMAID} caracteres.`),
+  },
+  "Falta el diagrama."
+);
+
+/** Valida el cuerpo de POST /api/diagrama y devuelve el código Mermaid. Si no es válido, "pedido_invalido". */
+export function validarPedidoDeDiagrama(cuerpo: unknown): string {
+  return validar(PedidoDeDiagramaSchema, cuerpo).mermaid;
 }
 
 // ---------------------------------------------------------------------------------------------------------------

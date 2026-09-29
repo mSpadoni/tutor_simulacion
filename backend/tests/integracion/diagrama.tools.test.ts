@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DiagramaController } from "@/backend/controllers/diagrama.controller";
 import { ClienteKroki } from "@/backend/lib/kroki";
 import {
   crearToolsDiagrama,
@@ -49,6 +50,39 @@ describe("generarDiagramaFlujo", () => {
       expect(diagrama).toMatchObject({ ok: true, titulo: "Principal", svg: SVG });
       expect(diagrama.mermaid).toMatch(/^flowchart TD\n\s*classDef conector /);
       expect(diagrama.mermaid).toContain('A1(("A")):::conector --> B["T = TPLL"]');
+    } finally {
+      await servidor.cerrar();
+    }
+  });
+});
+
+describe("DiagramaController.dibujar (POST /api/diagrama: el Mermaid que el tutor escribió en el texto)", () => {
+  it("un pedido válido se dibuja igual que con la tool: con Kroki y con el estilo de la cátedra", async () => {
+    const servidor = await levantarServidor(() => ({
+      status: 200,
+      headers: { "content-type": "image/svg+xml" },
+      cuerpo: SVG,
+    }));
+    const controller = new DiagramaController(new ClienteKroki({ endpoint: servidor.url }));
+
+    try {
+      const diagrama = await controller.dibujar({ mermaid: MERMAID });
+
+      expect(diagrama).toMatchObject({ ok: true, svg: SVG });
+      expect(diagrama.mermaid).toMatch(/classDef conector /);
+      expect(servidor.pedidos()).toBe(1);
+    } finally {
+      await servidor.cerrar();
+    }
+  });
+
+  it("un pedido inválido se corta con «pedido_invalido» sin llamar a Kroki", async () => {
+    const servidor = await levantarServidor(() => ({ status: 200, cuerpo: SVG }));
+    const controller = new DiagramaController(new ClienteKroki({ endpoint: servidor.url }));
+
+    try {
+      await expect(controller.dibujar({ mermaid: "" })).rejects.toMatchObject({ codigo: "pedido_invalido" });
+      expect(servidor.pedidos()).toBe(0);
     } finally {
       await servidor.cerrar();
     }

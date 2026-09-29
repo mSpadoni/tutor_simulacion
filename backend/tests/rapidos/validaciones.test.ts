@@ -1,8 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { ChatController } from "@/backend/controllers/chat.controller";
-import { codigoDeLogin, esIdDeConversacion, validarPedidoDeChat } from "@/backend/controllers/validaciones";
+import {
+  codigoDeLogin,
+  esIdDeConversacion,
+  validarPedidoDeChat,
+  validarPedidoDeDiagrama,
+} from "@/backend/controllers/validaciones";
 import { ErrorDeAplicacion } from "@/backend/errores";
+import { MAX_CARACTERES_MERMAID } from "@/backend/models/dominio/mermaid";
 import { MAX_CARACTERES_MENSAJE } from "@/shared/chat";
 
 // Sin mocks: cuerpos como los que manda el navegador (válidos y armados a mano para romper las reglas).
@@ -74,6 +80,28 @@ describe("validarPedidoDeChat (POST /api/chat)", () => {
     await expect(new ChatController().responder({ basura: true })).rejects.toMatchObject({
       codigo: "pedido_invalido",
     });
+  });
+});
+
+describe("validarPedidoDeDiagrama (POST /api/diagrama)", () => {
+  it("devuelve el código Mermaid, sin espacios de más", () => {
+    expect(validarPedidoDeDiagrama({ mermaid: '  flowchart TD\n  CI[["C.I."]]  ' })).toBe(
+      'flowchart TD\n  CI[["C.I."]]'
+    );
+  });
+
+  it("sin diagrama, vacío o más largo que el máximo, es un pedido inválido", () => {
+    for (const cuerpo of [
+      null,
+      {},
+      { mermaid: 42 },
+      { mermaid: "   " },
+      { mermaid: "x".repeat(MAX_CARACTERES_MERMAID + 1) },
+    ]) {
+      expect(() => validarPedidoDeDiagrama(cuerpo)).toThrow(
+        expect.objectContaining({ constructor: ErrorDeAplicacion, codigo: "pedido_invalido" })
+      );
+    }
   });
 });
 

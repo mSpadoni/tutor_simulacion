@@ -4,7 +4,9 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { getStaticToolName, isStaticToolUIPart, type ToolUIPart } from "ai";
 import { textoDe, type HerramientasDelTutor, type TutorUIMessage } from "@/shared/chat";
-import { diagramaDe, herramientaFallo, TEXTOS_DE_HERRAMIENTAS, type DiagramaParaMostrar } from "./tipos";
+import { DiagramaDeFlujo, DiagramaDelTexto } from "./DiagramaDeFlujo";
+import { partirEnBloques } from "./diagramasEnTexto";
+import { diagramaDe, herramientaFallo, TEXTOS_DE_HERRAMIENTAS } from "./tipos";
 
 // react-markdown no renderiza HTML crudo: lo que escriba el modelo no puede inyectar scripts.
 // Este objeto dice cómo dibujar cada elemento del Markdown (párrafo, lista, tabla...) con estilos propios.
@@ -54,31 +56,6 @@ function AvisoDeTool({ parte }: { parte: ParteDeTool }) {
 }
 
 /**
- * Un diagrama de flujo generado con Kroki. Va como <img> (el SVG no se inserta como HTML, así no se ejecuta nada
- * que venga adentro), con un alt que dice de qué es, la fuente citada y el Mermaid como alternativa en texto.
- */
-function DiagramaDeFlujo({ diagrama }: { diagrama: DiagramaParaMostrar }) {
-  return (
-    <figure className="my-2 rounded-lg border border-slate-200 bg-white p-2">
-      <div className="overflow-x-auto">
-        {/* eslint-disable-next-line @next/next/no-img-element -- es un data URL generado en el momento. */}
-        <img src={diagrama.src} alt={`Diagrama de flujo: ${diagrama.titulo}`} className="mx-auto max-w-none" />
-      </div>
-      <figcaption className="mt-2 text-xs text-slate-600">
-        {diagrama.titulo} · Renderizado con{" "}
-        <a href="https://kroki.io" target="_blank" rel="noreferrer" className="text-blue-700 underline">
-          Kroki
-        </a>
-        <details className="mt-1">
-          <summary className="cursor-pointer text-slate-700">Ver como texto (Mermaid)</summary>
-          <pre className="mt-1 overflow-x-auto rounded bg-slate-100 p-2 text-[0.8rem]">{diagrama.mermaid}</pre>
-        </details>
-      </figcaption>
-    </figure>
-  );
-}
-
-/**
  * Un globo de mensaje del chat. Los del alumno van a la derecha como texto plano;
  * los del tutor a la izquierda, con las tools que usó y el Markdown convertido a HTML (tablas, listas, negritas...).
  */
@@ -113,15 +90,21 @@ export default function MessageBubble({ mensaje }: { mensaje: TutorUIMessage }) 
         {esAlumno ? (
           <p className="whitespace-pre-wrap">{texto}</p>
         ) : (
-          texto && (
-            // remark-math + rehype-katex: las fórmulas en LaTeX ($...$) se ven como fórmulas (y con MathML accesible).
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm, remarkMath]}
-              rehypePlugins={[rehypeKatex]}
-              components={componentesMarkdown}
-            >
-              {texto}
-            </ReactMarkdown>
+          // Si el tutor escribió un diagrama como código en vez de usar la tool, ese bloque se muestra como imagen.
+          partirEnBloques(texto).map((bloque, indice) =>
+            bloque.tipo === "diagrama" ? (
+              <DiagramaDelTexto key={indice} mermaid={bloque.mermaid} />
+            ) : (
+              // remark-math + rehype-katex: las fórmulas en LaTeX ($...$) se ven como fórmulas (y con MathML accesible).
+              <ReactMarkdown
+                key={indice}
+                remarkPlugins={[remarkGfm, remarkMath]}
+                rehypePlugins={[rehypeKatex]}
+                components={componentesMarkdown}
+              >
+                {bloque.texto}
+              </ReactMarkdown>
+            )
           )
         )}
       </div>
