@@ -15,7 +15,10 @@ export const AnalisisSchema = z.object({
   metodologia: z.string().trim().min(3).max(60).describe("La metodología que corresponde, ej: 'Evento a Evento'"),
   variables: z.object({
     datos: z.array(VariableSchema).max(10).describe("Exógenas no controlables: responden a una f.d.p."),
-    control: z.array(VariableSchema).max(10).describe("Exógenas de control; vacío si el enunciado no tiene"),
+    control: z
+      .array(VariableSchema)
+      .max(10)
+      .describe("Exógenas de control; vacío si el enunciado no tiene (la cátedra escribe «implícita»)"),
     resultado: z.array(VariableSchema).min(1).max(10).describe("Lo que pide medir el enunciado"),
     estado: z.array(VariableSchema).min(1).max(10).describe("Describen el estado del sistema, ej: NS"),
   }),

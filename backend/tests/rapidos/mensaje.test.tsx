@@ -138,7 +138,7 @@ describe("MessageBubble — análisis verificado", () => {
       ["LLEGADA", "LLEGADA", "SALIDA", "NS = 1"],
       ["SALIDA", "---", "SALIDA", "NS ≥ 1"],
     ]);
-    expect(seccion).toHaveTextContent("Control: ---");
+    expect(seccion).toHaveTextContent("Control: implícita");
   });
 
   it("si tenía problemas, no se muestra (el tutor lo corrige) y el aviso no lo marca como falla", () => {

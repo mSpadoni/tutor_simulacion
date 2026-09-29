@@ -18,8 +18,8 @@ const celda = "border border-slate-300 px-2 py-1 align-top";
 const encabezado = "border border-slate-300 bg-slate-100 px-2 py-1 font-semibold";
 
 /** "IA (intervalo entre arribos), TA (tiempo de atención)", o "---" si la categoría está vacía. */
-function listaDeVariables(variables: Variable[]): string {
-  if (variables.length === 0) return "---";
+function listaDeVariables(variables: Variable[], siNoHay = "---"): string {
+  if (variables.length === 0) return siNoHay;
   return variables.map((variable) => `${variable.nombre} (${variable.descripcion})`).join(", ");
 }
 
@@ -35,7 +35,9 @@ export function AnalisisDelEjercicio({ analisis, avisos }: { analisis: AnalisisP
         <ul className="space-y-0.5">
           {CATEGORIAS.map(({ clave, titulo }) => (
             <li key={clave}>
-              <span className="font-medium">{titulo}:</span> {listaDeVariables(analisis.variables[clave])}
+              {/* Como en la cátedra: sin variable de control se escribe "implícita". */}
+              <span className="font-medium">{titulo}:</span>{" "}
+              {listaDeVariables(analisis.variables[clave], clave === "control" ? "implícita" : "---")}
             </li>
           ))}
         </ul>

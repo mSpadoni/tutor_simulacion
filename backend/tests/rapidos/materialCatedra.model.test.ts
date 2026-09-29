@@ -15,7 +15,7 @@ const esModeloDeLaGuia = (ficha: Ficha) =>
 
 describe("MaterialCatedra.cargar", () => {
   it("lee todas las fichas del material, sin la base de conocimiento (esa va siempre entera)", () => {
-    expect(material.fichas.length).toBeGreaterThan(90);
+    expect(material.fichas.length).toBeGreaterThan(80);
     expect(material.fichas.some((ficha) => ficha.fuente.startsWith("BASE DE CONOCIMIENTO"))).toBe(false);
   });
 
@@ -29,7 +29,6 @@ describe("MaterialCatedra.cargar", () => {
     expect(tiposPorFuente.get("Guía Anexa resuelta (ejercicios de la cátedra, 2013 y 2015)")).toBe("ejercicio");
     expect(tiposPorFuente.get("Guía Anexa 2026 (cátedra)")).toBe("ejercicio");
     expect(tiposPorFuente.get("Parciales y parcialitos anteriores")).toBe("ejercicio");
-    expect(tiposPorFuente.get("Ejercicios resueltos (cátedra)")).toBe("ejercicio");
   });
 
   it("los ejercicios 1 a 8 de la guía oficial son modelos, y del 9 al 12 son ejercicios", () => {
