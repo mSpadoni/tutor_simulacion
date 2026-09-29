@@ -108,6 +108,21 @@ describe("ConversacionesModel", () => {
     expect(await conversaciones.obtener(id)).toBeNull();
     expect(await conversaciones.mensajes(id)).toEqual([]);
   });
+
+  it("usoReciente cuenta los mensajes del alumno (no los del tutor) en el último minuto y en el día", async () => {
+    const { conversaciones } = await alumnoConModel();
+    const otro = await alumnoConModel();
+    const id = randomUUID();
+    await conversaciones.crear(id, "Uso");
+    await conversaciones.agregarMensajes(id, [mensaje("user", "Uno"), mensaje("assistant", "Respuesta")]);
+    await conversaciones.agregarMensajes(id, [mensaje("user", "Dos")]);
+
+    expect(await conversaciones.usoReciente()).toEqual({ ultimoMinuto: 2, ultimoDia: 2 });
+    // Dentro de 2 minutos ya no cuentan para el minuto, pero sí para el día.
+    expect(await conversaciones.usoReciente(new Date(Date.now() + 120_000))).toEqual({ ultimoMinuto: 0, ultimoDia: 2 });
+    // Cada alumno cuenta solo lo suyo (RLS).
+    expect(await otro.conversaciones.usoReciente()).toEqual({ ultimoMinuto: 0, ultimoDia: 0 });
+  });
 });
 
 describe("ConversacionesModel — cada alumno solo ve lo suyo (RLS)", () => {

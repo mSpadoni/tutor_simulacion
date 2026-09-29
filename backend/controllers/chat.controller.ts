@@ -2,6 +2,7 @@ import "server-only";
 import { createUIMessageStreamResponse, type LanguageModel } from "ai";
 import { crearModeloOpenAI } from "@/backend/lib/openai";
 import { conversacionesModel, type ConversacionesModel } from "@/backend/models/repositorios/conversaciones.model";
+import { LIMITES_DE_USO, motivoDeLimite, type LimitesDeUso } from "@/backend/models/dominio/limiteDeUso";
 import { ejerciciosModel, type EjerciciosModel } from "@/backend/models/repositorios/ejercicios.model";
 import { obtenerMaterialCatedra, type MaterialCatedra } from "@/backend/models/materialCatedra.model";
 import type { PedidoDeChat } from "@/backend/models/dominio/pedidoDeChat.model";
@@ -23,6 +24,8 @@ type Dependencias = {
   timeoutMs?: number;
   /** Pausa entre palabras al mostrar la respuesta (ms). 0 = tan rápido como llega del modelo. */
   pausaEntrePalabrasMs?: number;
+  /** Cuántos mensajes puede mandar un alumno por minuto y por día. */
+  limites?: LimitesDeUso;
 };
 
 /**
@@ -37,6 +40,7 @@ export class ChatController {
   private readonly ejercicios: () => EjerciciosModel;
   private readonly timeoutMs: number;
   private readonly pausaEntrePalabrasMs: number;
+  private readonly limites: LimitesDeUso;
 
   // Recibe UN objeto y lo desestructura en el momento: cada propiedad con su valor por defecto (`= ...`).
   // `: Dependencias = {}` → el objeto entero es opcional: `new ChatController()` usa todo lo real.
@@ -47,6 +51,7 @@ export class ChatController {
     ejercicios = () => ejerciciosModel,
     timeoutMs = 45_000,
     pausaEntrePalabrasMs = PAUSA_ENTRE_PALABRAS_MS,
+    limites = LIMITES_DE_USO,
   }: Dependencias = {}) {
     this.crearModelo = crearModelo;
     this.material = material;
@@ -54,6 +59,7 @@ export class ChatController {
     this.ejercicios = ejercicios;
     this.timeoutMs = timeoutMs;
     this.pausaEntrePalabrasMs = pausaEntrePalabrasMs;
+    this.limites = limites;
   }
 
   /**
@@ -74,7 +80,11 @@ export class ChatController {
       throw traducirError(error);
     }
 
-    // 1) La conversación: si es nueva, se crea con el primer mensaje como título.
+    // 1) El límite de uso: cada mensaje gasta crédito. Se revisa antes de guardar nada (429 = demasiados pedidos).
+    const motivo = motivoDeLimite(await conversaciones.usoReciente(), this.limites);
+    if (motivo) throw new ErrorDeChat(motivo, 429);
+
+    // 2) La conversación: si es nueva, se crea con el primer mensaje como título.
     if (!(await conversaciones.obtener(conversacionId))) {
       // Si falla, el id ya existe pero es de otro alumno (RLS no se la deja ver).
       await conversaciones.crear(conversacionId, tituloDesde(pedido.texto)).catch((error: unknown) => {
@@ -82,13 +92,13 @@ export class ChatController {
       });
     }
 
-    // 2) El historial (sin el mensaje nuevo, por si es un reintento y ya estaba guardado) y el mensaje nuevo.
+    // 3) El historial (sin el mensaje nuevo, por si es un reintento y ya estaba guardado) y el mensaje nuevo.
     const historial = (await conversaciones.mensajes(conversacionId, MAX_MENSAJES_CONTEXTO)).filter(
       (anterior) => anterior.id !== mensaje.id
     );
     await conversaciones.agregarMensajes(conversacionId, [mensaje]);
 
-    // 3) La respuesta del agente, en streaming. Al terminar (o si el alumno la corta), se guarda.
+    // 4) La respuesta del agente, en streaming. Al terminar (o si el alumno la corta), se guarda.
     const stream = await responderComoTutor({
       modelo,
       mensajes: [...historial, mensaje],

@@ -2,6 +2,7 @@ import "server-only";
 import type { UIMessage } from "ai";
 import type { TutorUIMessage } from "@/shared/chat";
 import { datosOError } from "@/backend/lib/supabase/consultas";
+import type { UsoReciente } from "@/backend/models/dominio/limiteDeUso";
 import { crearClienteServidor, type ClienteSupabase } from "@/backend/lib/supabase/server";
 import type { Database, Json } from "@/backend/types/database";
 
@@ -111,6 +112,26 @@ export class ConversacionesModel {
         .eq("id", conversacionId),
       "No se pudo actualizar la conversación"
     );
+  }
+
+  /**
+   * Cuántos mensajes mandó el alumno logueado en el último minuto y en las últimas 24 horas (para el límite de uso).
+   * RLS ya limita la cuenta a los mensajes de sus conversaciones. `head: true` pide solo la cantidad, sin las filas.
+   */
+  async usoReciente(ahora = new Date()): Promise<UsoReciente> {
+    const supabase = await this.crearCliente();
+    const mensajesDesde = async (milisegundosAtras: number): Promise<number> => {
+      const respuesta = await supabase
+        .from("mensajes")
+        .select("id", { count: "exact", head: true })
+        .eq("rol", "alumno")
+        .gte("creado_en", new Date(ahora.getTime() - milisegundosAtras).toISOString());
+      datosOError(respuesta, "No se pudieron contar los mensajes del alumno");
+      return respuesta.count ?? 0; // con head: true, la cantidad viene en `count` (no en `data`)
+    };
+    // Las dos cuentas a la vez.
+    const [ultimoMinuto, ultimoDia] = await Promise.all([mensajesDesde(60_000), mensajesDesde(86_400_000)]);
+    return { ultimoMinuto, ultimoDia };
   }
 
   /** Borra la conversación (y sus mensajes, en cascada). Devuelve false si no existía o era de otro alumno. */

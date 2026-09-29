@@ -41,14 +41,21 @@ Las prueba `backend/tests/rapidos/arquitectura.test.ts` con el ESLint real del p
 
 La carpeta `backend/models/` se mantiene (es la M de MVC) y adentro separa `repositorios/` (Supabase) de `dominio/` (lógica pura). Las reglas se aplican por carpeta: un archivo nuevo en cualquiera de las dos queda cubierto solo.
 
-| #   | Etapa                                                                                                   | Estado |
-| --- | ------------------------------------------------------------------------------------------------------- | ------ |
-| 1   | Reglas que se hacen cumplir solas (`server-only` + ESLint)                                              | Hecha  |
-| 2   | Variables de entorno en un solo lugar (`lib/env.ts`, Zod); el middleware no tumba el sitio si falta una | Hecha  |
-| 3   | Sacar el refetch del historial después de cada respuesta (`router.refresh`)                             | Hecha  |
-| 4   | Contrato tipado cliente↔servidor (`shared/`: nombres de tools, límites, `TutorUIMessage`)               | Hecha  |
-| 5   | Dividir `ChatController` (agente del LLM y errores aparte)                                              | Hecha  |
-| 6   | Nombres correctos (`models/repositorios/`, `models/dominio/`), helpers de queries                       | Hecha  |
-| 7   | Separar `MaterialCatedra` (parser e índice puros, lectura de disco aparte)                              | Hecha  |
-| 8   | Tests rápidos (sin Docker ni internet) separados de los externos (Supabase local, Kroki, OpenAI)        | Hecha  |
-| 9   | Vista: hooks de scroll y anuncio, un componente por tipo de parte                                       | Hecha  |
+| #   | Etapa                                                                                                   | Estado     |
+| --- | ------------------------------------------------------------------------------------------------------- | ---------- |
+| 1   | Reglas que se hacen cumplir solas (`server-only` + ESLint)                                              | Hecha      |
+| 2   | Variables de entorno en un solo lugar (`lib/env.ts`, Zod); el middleware no tumba el sitio si falta una | Hecha      |
+| 3   | Sacar el refetch del historial después de cada respuesta (`router.refresh`)                             | Hecha      |
+| 4   | Contrato tipado cliente↔servidor (`shared/`: nombres de tools, límites, `TutorUIMessage`)               | Hecha      |
+| 5   | Dividir `ChatController` (agente del LLM y errores aparte)                                              | Hecha      |
+| 6   | Nombres correctos (`models/repositorios/`, `models/dominio/`), helpers de queries                       | Hecha      |
+| 7   | Separar `MaterialCatedra` (parser e índice puros, lectura de disco aparte)                              | Hecha      |
+| 8   | Tests rápidos (sin Docker ni internet) separados de los externos (Supabase local, Kroki, OpenAI)        | Hecha      |
+| 9   | Vista: hooks de scroll y anuncio, un componente por tipo de parte                                       | Hecha      |
+| 10  | Límite de uso en `/api/chat`: 10 mensajes por minuto y 150 por día por alumno (429 con mensaje claro)   | Hecha      |
+| 11  | Reorganizar por features                                                                                | Descartada |
+| 12  | Validar con Zod el `payload` de los ejercicios también al leerlos (sin casts)                           | Hecha      |
+
+**Etapa 10.** El límite cuenta los mensajes del alumno que ya están en la tabla `mensajes` (RLS limita la cuenta a los suyos), así que no necesita tabla ni migración nueva. Limitación conocida: borrar una conversación borra sus mensajes y libera cupo. Para cerrarlo haría falta un registro de uso aparte (una tabla más), que no vale la pena para esta entrega.
+
+**Etapa 11, descartada.** Reorganizar por features (`features/chat/{controller,model,view}`) choca con la estructura MVC por capas que pide el proyecto y movería casi todos los archivos. `views/chat/` ya agrupa por feature donde tiene sentido.

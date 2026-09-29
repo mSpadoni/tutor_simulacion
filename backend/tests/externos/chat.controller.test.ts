@@ -138,6 +138,22 @@ describe("ChatController.responder — conversación y errores (sin gastar créd
     });
     expect(await duenio.conversaciones.mensajes(id)).toHaveLength(1);
   });
+
+  it("al pasar el límite de mensajes, responde 429 con un mensaje claro y no guarda ni consulta al modelo", async () => {
+    const { conversaciones, controller } = await alumnoConChat({
+      crearModelo: modeloConClaveInvalida,
+      limites: { porMinuto: 1, porDia: 100 },
+    });
+    const id = randomUUID();
+    await conversar(controller, id, "Primero");
+
+    await expect(conversar(controller, id, "Segundo")).rejects.toMatchObject({
+      constructor: ErrorDeChat,
+      status: 429,
+      mensajeParaAlumno: expect.stringContaining("Esperá un minuto"),
+    });
+    expect(await conversaciones.mensajes(id)).toHaveLength(1);
+  });
 });
 
 // Con el modelo real la redacción cambia en cada respuesta: estos tests solo controlan que responda, que se
