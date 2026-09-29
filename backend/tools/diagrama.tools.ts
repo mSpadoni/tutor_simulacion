@@ -2,7 +2,7 @@ import "server-only";
 import { tool } from "ai";
 import { z } from "zod";
 import { clienteKroki, type ClienteKroki, type ResultadoKroki } from "@/backend/lib/kroki";
-import { conEstilosDeLaCatedra } from "@/backend/models/dominio/mermaid";
+import { conConvencionDeLaCatedra } from "@/backend/models/dominio/mermaid";
 
 /** Lo que devuelve la tool: el SVG va a la vista (se muestra como imagen); el modelo solo recibe un resumen. */
 export type DiagramaGenerado = { titulo: string; mermaid: string } & ResultadoKroki;
@@ -13,7 +13,7 @@ export async function generarDiagramaFlujo(
   mermaid: string,
   kroki: ClienteKroki = clienteKroki
 ): Promise<DiagramaGenerado> {
-  const codigo = conEstilosDeLaCatedra(mermaid);
+  const codigo = conConvencionDeLaCatedra(mermaid);
   return { titulo, mermaid: codigo, ...(await kroki.renderizar(codigo)) };
 }
 

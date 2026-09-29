@@ -14,6 +14,22 @@ export function conEstilosDeLaCatedra(codigo: string): string {
   return [primera, `  ${ESTILO_CONECTOR}`, ...resto].join("\n");
 }
 
+/**
+ * Un rombo de Mermaid: `{…}` que no es un hexágono (`{{…}}`) ni una forma nueva (`@{ shape: … }`).
+ * Su texto es lo de adentro.
+ */
+const ROMBO = /(?<![{@])\{(?!\{)([^{}]*)\}(?!\})/g;
+
+/** La cátedra escribe las decisiones sin signos de pregunta: `{"T < TF?"}` → `{"T < TF"}`. */
+export function sinPreguntasEnLasDecisiones(codigo: string): string {
+  return codigo.replace(ROMBO, (_rombo, texto: string) => `{${texto.replace(/¿\s*|\s*\?/g, "")}}`);
+}
+
+/** El código con la convención de la cátedra que no depende del modelo: decisiones sin "?" y conectores en azul. */
+export function conConvencionDeLaCatedra(codigo: string): string {
+  return conEstilosDeLaCatedra(sinPreguntasEnLasDecisiones(codigo));
+}
+
 /** Por qué un código no es un diagrama aceptable. */
 export type ProblemaDeMermaid = { motivo: "codigo_invalido" | "demasiado_largo"; detalle: string };
 

@@ -87,6 +87,13 @@ describe("contrato del prompt", () => {
     expect(dibujar).not.toMatch(/"SÍ"|\(\["Inicio"\]\)/);
   });
 
+  it("en los ejemplos, avanzar el tiempo es el primer paso de la rutina del evento, no del programa principal", () => {
+    const dibujar = seccion("Cómo dibujar un diagrama");
+
+    expect(dibujar).toMatch(/-- "SI" --> LL\{\{"LLEGADA"\}\}/);
+    expect(dibujar).toMatch(/L0\{\{"LLEGADA"\}\} --> \w+\["T = TPLL"\]/);
+  });
+
   it("la regla de consultar los modelos va al principio (ahí pesa más para el modelo)", () => {
     expect(prompt.slice(0, 800)).toMatch(/Regla más importante[\s\S]*consultar_modelos/);
   });

@@ -84,7 +84,8 @@ Seguí la estructura de la sección 5 de la base de conocimiento (C.I. → próx
   - **B** (arrepentimiento): cuando el que llega se arrepiente, la flecha va a \`B1(("B")):::conector\`; en el programa principal, \`B2(("B")):::conector\` se une a las líneas que llegan a \`T < TF\` (con el punto de unión).
 - En una rutina con un ciclo (ej. el método del rechazo), la vuelta también es con un conector (**C**, **D**…) y un punto de unión antes del comienzo del ciclo.
 - **Una llamada a la herramienta por parte.** Cada parte que no es el programa principal es una rutina: empieza con el hexágono de su nombre y termina en un círculo \`RET(("R"))\` (vuelve a quien la llamó). Partes:
-  - El programa principal: C.I., próximo evento, un hexágono por evento, \`T < TF\`, resultados y FIN. No pongas adentro la lógica de los eventos.
+  - El programa principal: C.I., próximo evento, un hexágono por evento, \`T < TF\`, resultados y FIN. No pongas adentro la lógica de los eventos: del rombo del próximo evento se va **directo** al hexágono del evento.
+  - Avanzar el tiempo (\`T = TPLL\`, \`T = TPS\`) es el **primer paso de la rutina de cada evento**, justo después del hexágono de su nombre. Nunca va en el programa principal.
   - Una rutina por evento y por rutina propia del ejercicio (arrepentimiento, vaciamiento…).
   - Una rutina por variable aleatoria (solo en la respuesta de las f.d.p.).
   - Las búsquedas de un índice (\`MENOR TPS(i)\`, \`MENOR NS(x)\`, un puesto libre) no se dibujan: son las de la cátedra.
@@ -95,10 +96,8 @@ Seguí la estructura de la sección 5 de la base de conocimiento (C.I. → próx
     CI[["C.I."]] --- J1@{ shape: f-circ }
     A1(("A")):::conector --- J1
     J1 --> D1{"TPLL ≤ TPS"}
-    D1 -- "SI" --> T1["T = TPLL"]
-    T1 --> LL{{"LLEGADA"}}
-    D1 -- "NO" --> T2["T = TPS"]
-    T2 --> SA{{"SALIDA"}}
+    D1 -- "SI" --> LL{{"LLEGADA"}}
+    D1 -- "NO" --> SA{{"SALIDA"}}
     LL --- J2@{ shape: f-circ }
     SA --- J2
     B2(("B")):::conector --- J2
@@ -111,7 +110,8 @@ Seguí la estructura de la sección 5 de la base de conocimiento (C.I. → próx
   Rutina de un evento:
   \`\`\`
   flowchart TD
-    L0{{"LLEGADA"}} --> IA{{"IA"}}
+    L0{{"LLEGADA"}} --> T1["T = TPLL"]
+    T1 --> IA{{"IA"}}
     IA --> L1["TPLL = T + IA"]
     L1 --> ARR{{"ARREPENTIMIENTO"}}
     ARR --> L2["NS = NS + 1"]

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { conEstilosDeLaCatedra, MAX_CARACTERES_MERMAID, problemaDeMermaid } from "@/backend/models/dominio/mermaid";
+import {
+  conConvencionDeLaCatedra,
+  conEstilosDeLaCatedra,
+  MAX_CARACTERES_MERMAID,
+  problemaDeMermaid,
+  sinPreguntasEnLasDecisiones,
+} from "@/backend/models/dominio/mermaid";
 
 // Qué código Mermaid se acepta antes de mandarlo a Kroki. Lógica pura: sin red.
 
@@ -42,5 +48,30 @@ describe("conEstilosDeLaCatedra", () => {
     const codigo = "flowchart TD\n  classDef conector fill:#000\n  A --> B";
 
     expect(conEstilosDeLaCatedra(codigo)).toBe(codigo);
+  });
+});
+
+describe("sinPreguntasEnLasDecisiones", () => {
+  it("saca los signos de pregunta de los rombos, con o sin comillas", () => {
+    const codigo = 'flowchart TD\n  F{"T < TF?"} -- "SI" --> A\n  D{"¿TPLL ≤ TPS?"}\n  N{NS = 1?}';
+
+    expect(sinPreguntasEnLasDecisiones(codigo)).toBe(
+      'flowchart TD\n  F{"T < TF"} -- "SI" --> A\n  D{"TPLL ≤ TPS"}\n  N{NS = 1}'
+    );
+  });
+
+  it("no toca hexágonos, puntos de unión ni otros nodos", () => {
+    const codigo = 'flowchart TD\n  G{{"¿IA?"}} --- J1@{ shape: f-circ }\n  R["¿Qué pasa?"]';
+
+    expect(sinPreguntasEnLasDecisiones(codigo)).toBe(codigo);
+  });
+});
+
+describe("conConvencionDeLaCatedra", () => {
+  it("aplica las dos cosas: decisiones sin «?» y el estilo de los conectores", () => {
+    const resultado = conConvencionDeLaCatedra('flowchart TD\n  F{"T < TF?"} -- "SI" --> A2(("A")):::conector');
+
+    expect(resultado).toContain('F{"T < TF"}');
+    expect(resultado).toMatch(/classDef conector /);
   });
 });
