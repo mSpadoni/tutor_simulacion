@@ -4,6 +4,7 @@ import {
   LARGO_MINIMO_DE_PARCIAL,
   problemasDelAnalisisDelEjercicio,
   problemasDelEjercicio,
+  type DatoAleatorio,
   type EjercicioARevisar,
 } from "@/backend/models/dominio/ejercicio";
 
@@ -19,16 +20,18 @@ const RESTO_DEL_SISTEMA =
   "del día y cada cliente que se va es una venta perdida, así que para decidirlo se estudiará el porcentaje de tiempo " +
   "ocioso de cada máquina, el promedio de espera de los pedidos en la fila y el porcentaje de clientes que se van.";
 
+const DATOS: DatoAleatorio[] = [
+  { sigla: "IA", forma: "fdp" },
+  { sigla: "TL", forma: "probabilidades" },
+];
+
 const BIEN: EjercicioARevisar = {
   enunciado:
-    "Un lavadero tiene N máquinas. Los pedidos llegan con un intervalo (IA) que responde a una f.d.p. uniforme entre " +
-    "5 y 15 minutos, y el lavado (TL) responde a una f.d.p. lineal entre 20 y 40 minutos, donde f(40) = 2·f(20). " +
+    "Un lavadero tiene N máquinas. Los pedidos llegan con un intervalo que responde a una f.d.p. uniforme entre 5 y " +
+    "15 minutos. El lavado del 70% de los pedidos dura 40 minutos y el del resto, 25 minutos. " +
     "Se desea determinar la cantidad N de máquinas." +
     RESTO_DEL_SISTEMA,
-  datosAleatorios: [
-    { sigla: "IA", fdp: "uniforme entre 5 y 15 minutos" },
-    { sigla: "TL", fdp: "lineal entre 20 y 40 minutos, donde f(40) = 2·f(20)" },
-  ],
+  datosAleatorios: DATOS,
 };
 
 describe("problemasDelEjercicio", () => {
@@ -36,61 +39,46 @@ describe("problemasDelEjercicio", () => {
     expect(problemasDelEjercicio(BIEN)).toEqual([]);
   });
 
+  it("no nombra la variable de un dato: el alumno la deduce", () => {
+    const ejercicio = { ...BIEN, enunciado: BIEN.enunciado.replace("con un intervalo", "con un intervalo (IA)") };
+
+    expect(problemasDelEjercicio(ejercicio)).toEqual([expect.stringContaining("El enunciado nombra la variable IA")]);
+  });
+
+  it("una sigla que aparece dentro de otra palabra no cuenta como nombrarla", () => {
+    const ejercicio = { ...BIEN, datosAleatorios: [...DATOS, { sigla: "TA", forma: "fdp_conocida" as const }] };
+    // "TA" no está como palabra ("DATA", "tarda" no cuentan); falta "f.d.p. conocida".
+    expect(problemasDelEjercicio(ejercicio)).toEqual([expect.stringContaining("El dato TA tiene que aparecer")]);
+  });
+
+  it("cada dato aparece como en la cátedra, según su forma", () => {
+    const casos: [DatoAleatorio["forma"], string, string][] = [
+      ["fdp", "responde a una f.d.p. lineal entre 10 y 30 minutos", "f.d.p."],
+      ["fdp_conocida", "responde a una f.d.p. conocida", "f.d.p. conocida"],
+      ["derivado", "el tiempo de los camiones grandes es el doble que el de los chicos", "doble"],
+      ["probabilidades", "el 60% de los clientes tarda 40 minutos y el resto 20", "60%"],
+    ];
+    for (const [forma, frase] of casos) {
+      const conFrase = { enunciado: `${BIEN.enunciado} Además, ${frase}.`, datosAleatorios: [{ sigla: "X", forma }] };
+      expect(problemasDelEjercicio(conFrase), forma).toEqual([]);
+    }
+
+    const sinFdpConocida = {
+      enunciado: BIEN.enunciado,
+      datosAleatorios: [{ sigla: "X", forma: "fdp_conocida" as const }],
+    };
+    expect(problemasDelEjercicio(sinFdpConocida)).toEqual([
+      expect.stringContaining("«responde a una f.d.p. conocida»"),
+    ]);
+    const sinDerivado = { enunciado: BIEN.enunciado, datosAleatorios: [{ sigla: "X", forma: "derivado" as const }] };
+    expect(problemasDelEjercicio(sinDerivado)).toEqual([expect.stringContaining("el doble")]);
+  });
+
   it("un enunciado corto (de clase, no de parcial) se marca", () => {
     const corto = { ...BIEN, enunciado: BIEN.enunciado.replace(RESTO_DEL_SISTEMA, "") };
 
     expect(corto.enunciado.length).toBeLessThan(LARGO_MINIMO_DE_PARCIAL);
     expect(problemasDelEjercicio(corto)).toEqual([expect.stringContaining("Es un ejercicio de clase, no de parcial")]);
-  });
-
-  it("una f.d.p. lineal sin la relación que define la recta no se puede resolver", () => {
-    const fdp = "lineal entre 10 y 30 minutos";
-    const ejercicio = {
-      enunciado: BIEN.enunciado.replace("lineal entre 20 y 40 minutos, donde f(40) = 2·f(20)", fdp),
-      datosAleatorios: [BIEN.datosAleatorios[0], { sigla: "TL", fdp }],
-    };
-
-    expect(problemasDelEjercicio(ejercicio)).toEqual([expect.stringContaining("TL es lineal pero no dice qué recta")]);
-  });
-
-  it("una exponencial sin media, tampoco", () => {
-    const fdp = "exponencial";
-    const ejercicio = {
-      enunciado: BIEN.enunciado.replace("uniforme entre 5 y 15 minutos", fdp),
-      datosAleatorios: [{ sigla: "IA", fdp }, BIEN.datosAleatorios[1]],
-    };
-
-    expect(problemasDelEjercicio(ejercicio)).toEqual([
-      expect.stringContaining("IA es exponencial pero no dice su media"),
-    ]);
-  });
-
-  it("se revisa lo que dice el enunciado, no cómo lo copió el modelo en el dato (LaTeX, otras palabras)", () => {
-    // Un caso real: el modelo escribió «$λ = 1/3$» en el enunciado y «λ = 1/3» en el dato.
-    const ejercicio = {
-      enunciado: BIEN.enunciado.replace("uniforme entre 5 y 15 minutos", "exponencial con $λ = 1/3$ minutos"),
-      datosAleatorios: [{ sigla: "IA", fdp: "exponencial con λ = 1/3 minutos" }, BIEN.datosAleatorios[1]],
-    };
-
-    expect(problemasDelEjercicio(ejercicio)).toEqual([]);
-  });
-
-  it("lo que el enunciado dice de un dato no se mezcla con el dato siguiente de la misma oración", () => {
-    // La recta de TL no le sirve a IA: cada dato se revisa desde su sigla hasta el próximo.
-    const ejercicio = {
-      ...BIEN,
-      enunciado: BIEN.enunciado.replace("uniforme entre 5 y 15 minutos", "lineal entre 5 y 15 minutos"),
-    };
-
-    expect(problemasDelEjercicio(ejercicio)).toEqual([expect.stringContaining("IA es lineal pero no dice qué recta")]);
-  });
-
-  it("cada dato va con su sigla entre paréntesis", () => {
-    const ejercicio = { ...BIEN, enunciado: BIEN.enunciado.replace("(IA)", "") };
-
-    expect(problemasDelEjercicio(ejercicio)).toEqual([
-      expect.stringContaining("El dato IA no aparece en el enunciado"),
-    ]);
   });
 
   it("no puede nombrar la metodología ni variables de la resolución", () => {
@@ -118,9 +106,9 @@ describe("problemasDelEjercicio", () => {
 });
 
 describe("problemasDelAnalisisDelEjercicio (el análisis que el modelo arma de su propio ejercicio)", () => {
-  const datosAleatorios = [
-    { sigla: "IA", fdp: "uniforme entre 5 y 15 minutos" },
-    { sigla: "TA", fdp: "lineal entre 10 y 30 minutos, donde f(30) = 2·f(10)" },
+  const datosAleatorios: DatoAleatorio[] = [
+    { sigla: "IA", forma: "fdp" },
+    { sigla: "TA", forma: "fdp" },
   ];
   const seDecide = "la cantidad N de puestos";
 
@@ -138,7 +126,7 @@ describe("problemasDelAnalisisDelEjercicio (el análisis que el modelo arma de s
   });
 
   it("cada dato del enunciado tiene que estar entre los datos del análisis", () => {
-    const conOtroDato = [...datosAleatorios, { sigla: "TR", fdp: "exponencial de media 30 minutos" }];
+    const conOtroDato: DatoAleatorio[] = [...datosAleatorios, { sigla: "TR", forma: "fdp" }];
 
     expect(
       problemasDelAnalisisDelEjercicio({ datosAleatorios: conOtroDato, seDecide, analisis: ANALISIS_DE_PRUEBA })

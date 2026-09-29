@@ -4,6 +4,7 @@ import { z } from "zod";
 import { AnalisisSchema } from "@/backend/models/dominio/analisis";
 import {
   EjercicioSchema,
+  FORMAS_DE_DATO,
   problemasDelAnalisisDelEjercicio,
   problemasDelEjercicio,
 } from "@/backend/models/dominio/ejercicio";
@@ -17,25 +18,25 @@ export const DatosEjercicioSchema = z.object({
     "Título corto con el dominio, ej: 'Taller de bicicletas'"
   ),
   enunciado: EjercicioSchema.shape.payload.shape.enunciado.describe(
-    "El sistema contado en prosa, con los datos como f.d.p. y lo que se desea determinar (sin el «Se pide»)"
+    "El sistema contado en prosa, con los datos sin nombrar su variable (el alumno la deduce) y lo que se desea " +
+      "determinar (sin el «Se pide»)"
   ),
   sePide: EjercicioSchema.shape.payload.shape.sePide.describe("Cada consigna del «Se pide:», en orden"),
   // No se guardan: obligan a pensar el ejercicio antes de escribirlo y permiten revisarlo.
   datosAleatorios: z
     .array(
       z.object({
-        sigla: z.string().trim().min(1).max(10).describe("La sigla del dato, ej: 'IA'"),
-        fdp: z
-          .string()
-          .trim()
-          .min(5)
-          .max(200)
+        sigla: z.string().trim().min(1).max(10).describe("La variable del dato, ej: 'IA' (no va en el enunciado)"),
+        forma: z
+          .enum(FORMAS_DE_DATO)
           .describe(
-            "Su f.d.p. copiada tal cual del enunciado, ej: 'lineal entre 10 y 30 minutos, donde f(30) = 2·f(10)'"
+            "Cómo lo cuenta el enunciado: 'fdp' («responde a una f.d.p. uniforme entre 5 y 15»), 'fdp_conocida' " +
+              "(«responde a una f.d.p. conocida»), 'derivado' («es el doble que…») o 'probabilidades' («el 60% " +
+              "tarda 40 minutos y el resto 20»)"
           ),
       })
     )
-    .describe("Cada dato aleatorio del enunciado con su f.d.p."),
+    .describe("Cada dato aleatorio del enunciado y cómo aparece"),
   seDecide: z
     .string()
     .trim()

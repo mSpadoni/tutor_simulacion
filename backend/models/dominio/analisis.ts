@@ -56,6 +56,26 @@ export const AnalisisSchema = z.object({
 
 export type Analisis = z.infer<typeof AnalisisSchema>;
 
+type FilaTei = Analisis["tei"][number];
+
+/**
+ * La T.E.I. con cada evento una sola vez: si un evento vino en varias filas (una por E.F.C., como se escribe en la
+ * cátedra cuando genera dos eventos condicionados), se juntan sus E.F.C. en una. Así la vista las muestra ordenadas.
+ */
+export function teiPorEvento(tei: FilaTei[]): FilaTei[] {
+  const porEvento = new Map<string, FilaTei>();
+  for (const fila of tei) {
+    const anterior = porEvento.get(clave(fila.evento));
+    if (!anterior) {
+      porEvento.set(clave(fila.evento), { ...fila, efc: [...fila.efc] });
+    } else {
+      anterior.efnc ??= fila.efnc;
+      anterior.efc.push(...fila.efc);
+    }
+  }
+  return [...porEvento.values()];
+}
+
 /** Para comparar nombres: sin tildes, sin espacios de más, en mayúsculas ("Llegada" = "LLEGADA"). */
 function clave(nombre: string): string {
   return nombre
@@ -164,24 +184,22 @@ export function problemasDelAnalisis(analisis: Analisis): string[] {
     }
   }
 
-  // --- T.E.I.: una fila por evento, y solo eventos
-  const filasPorEvento = new Map<string, number>();
+  // --- T.E.I.: solo eventos, y cada evento con su E.F.NO C. (sus E.F.C. pueden venir en varias filas)
   for (const fila of tei) {
-    const evento = clave(fila.evento);
-    if (!nombresDeEventos.has(evento)) {
+    if (!nombresDeEventos.has(clave(fila.evento))) {
       problemas.push(
         `La fila «${fila.evento}» de la T.E.I. no es un evento de la lista: en la T.E.I. solo van eventos independientes.`
       );
     }
-    filasPorEvento.set(evento, (filasPorEvento.get(evento) ?? 0) + 1);
   }
   for (const evento of eventos) {
-    const filas = filasPorEvento.get(clave(evento.nombre)) ?? 0;
-    if (filas === 0) problemas.push(`Falta la fila del evento ${evento.nombre} en la T.E.I.`);
-    if (filas > 1) {
+    const filas = tei.filter((fila) => clave(fila.evento) === clave(evento.nombre));
+    if (filas.length === 0) problemas.push(`Falta la fila del evento ${evento.nombre} en la T.E.I.`);
+    const efncDistintos = new Set(filas.flatMap((fila) => (fila.efnc === null ? [] : [clave(fila.efnc)])));
+    if (efncDistintos.size > 1) {
       problemas.push(
-        `El evento ${evento.nombre} tiene ${filas} filas en la T.E.I.: va una sola fila por evento, con todos sus ` +
-          "E.F.C. (y sus condiciones) en esa misma fila."
+        `El evento ${evento.nombre} tiene dos E.F.NO C. distintos en la T.E.I.: tiene uno solo (el mismo evento) o ` +
+          "ninguno. Si genera varios eventos con condición, cada uno va en su fila como E.F.C."
       );
     }
   }

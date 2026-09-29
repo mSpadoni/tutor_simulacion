@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { armarSystemPrompt } from "@/backend/lib/prompts/systemPrompt";
-import { AnalisisSchema, problemasDelAnalisis, type Analisis } from "@/backend/models/dominio/analisis";
+import { AnalisisSchema, problemasDelAnalisis, teiPorEvento, type Analisis } from "@/backend/models/dominio/analisis";
 import {
   crearToolsAnalisis,
   type AnalisisVerificado,
@@ -52,16 +52,45 @@ describe("problemasDelAnalisis", () => {
     expect(problemasDelAnalisis(analisis)).toEqual([]);
   });
 
-  it("un evento en varias filas: va una sola fila, con todos sus E.F.C.", () => {
+  it("un evento con dos E.F.C. puede ir en dos filas (una por E.F.C.), como en la cátedra", () => {
+    const analisis = con({
+      eventos: [
+        { nombre: "LLEGADA", tef: "TPLL", modifica: ["NS"] },
+        { nombre: "SALIDA1", tef: "TPS1", modifica: ["NS"] },
+        { nombre: "SALIDA2", tef: "TPS2", modifica: ["NS"] },
+      ],
+      tei: [
+        { evento: "LLEGADA", efnc: "LLEGADA", efc: [{ evento: "SALIDA1", condicion: "NS = 1" }] },
+        { evento: "LLEGADA", efnc: null, efc: [{ evento: "SALIDA2", condicion: "NS = 2" }] },
+        { evento: "SALIDA1", efnc: null, efc: [{ evento: "SALIDA1", condicion: "NS ≥ 2" }] },
+        { evento: "SALIDA2", efnc: null, efc: [{ evento: "SALIDA2", condicion: "NS ≥ 2" }] },
+      ],
+    });
+
+    expect(problemasDelAnalisis(analisis)).toEqual([]);
+    // Para mostrarla, cada evento queda una vez con todos sus E.F.C.
+    expect(teiPorEvento(analisis.tei)[0]).toEqual({
+      evento: "LLEGADA",
+      efnc: "LLEGADA",
+      efc: [
+        { evento: "SALIDA1", condicion: "NS = 1" },
+        { evento: "SALIDA2", condicion: "NS = 2" },
+      ],
+    });
+  });
+
+  it("un evento no puede tener dos E.F.NO C. distintos entre sus filas", () => {
     const analisis = con({
       tei: [
-        { evento: "LLEGADA", efnc: "LLEGADA", efc: [] },
-        { evento: "LLEGADA", efnc: null, efc: [{ evento: "SALIDA", condicion: "NS = 1" }] },
+        { evento: "LLEGADA", efnc: "LLEGADA", efc: [{ evento: "SALIDA", condicion: "NS = 1" }] },
+        { evento: "LLEGADA", efnc: "SALIDA", efc: [] },
         { evento: "SALIDA", efnc: null, efc: [{ evento: "SALIDA", condicion: "NS ≥ 1" }] },
       ],
     });
 
-    expect(problemasDelAnalisis(analisis)).toEqual([expect.stringContaining("LLEGADA tiene 2 filas en la T.E.I.")]);
+    expect(problemasDelAnalisis(analisis)).toContainEqual(
+      expect.stringContaining("LLEGADA tiene dos E.F.NO C. distintos")
+    );
   });
 
   it("en E.F.NO C. va el mismo evento o nada: otro evento es un error", () => {

@@ -141,6 +141,37 @@ describe("MessageBubble — análisis verificado", () => {
     expect(seccion).toHaveTextContent("Control: ---");
   });
 
+  it("un evento con dos E.F.C. ocupa dos filas: una por E.F.C., con el evento y su E.F.NO C. una sola vez", () => {
+    const conDosEfc = structuredClone(analisis);
+    conDosEfc.tei[0].efc.push({ evento: "SALIDA", condicion: "NS = 2" });
+    mostrar(
+      delTutor("", [
+        {
+          type: "tool-verificar_analisis",
+          toolCallId: "t1",
+          state: "output-available",
+          input: conDosEfc,
+          output: { ok: true, problemas: [], analisis: conDosEfc },
+        },
+      ])
+    );
+
+    const [tei] = within(screen.getByRole("region", { name: "Análisis del ejercicio" })).getAllByRole("table");
+    const filas = within(tei)
+      .getAllByRole("row")
+      .slice(1)
+      .map((fila) =>
+        within(fila)
+          .getAllByRole("cell")
+          .map((celda) => celda.textContent)
+      );
+    expect(filas).toEqual([
+      ["LLEGADA", "LLEGADA", "SALIDA", "NS = 1"],
+      ["SALIDA", "NS = 2"],
+      ["SALIDA", "---", "SALIDA", "NS ≥ 1"],
+    ]);
+  });
+
   it("si tenía problemas, no se muestra (el tutor lo corrige) y el aviso no lo marca como falla", () => {
     mostrar(delTutor("", [verificacion(false)]));
 
@@ -169,7 +200,7 @@ describe("MessageBubble — ejercicio nuevo", () => {
     titulo: "Lavadero",
     enunciado: "Un lavadero…",
     sePide: ["Diagrama de flujo."],
-    datosAleatorios: [{ sigla: "IA", fdp: "uniforme entre 5 y 15 minutos" }],
+    datosAleatorios: [{ sigla: "IA", forma: "fdp" as const }],
     seDecide: "la cantidad de máquinas",
     complicaciones: ["N puestos", "arrepentimiento"],
     analisis: ANALISIS_DE_PRUEBA,

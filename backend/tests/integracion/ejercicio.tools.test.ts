@@ -22,7 +22,7 @@ const EJERCICIO: DatosEjercicio = {
   dificultad: "media",
   titulo: "Taller de bicicletas",
   enunciado:
-    "Un taller de bicicletas tiene N mecánicos. Las bicicletas llegan con un intervalo (IA) que responde a una f.d.p. " +
+    "Un taller de bicicletas tiene N mecánicos. Las bicicletas llegan con un intervalo que responde a una f.d.p. " +
     "uniforme entre 5 y 15 minutos, y el 20% de los clientes se va si hay más de 4 esperando. Se desea determinar " +
     "la cantidad N de mecánicos. Cada mecánico tiene su propia fila y la bicicleta que llega se ubica en la fila con " +
     "menos bicicletas esperando; si hay empate, elige la de menor número. El arreglo de una bicicleta demora un " +
@@ -32,7 +32,10 @@ const EJERCICIO: DatosEjercicio = {
     "el porcentaje de tiempo ocioso de cada mecánico, el promedio de espera en la fila y el porcentaje de clientes que " +
     "se van sin dejar la bicicleta.",
   sePide: ["Análisis completo: metodología, variables, T.E.I. y T.E.F.", "Diagrama de flujo"],
-  datosAleatorios: [{ sigla: "IA", fdp: "uniforme entre 5 y 15 minutos" }],
+  datosAleatorios: [
+    { sigla: "IA", forma: "fdp" },
+    { sigla: "TA", forma: "probabilidades" },
+  ],
   seDecide: "la cantidad N de mecánicos",
   complicaciones: ["N puestos", "arrepentimiento"],
   analisis: ANALISIS_DE_PRUEBA,
@@ -68,34 +71,36 @@ describe("guardarEjercicio (la tool generar_ejercicio)", () => {
 
   it("si no cumple las reglas de la cátedra, le devuelve los problemas al modelo y no guarda nada", async () => {
     const { ejercicios, conversacionId } = await alumnoConConversacion();
-    const sinRecta = {
+    const nombraLaVariable = {
       ...EJERCICIO,
-      enunciado: EJERCICIO.enunciado.replace("uniforme entre 5 y 15 minutos", "lineal entre 5 y 15 minutos"),
-      datosAleatorios: [{ sigla: "IA", fdp: "lineal entre 5 y 15 minutos" }],
+      enunciado: EJERCICIO.enunciado.replace("con un intervalo", "con un intervalo (IA)"),
     };
 
-    const resultado = await guardarEjercicio(ejercicios, conversacionId, sinRecta);
+    const resultado = await guardarEjercicio(ejercicios, conversacionId, nombraLaVariable);
 
-    expect(resultado).toEqual({ ok: false, problemas: [expect.stringContaining("es lineal pero no dice qué recta")] });
+    expect(resultado).toEqual({
+      ok: false,
+      problemas: [expect.stringContaining("El enunciado nombra la variable IA")],
+    });
     expect(await ejercicios.listarRecientes()).toEqual([]);
   });
 
   it(`en una respuesta rechaza hasta ${RECHAZOS_POR_RESPUESTA} veces; después lo guarda una vez, con avisos`, async () => {
     const { ejercicios, conversacionId } = await alumnoConConversacion();
     const { generar_ejercicio: herramienta } = crearToolsEjercicio(ejercicios, conversacionId);
-    const sinRecta = {
+    const nombraLaVariable = {
       ...EJERCICIO,
-      enunciado: EJERCICIO.enunciado.replace("uniforme entre 5 y 15 minutos", "lineal entre 5 y 15 minutos"),
+      enunciado: EJERCICIO.enunciado.replace("con un intervalo", "con un intervalo (IA)"),
     };
     const opciones = { toolCallId: "t", messages: [], context: {} };
 
     const intentos: EjercicioGenerado[] = [];
     for (let i = 0; i <= RECHAZOS_POR_RESPUESTA; i++) {
-      intentos.push((await herramienta.execute!(sinRecta, opciones)) as EjercicioGenerado);
+      intentos.push((await herramienta.execute!(nombraLaVariable, opciones)) as EjercicioGenerado);
     }
 
     expect(intentos.map((intento) => intento.ok)).toEqual([...Array(RECHAZOS_POR_RESPUESTA).fill(false), true]);
-    expect(intentos.at(-1)).toMatchObject({ avisos: [expect.stringContaining("es lineal pero no dice qué recta")] });
+    expect(intentos.at(-1)).toMatchObject({ avisos: [expect.stringContaining("El enunciado nombra la variable IA")] });
     expect(await ejercicios.listarRecientes()).toHaveLength(1);
   });
 

@@ -1,6 +1,6 @@
 import "server-only";
 import { tool } from "ai";
-import { AnalisisSchema, problemasDelAnalisis, type Analisis } from "@/backend/models/dominio/analisis";
+import { AnalisisSchema, problemasDelAnalisis, teiPorEvento, type Analisis } from "@/backend/models/dominio/analisis";
 
 // verificar_analisis: el modelo arma el análisis previo razonando sobre el enunciado y, antes de mostrarlo, lo
 // verifica contra las reglas de la cátedra (como verificar_fdp con las f.d.p.). Si pasa, la vista lo muestra como
@@ -24,7 +24,12 @@ export function verificarAnalisis(
   { rechazar = true }: { rechazar?: boolean } = {}
 ): AnalisisVerificado {
   const problemas = problemasDelAnalisis(analisis);
-  return { ok: problemas.length === 0 || !rechazar, problemas, analisis };
+  // A la vista le llega cada evento una vez, con todos sus E.F.C. (los muestra en una fila cada uno).
+  return {
+    ok: problemas.length === 0 || !rechazar,
+    problemas,
+    analisis: { ...analisis, tei: teiPorEvento(analisis.tei) },
+  };
 }
 
 /** Lo que lee el modelo del resultado: si se muestra, que no repita las tablas; si no, qué corregir. */

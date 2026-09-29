@@ -72,7 +72,7 @@ describe("ejerciciosGuardadosEn", () => {
     titulo,
     enunciado: "Un taller de bicicletas atiende a los clientes que llegan con un intervalo entre arribos.",
     sePide: ["El tiempo medio de espera en cola"],
-    datosAleatorios: [{ sigla: "IA", fdp: "uniforme entre 5 y 15 minutos" }],
+    datosAleatorios: [{ sigla: "IA", forma: "fdp" as const }],
     seDecide: "la cantidad de mecánicos",
     complicaciones: ["N puestos", "arrepentimiento"],
     analisis: ANALISIS_DE_PRUEBA,

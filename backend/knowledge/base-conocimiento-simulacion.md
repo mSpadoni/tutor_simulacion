@@ -73,7 +73,7 @@ Un **evento** es un hecho o acontecimiento que se produce en el sistema. Definic
 **"Generar un evento" es poder decir de manera exacta cuándo va a suceder otro evento.** Ej.: en una LLEGADA a las 10:00 genero IA = 12' → TPLL = 10:12.
 
 ### Tabla de Eventos Independientes (T.E.I.)
-Tiene tantas filas como eventos independientes tenga el modelo (una por evento) y **tres columnas**: **EVENTO | E.F.NO C. | E.F.C.**, más una **columna anexa CONDICIÓN** (no es parte de la T.E.I.; tiene las condiciones para que suceda el E.F.C.).
+Tiene una fila por evento independiente (si un evento genera dos E.F.C., ocupa dos filas: una por cada E.F.C. con su condición) y **tres columnas**: **EVENTO | E.F.NO C. | E.F.C.**, más una **columna anexa CONDICIÓN** (no es parte de la T.E.I.; tiene las condiciones para que suceda el E.F.C.).
 - **E.F.NO C.** (Evento Futuro NO Condicionado): se genera como consecuencia del evento actual; a partir de los datos puedo decir cuándo va a volver a suceder.
 - **E.F.C.** (Evento Futuro Condicionado): también se genera por el evento actual, pero solo si se cumple cierta condición.
 
@@ -265,7 +265,12 @@ Al corregir, el bot debe señalar en qué paso específico está el error (no so
 **Cómo se redacta** (como en la Guía Anexa y los parciales):
 - Un **título corto** con el dominio ("Clínica", "Garage", "Salón de ventas").
 - El **sistema contado en prosa**, en lenguaje del dominio (clientes, pacientes, pedidos, vehículos), sin vocabulario de la materia. Puede ser un pedido en primera persona (como el mail del gerente en "WBD").
-- Los **datos**: "responde a una f.d.p. conocida" o, cuando se pide resolverla, la f.d.p. explícita en el estilo de la cátedra ("equiprobable entre 10 y 35 minutos", "lineal donde f(20) = 2·f(10)", "entre 2 y 8 horas con f(x) = (x−1)/24"). Se pueden dar siglas solo para los datos, entre paréntesis: (IA), (TA), (CC). Cada dato aleatorio se nombra **siempre como f.d.p.** ("responde a una f.d.p. uniforme entre 5 y 15 minutos"), nunca como "distribución" ni "f(x)" suelta.
+- Los **datos**, de alguna de estas formas (como en la cátedra):
+  - responden a una f.d.p. explícita, en el estilo de la cátedra: "responde a una f.d.p. equiprobable entre 10 y 35 minutos", "lineal donde f(20) = 2·f(10)", "entre 2 y 8 horas con f(x) = (x−1)/24";
+  - responden a una f.d.p. conocida: "responde a una f.d.p. conocida";
+  - salen de otro dato: "el tiempo de los camiones grandes es el doble que el de los chicos";
+  - toman distintos valores según probabilidades: "el 60% de los clientes tarda 40 minutos y el resto 20".
+  **Sin nombrar la variable**: ni siglas ni nombres (nada de "(IA)" o "(TA)"); qué variable es cada dato lo deduce el alumno. Nunca "distribución" ni "f(x)" suelta.
 - **Porcentajes y reglas del dominio** que generan las complicaciones: arrepentimiento según la cola, prioridades, rotura o rechazo con probabilidad, asignación al puesto que se desocupa primero o al de menor cola, reposición cada cierto tiempo.
 - **Qué se busca decidir** (las variables de control, sin llamarlas así) y **qué se quiere medir**: "Se desea determinar la cantidad N de …, para ello se estudiará el porcentaje de … y el promedio de …".
 - La **consigna**, como en la guía y los parciales: "Se pide: a) Análisis completo: Metodología, clasificación de variables, tabla de eventos independientes, tabla de eventos futuros. b) Diagrama de flujo. c) Resolver las f.d.p. por el método más conveniente."
