@@ -6,6 +6,8 @@ import { useRef, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MAX_CARACTERES_MENSAJE, type TutorUIMessage } from "@/shared/chat";
 import type { CodigoDeError } from "@/shared/errores";
+import PaginaDeError from "@/app/error";
+import PaginaNoEncontrada from "@/app/not-found";
 import Atajos from "@/views/chat/Atajos";
 import AvisoDeError from "@/views/chat/AvisoDeError";
 import MessageInput from "@/views/chat/MessageInput";
@@ -164,5 +166,25 @@ describe("PanelDeDebug", () => {
     render(<PanelDeDebug id="panel" mensajes={[]} abierto onCerrar={vi.fn()} />);
 
     expect(screen.getByText("Cuando el tutor responda, acá vas a ver qué hizo.")).toBeInTheDocument();
+  });
+});
+
+describe("páginas de error y de «no encontrado»", () => {
+  it("si una página falla: lo dice sin el detalle técnico, deja reintentar y volver al inicio", async () => {
+    const reintentar = vi.fn();
+    render(<PaginaDeError error={new Error("connect ECONNREFUSED 127.0.0.1")} reset={reintentar} />);
+
+    expect(screen.getByRole("heading", { level: 1, name: "No pudimos cargar esta página" })).toBeInTheDocument();
+    expect(screen.getByRole("alert")).not.toHaveTextContent("ECONNREFUSED");
+    expect(screen.getByRole("link", { name: "Volver al inicio" })).toHaveAttribute("href", "/");
+    await userEvent.click(screen.getByRole("button", { name: "Reintentar" }));
+    expect(reintentar).toHaveBeenCalledOnce();
+  });
+
+  it("una dirección que no existe tiene su propia página, con salida al inicio", () => {
+    render(<PaginaNoEncontrada />);
+
+    expect(screen.getByRole("heading", { level: 1, name: "No encontramos esta página" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Volver al inicio" })).toHaveAttribute("href", "/");
   });
 });
