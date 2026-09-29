@@ -88,7 +88,9 @@ describe("estadisticas", () => {
   });
 
   it("compara los gastos con el período anterior", () => {
-    const resultado = estadisticas([mov({ montoEnPesos: 150000 })], septiembre, [mov({ montoEnPesos: 120000 })]);
+    const resultado = estadisticas([mov({ montoEnPesos: 150000 })], septiembre, [
+      mov({ montoEnPesos: 120000, fecha: "2026-08-10" }),
+    ]);
 
     expect(resultado.variacionDeGastos).toEqual({ anterior: 120000, porcentaje: 25 });
   });
