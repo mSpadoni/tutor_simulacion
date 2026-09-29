@@ -42,12 +42,24 @@ describe("problemasDelEjercicio", () => {
     ]);
   });
 
-  it("la f.d.p. que se revisa tiene que ser la que lee el alumno: si no está en el enunciado, se marca", () => {
-    const ejercicio = { ...BIEN, datosAleatorios: [{ sigla: "IA", fdp: "uniforme entre 1 y 3 minutos" }] };
+  it("se revisa lo que dice el enunciado, no cómo lo copió el modelo en el dato (LaTeX, otras palabras)", () => {
+    // Un caso real: el modelo escribió «$λ = 1/3$» en el enunciado y «λ = 1/3» en el dato.
+    const ejercicio = {
+      enunciado: BIEN.enunciado.replace("uniforme entre 5 y 15 minutos", "exponencial con $λ = 1/3$ minutos"),
+      datosAleatorios: [{ sigla: "IA", fdp: "exponencial con λ = 1/3 minutos" }, BIEN.datosAleatorios[1]],
+    };
 
-    expect(problemasDelEjercicio(ejercicio)).toEqual([
-      "La f.d.p. de IA («uniforme entre 1 y 3 minutos») no aparece tal cual en el enunciado.",
-    ]);
+    expect(problemasDelEjercicio(ejercicio)).toEqual([]);
+  });
+
+  it("lo que el enunciado dice de un dato no se mezcla con el dato siguiente de la misma oración", () => {
+    // La recta de TL no le sirve a IA: cada dato se revisa desde su sigla hasta el próximo.
+    const ejercicio = {
+      ...BIEN,
+      enunciado: BIEN.enunciado.replace("uniforme entre 5 y 15 minutos", "lineal entre 5 y 15 minutos"),
+    };
+
+    expect(problemasDelEjercicio(ejercicio)).toEqual([expect.stringContaining("IA es lineal pero no dice qué recta")]);
   });
 
   it("cada dato va con su sigla entre paréntesis", () => {

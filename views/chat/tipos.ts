@@ -1,4 +1,4 @@
-import { isToolUIPart } from "ai";
+import { getStaticToolName, isStaticToolUIPart, isToolUIPart } from "ai";
 import type { NombreDeHerramienta, ParteDelTutor } from "@/shared/chat";
 import { leerErrorPublico, type ErrorPublico } from "@/shared/errores";
 
@@ -85,9 +85,9 @@ export type AnalisisParaMostrar = Extract<
  * Si la parte del mensaje es un análisis que pasó la verificación de la cátedra, sus datos para mostrarlo como
  * tablas; si no, null (todavía se está verificando, o tenía problemas y el tutor lo está corrigiendo).
  */
-export function analisisDe(parte: ParteDelTutor): AnalisisParaMostrar | null {
+export function analisisDe(parte: ParteDelTutor): { analisis: AnalisisParaMostrar; avisos: string[] } | null {
   if (parte.type !== "tool-verificar_analisis" || parte.state !== "output-available") return null;
-  return parte.output.ok ? parte.output.analisis : null;
+  return parte.output.ok ? { analisis: parte.output.analisis, avisos: parte.output.problemas } : null;
 }
 
 /** Un ejercicio nuevo tal como se guardó en «Mis ejercicios» (tipado desde la tool). */
@@ -101,9 +101,30 @@ export type EjercicioParaMostrar = Extract<
  * null. Los mensajes guardados antes de que la tool devolviera el ejercicio no lo traen: ahí el ejercicio está en el
  * texto del tutor.
  */
-export function ejercicioDe(parte: ParteDelTutor): EjercicioParaMostrar | null {
+export function ejercicioDe(parte: ParteDelTutor): { ejercicio: EjercicioParaMostrar; avisos: string[] } | null {
   if (parte.type !== "tool-generar_ejercicio" || parte.state !== "output-available" || !parte.output.ok) return null;
-  return parte.output.ejercicio ?? null;
+  const { ejercicio, avisos } = parte.output;
+  return ejercicio ? { ejercicio, avisos: avisos ?? [] } : null;
+}
+
+/** ¿La tool revisó algo del tutor y le devolvió problemas para corregir? (No es una falla: vuelve a intentar.) */
+function devolvioProblemas(parte: ParteDelTutor): boolean {
+  if (parte.type === "tool-verificar_analisis" && parte.state === "output-available") return !parte.output.ok;
+  if (parte.type === "tool-generar_ejercicio" && parte.state === "output-available") return "problemas" in parte.output;
+  return false;
+}
+
+/** Qué ve el alumno de cada uso de una tool: un ícono y el texto (nunca solo el ícono). */
+export function avisoDeHerramienta(parte: ParteDelTutor): { icono: string; texto: string } | null {
+  if (!isStaticToolUIPart(parte)) return null;
+  const textos = TEXTOS_DE_HERRAMIENTAS[getStaticToolName(parte)];
+  if (devolvioProblemas(parte)) {
+    const que = parte.type === "tool-verificar_analisis" ? "el análisis" : "el ejercicio";
+    return { icono: "↻", texto: `Revisó ${que}: tenía algo para corregir` };
+  }
+  if (herramientaFallo(parte)) return { icono: "⚠", texto: `No se pudo: ${textos.usada.toLowerCase()}` };
+  if (parte.state === "output-available") return { icono: "✓", texto: textos.usada };
+  return { icono: "…", texto: textos.usando };
 }
 
 /** Un diagrama listo para mostrar: el SVG va como data URL en un <img> (así el navegador no ejecuta nada de adentro). */
@@ -128,10 +149,7 @@ export function diagramaDe(parte: ParteDelTutor): DiagramaParaMostrar | null {
 export function herramientaFallo(parte: ParteDelTutor): boolean {
   if (!isToolUIPart(parte)) return false;
   // Un análisis o un ejercicio con problemas no es una falla: el tutor lo corrige y lo vuelve a revisar.
-  if (parte.type === "tool-verificar_analisis") return false;
-  if (parte.type === "tool-generar_ejercicio" && parte.state === "output-available" && "problemas" in parte.output) {
-    return false;
-  }
+  if (devolvioProblemas(parte)) return false;
   if (parte.state === "output-error") return true;
   if (parte.state !== "output-available") return false;
   // Algunas tools devuelven texto (las del material) y otras un resultado { ok, ... }.

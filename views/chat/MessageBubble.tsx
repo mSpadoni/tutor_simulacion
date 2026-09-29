@@ -2,13 +2,13 @@ import ReactMarkdown, { type Components } from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
-import { getStaticToolName, isStaticToolUIPart, type ToolUIPart } from "ai";
-import { textoDe, type HerramientasDelTutor, type TutorUIMessage } from "@/shared/chat";
+import { isStaticToolUIPart } from "ai";
+import { textoDe, type ParteDelTutor, type TutorUIMessage } from "@/shared/chat";
 import { AnalisisDelEjercicio } from "./AnalisisDelEjercicio";
 import { DiagramaDeFlujo, DiagramaDelTexto } from "./DiagramaDeFlujo";
 import { EjercicioNuevo } from "./EjercicioNuevo";
 import { partirEnBloques } from "./diagramasEnTexto";
-import { analisisDe, diagramaDe, ejercicioDe, herramientaFallo, TEXTOS_DE_HERRAMIENTAS } from "./tipos";
+import { analisisDe, avisoDeHerramienta, diagramaDe, ejercicioDe } from "./tipos";
 
 // react-markdown no renderiza HTML crudo: lo que escriba el modelo no puede inyectar scripts.
 // Este objeto dice cómo dibujar cada elemento del Markdown (párrafo, lista, tabla...) con estilos propios.
@@ -41,18 +41,14 @@ const componentesMarkdown: Components = {
   a: (props) => <a className="text-blue-700 underline" target="_blank" rel="noreferrer" {...props} />,
 };
 
-/** Una parte de tool del mensaje (`tool-<nombre>`), con su estado (usándola, lista o con error) y su resultado. */
-type ParteDeTool = ToolUIPart<HerramientasDelTutor>;
-
 /** Cómo se muestra el uso de una tool: texto visible (no solo un ícono) y un indicador de estado. */
-function AvisoDeTool({ parte }: { parte: ParteDeTool }) {
-  const textos = TEXTOS_DE_HERRAMIENTAS[getStaticToolName<HerramientasDelTutor>(parte)];
-  const conError = herramientaFallo(parte);
-  const lista = parte.state === "output-available" && !conError;
+function AvisoDeTool({ parte }: { parte: ParteDelTutor }) {
+  const aviso = avisoDeHerramienta(parte);
+  if (!aviso) return null;
   return (
     <li className="flex items-center gap-1.5 text-xs text-slate-600">
-      <span aria-hidden="true">{conError ? "⚠" : lista ? "✓" : "…"}</span>
-      {conError ? `No se pudo: ${textos.usada.toLowerCase()}` : lista ? textos.usada : textos.usando}
+      <span aria-hidden="true">{aviso.icono}</span>
+      {aviso.texto}
     </li>
   );
 }
@@ -88,11 +84,11 @@ export default function MessageBubble({ mensaje }: { mensaje: TutorUIMessage }) 
             ))}
           </ul>
         )}
-        {ejercicios.map((ejercicio, indice) => (
-          <EjercicioNuevo key={indice} ejercicio={ejercicio} />
+        {ejercicios.map(({ ejercicio, avisos }, indice) => (
+          <EjercicioNuevo key={indice} ejercicio={ejercicio} avisos={avisos} />
         ))}
-        {analisis.map((datos, indice) => (
-          <AnalisisDelEjercicio key={indice} analisis={datos} />
+        {analisis.map(({ analisis: datos, avisos }, indice) => (
+          <AnalisisDelEjercicio key={indice} analisis={datos} avisos={avisos} />
         ))}
         {diagramas.map((diagrama, indice) => (
           <DiagramaDeFlujo key={indice} diagrama={diagrama} />

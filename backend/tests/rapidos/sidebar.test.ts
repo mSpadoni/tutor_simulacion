@@ -81,7 +81,12 @@ describe("ejerciciosGuardadosEn", () => {
       toolCallId: "t1",
       state: "output-available",
       input: datos("Taller de bicicletas"),
-      output: { ok: true, id: "e9", ejercicio: { titulo: "Taller de bicicletas", enunciado: "…", sePide: [] } },
+      output: {
+        ok: true,
+        id: "e9",
+        ejercicio: { titulo: "Taller de bicicletas", enunciado: "…", sePide: [] },
+        avisos: [],
+      },
     };
 
     expect(ejerciciosGuardadosEn(mensaje([{ type: "text", text: "Acá va" }, guardado]), "c")).toEqual([

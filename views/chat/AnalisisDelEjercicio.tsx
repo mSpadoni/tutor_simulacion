@@ -1,3 +1,4 @@
+import { AvisosDeRevision } from "./AvisosDeRevision";
 import type { AnalisisParaMostrar } from "./tipos";
 
 // El análisis previo que el tutor verificó con las reglas de la cátedra, en el formato de la cátedra: metodología,
@@ -22,7 +23,7 @@ function listaDeVariables(variables: Variable[]): string {
   return variables.map((variable) => `${variable.nombre} (${variable.descripcion})`).join(", ");
 }
 
-export function AnalisisDelEjercicio({ analisis }: { analisis: AnalisisParaMostrar }) {
+export function AnalisisDelEjercicio({ analisis, avisos }: { analisis: AnalisisParaMostrar; avisos: string[] }) {
   return (
     <section aria-label="Análisis del ejercicio" className="my-2 space-y-3 text-sm">
       <p>
@@ -92,6 +93,7 @@ export function AnalisisDelEjercicio({ analisis }: { analisis: AnalisisParaMostr
           </table>
         </div>
       </div>
+      <AvisosDeRevision avisos={avisos} />
     </section>
   );
 }

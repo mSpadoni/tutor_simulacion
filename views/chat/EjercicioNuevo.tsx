@@ -1,7 +1,8 @@
+import { AvisosDeRevision } from "./AvisosDeRevision";
 import type { EjercicioParaMostrar } from "./tipos";
 
 /** Un ejercicio nuevo tal como quedó guardado en «Mis ejercicios»: título, enunciado y el «Se pide:». */
-export function EjercicioNuevo({ ejercicio }: { ejercicio: EjercicioParaMostrar }) {
+export function EjercicioNuevo({ ejercicio, avisos }: { ejercicio: EjercicioParaMostrar; avisos: string[] }) {
   return (
     <article aria-label={`Ejercicio: ${ejercicio.titulo}`} className="my-2 space-y-2">
       <p className="font-semibold">{ejercicio.titulo}</p>
@@ -14,6 +15,7 @@ export function EjercicioNuevo({ ejercicio }: { ejercicio: EjercicioParaMostrar 
           ))}
         </ol>
       </div>
+      <AvisosDeRevision avisos={avisos} />
     </article>
   );
 }

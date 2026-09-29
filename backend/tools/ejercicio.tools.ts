@@ -45,28 +45,38 @@ export type DatosEjercicio = z.infer<typeof DatosEjercicioSchema>;
 export type EjercicioGuardado = { titulo: string; enunciado: string; sePide: string[] };
 
 /**
- * Lo que devuelve la tool: el ejercicio guardado; las reglas de la cátedra que no cumple (no se guarda, el modelo
- * lo corrige); o por qué no se pudo guardar.
+ * Revisiones que se rechazan como máximo en una misma respuesta. Después se guarda igual (con los avisos): un modelo
+ * que no logra cumplir una regla no puede dejar al alumno sin ejercicio ni gastar todos los pasos reintentando.
+ */
+export const RECHAZOS_POR_RESPUESTA = 2;
+
+/**
+ * Lo que devuelve la tool: el ejercicio guardado (con los avisos de lo que no cumple, si se guardó igual); las
+ * reglas de la cátedra que no cumple (no se guarda, el modelo lo corrige); o por qué no se pudo guardar.
  */
 export type EjercicioGenerado =
-  | { ok: true; id: string; ejercicio: EjercicioGuardado }
+  | { ok: true; id: string; ejercicio: EjercicioGuardado; avisos: string[] }
   | { ok: false; problemas: string[] }
   | { ok: false; error: string };
 
-/** Guarda el ejercicio en "Mis ejercicios" del alumno, asociado a la conversación donde se generó. */
+/**
+ * Revisa el ejercicio y lo guarda en "Mis ejercicios" del alumno, asociado a la conversación donde se generó.
+ * Si no cumple las reglas, no lo guarda y devuelve los problemas; con `rechazar: false`, lo guarda igual con avisos.
+ */
 export async function guardarEjercicio(
   ejercicios: EjerciciosModel,
   conversacionId: string,
-  { tema, dificultad, titulo, enunciado, sePide, datosAleatorios }: DatosEjercicio
+  { tema, dificultad, titulo, enunciado, sePide, datosAleatorios }: DatosEjercicio,
+  { rechazar = true }: { rechazar?: boolean } = {}
 ): Promise<EjercicioGenerado> {
   const problemas = problemasDelEjercicio({ enunciado, datosAleatorios });
-  if (problemas.length > 0) return { ok: false, problemas };
+  if (problemas.length > 0 && rechazar) return { ok: false, problemas };
   try {
     const guardado = await ejercicios.guardar(
       { tema, dificultad, payload: { titulo, enunciado, sePide } },
       conversacionId
     );
-    return { ok: true, id: guardado.id, ejercicio: { titulo, enunciado, sePide } };
+    return { ok: true, id: guardado.id, ejercicio: { titulo, enunciado, sePide }, avisos: problemas };
   } catch (error) {
     return { ok: false, error: `No se pudo guardar el ejercicio: ${(error as Error).message}` };
   }
@@ -74,6 +84,13 @@ export async function guardarEjercicio(
 
 /** Lo que lee el modelo del resultado: si se guardó, que no lo repita; si no, qué corregir. */
 export function resumenDelEjercicio(resultado: EjercicioGenerado): string {
+  if (resultado.ok && resultado.avisos.length > 0) {
+    return (
+      "Ejercicio guardado y mostrado al alumno, pero no cumple:\n" +
+      resultado.avisos.map((aviso) => `- ${aviso}`).join("\n") +
+      "\nNo lo repitas ni lo vuelvas a generar: avisale al alumno en una línea qué le falta al enunciado."
+    );
+  }
   if (resultado.ok) {
     return "Ejercicio guardado en «Mis ejercicios» y mostrado al alumno. No lo repitas en texto: deseale suerte en una línea.";
   }
@@ -89,6 +106,8 @@ export function resumenDelEjercicio(resultado: EjercicioGenerado): string {
 
 /** La tool para `streamText`. Se crea por pedido: guarda con la sesión del alumno y en su conversación. */
 export function crearToolsEjercicio(ejercicios: EjerciciosModel, conversacionId: string) {
+  // Cuántas revisiones se rechazaron en esta respuesta (las tools se crean por pedido).
+  let rechazos = 0;
   return {
     generar_ejercicio: tool({
       description:
@@ -96,7 +115,13 @@ export function crearToolsEjercicio(ejercicios: EjerciciosModel, conversacionId:
         "ejercicios» y se lo muestra al alumno. Llamala SIEMPRE para dar un ejercicio nuevo, en vez de escribirlo en " +
         "el mensaje: si devuelve problemas, corregilo y volvé a llamarla.",
       inputSchema: DatosEjercicioSchema,
-      execute: (datos) => guardarEjercicio(ejercicios, conversacionId, datos),
+      execute: async (datos) => {
+        const resultado = await guardarEjercicio(ejercicios, conversacionId, datos, {
+          rechazar: rechazos < RECHAZOS_POR_RESPUESTA,
+        });
+        if (!resultado.ok && "problemas" in resultado) rechazos += 1;
+        return resultado;
+      },
       toModelOutput: ({ output }) => ({ type: "text", value: resumenDelEjercicio(output) }),
     }),
   };

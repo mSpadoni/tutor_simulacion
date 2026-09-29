@@ -145,7 +145,62 @@ describe("MessageBubble — análisis verificado", () => {
 
     expect(screen.queryByRole("region", { name: "Análisis del ejercicio" })).toBeNull();
     const material = screen.getByRole("list", { name: "Material que consultó el tutor" });
-    expect(material).toHaveTextContent("Revisó el análisis con las reglas de la cátedra");
+    expect(material).toHaveTextContent("Revisó el análisis: tenía algo para corregir");
     expect(material).not.toHaveTextContent("⚠");
+  });
+
+  it("si se mostró igual (el tutor no logró corregirlo), las tablas van con el aviso de lo que no cumple", () => {
+    const conAvisos: ParteDelTutor = {
+      ...verificacion(true),
+      output: { ok: true, problemas: ["Falta la fila del evento SALIDA en la T.E.I."], analisis },
+    } as ParteDelTutor;
+    mostrar(delTutor("Revisá la T.E.I.", [conAvisos]));
+
+    const seccion = screen.getByRole("region", { name: "Análisis del ejercicio" });
+    expect(within(seccion).getByRole("note")).toHaveTextContent("Falta la fila del evento SALIDA en la T.E.I.");
+  });
+});
+
+describe("MessageBubble — ejercicio nuevo", () => {
+  const input = {
+    tema: "colas",
+    dificultad: "media" as const,
+    titulo: "Lavadero",
+    enunciado: "Un lavadero…",
+    sePide: ["Diagrama de flujo."],
+    datosAleatorios: [{ sigla: "IA", fdp: "uniforme entre 5 y 15 minutos" }],
+    seDecide: "la cantidad de máquinas",
+  };
+
+  it("un ejercicio guardado se muestra desde lo guardado; los intentos rechazados no dicen «Guardó»", () => {
+    const rechazado: ParteDelTutor = {
+      type: "tool-generar_ejercicio",
+      toolCallId: "t1",
+      state: "output-available",
+      input,
+      output: { ok: false, problemas: ["El dato IA no aparece en el enunciado con su sigla entre paréntesis."] },
+    };
+    const guardado: ParteDelTutor = {
+      type: "tool-generar_ejercicio",
+      toolCallId: "t2",
+      state: "output-available",
+      input,
+      output: {
+        ok: true,
+        id: "e1",
+        ejercicio: { titulo: "Lavadero", enunciado: "Un lavadero…", sePide: ["Diagrama de flujo."] },
+        avisos: [],
+      },
+    };
+    mostrar(delTutor("¡Éxito con la práctica!", [rechazado, guardado]));
+
+    expect(screen.getByRole("article", { name: "Ejercicio: Lavadero" })).toHaveTextContent("Diagrama de flujo.");
+    const avisos = within(screen.getByRole("list", { name: "Material que consultó el tutor" })).getAllByRole(
+      "listitem"
+    );
+    expect(avisos.map((aviso) => aviso.textContent)).toEqual([
+      "↻Revisó el ejercicio: tenía algo para corregir",
+      "✓Guardó el ejercicio en «Mis ejercicios»",
+    ]);
   });
 });

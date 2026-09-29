@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { armarSystemPrompt } from "@/backend/lib/prompts/systemPrompt";
 import { AnalisisSchema, problemasDelAnalisis, type Analisis } from "@/backend/models/dominio/analisis";
-import { resumenDelAnalisis, verificarAnalisis } from "@/backend/tools/analisis.tools";
+import {
+  crearToolsAnalisis,
+  type AnalisisVerificado,
+  RECHAZOS_POR_RESPUESTA,
+  resumenDelAnalisis,
+  verificarAnalisis,
+} from "@/backend/tools/analisis.tools";
 
 // Las reglas de la cátedra para el análisis previo (sección 2 y 3 de la base de conocimiento). Lógica pura.
 
@@ -171,5 +177,32 @@ describe("verificar_analisis: lo que lee el modelo", () => {
     expect(resultado.ok).toBe(false);
     for (const problema of resultado.problemas) expect(resumen).toContain(`- ${problema}`);
     expect(resumen).toContain("volvé a llamar a verificar_analisis");
+  });
+});
+
+describe("verificar_analisis: tope de rechazos por respuesta", () => {
+  const opciones = { toolCallId: "t", messages: [], context: {} };
+  /** Una llamada a la tool como la hace el SDK (acá execute devuelve el resultado, no un stream). */
+  const verificar = async (herramienta: ReturnType<typeof crearToolsAnalisis>["verificar_analisis"]) =>
+    (await herramienta.execute!(conProblemas, opciones)) as AnalisisVerificado;
+  const conProblemas = con({ tei: [{ evento: "LLEGADA", efnc: "LLEGADA", efc: [] }] });
+
+  it(`rechaza hasta ${RECHAZOS_POR_RESPUESTA} veces; después lo muestra igual, con los problemas como avisos`, async () => {
+    const { verificar_analisis: herramienta } = crearToolsAnalisis();
+    const intentos: AnalisisVerificado[] = [];
+    for (let i = 0; i <= RECHAZOS_POR_RESPUESTA; i++) intentos.push(await verificar(herramienta));
+
+    expect(intentos.map((intento) => intento.ok)).toEqual([...Array(RECHAZOS_POR_RESPUESTA).fill(false), true]);
+    const ultimo = intentos.at(-1)!;
+    expect(ultimo.problemas.length).toBeGreaterThan(0);
+    expect(resumenDelAnalisis(ultimo)).toContain("No lo vuelvas a verificar");
+  });
+
+  it("cada respuesta empieza de cero: el tope no se arrastra a la próxima", async () => {
+    const primera = crearToolsAnalisis().verificar_analisis;
+    for (let i = 0; i < RECHAZOS_POR_RESPUESTA; i++) await verificar(primera);
+
+    const nueva = crearToolsAnalisis().verificar_analisis;
+    expect((await verificar(nueva)).ok).toBe(false);
   });
 });

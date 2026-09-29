@@ -3,7 +3,13 @@ import { afterAll, describe, expect, it } from "vitest";
 import { EjerciciosController } from "@/backend/controllers/ejercicios.controller";
 import { ConversacionesModel } from "@/backend/models/repositorios/conversaciones.model";
 import { EjerciciosModel } from "@/backend/models/repositorios/ejercicios.model";
-import { guardarEjercicio, type DatosEjercicio } from "@/backend/tools/ejercicio.tools";
+import {
+  crearToolsEjercicio,
+  guardarEjercicio,
+  RECHAZOS_POR_RESPUESTA,
+  type DatosEjercicio,
+  type EjercicioGenerado,
+} from "@/backend/tools/ejercicio.tools";
 import { borrarAlumnosDePrueba, crearAlumnoLogueado } from "../helpers/alumnoDePrueba";
 
 // Sin mocks: contra la base local de Supabase, con alumnos reales logueados.
@@ -62,6 +68,25 @@ describe("guardarEjercicio (la tool generar_ejercicio)", () => {
 
     expect(resultado).toEqual({ ok: false, problemas: [expect.stringContaining("es lineal pero no dice qué recta")] });
     expect(await ejercicios.listarRecientes()).toEqual([]);
+  });
+
+  it(`en una respuesta rechaza hasta ${RECHAZOS_POR_RESPUESTA} veces; después lo guarda una vez, con avisos`, async () => {
+    const { ejercicios, conversacionId } = await alumnoConConversacion();
+    const { generar_ejercicio: herramienta } = crearToolsEjercicio(ejercicios, conversacionId);
+    const sinRecta = {
+      ...EJERCICIO,
+      enunciado: EJERCICIO.enunciado.replace("uniforme entre 5 y 15 minutos", "lineal entre 5 y 15 minutos"),
+    };
+    const opciones = { toolCallId: "t", messages: [], context: {} };
+
+    const intentos: EjercicioGenerado[] = [];
+    for (let i = 0; i <= RECHAZOS_POR_RESPUESTA; i++) {
+      intentos.push((await herramienta.execute!(sinRecta, opciones)) as EjercicioGenerado);
+    }
+
+    expect(intentos.map((intento) => intento.ok)).toEqual([...Array(RECHAZOS_POR_RESPUESTA).fill(false), true]);
+    expect(intentos.at(-1)).toMatchObject({ avisos: [expect.stringContaining("es lineal pero no dice qué recta")] });
+    expect(await ejercicios.listarRecientes()).toHaveLength(1);
   });
 
   it("si los datos no pasan la validación, le devuelve el error al modelo y no guarda nada", async () => {
