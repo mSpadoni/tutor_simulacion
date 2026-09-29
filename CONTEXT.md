@@ -62,6 +62,10 @@ _Avoid_: Intervalo, lapso
 Ingresos menos gastos de un período, en pesos.
 _Avoid_: Saldo, resultado
 
+**Período anterior**:
+El período con el que se compara uno: el mes calendario anterior para un mes, la semana anterior para una semana, el día anterior para un día, o la misma cantidad de días justo antes para un rango.
+_Avoid_: Período previo, mes pasado (como término general)
+
 **Estadísticas**:
-Totales por categoría, promedio diario y variación contra el período anterior de igual duración, calculados sobre los movimientos de un período.
+Totales por categoría, promedio diario de gastos y variación de los gastos contra el período anterior, calculados sobre los movimientos de un período.
 _Avoid_: Métricas, reporte
