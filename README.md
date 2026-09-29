@@ -59,7 +59,8 @@ backend/
   types/                Tipos de la base (database.ts).
   supabase/             Config de la base local y migraciones SQL (con las políticas RLS).
   tests/rapidos/        Tests sin Docker ni internet (lógica pura, reglas de arquitectura, vista).
-  tests/externos/       Tests contra la base local (Docker), Kroki y OpenAI.
+  tests/integracion/    Tests contra la base local de Supabase (Docker), sin internet.
+  tests/externos/       Tests contra OpenAI y Kroki (internet).
 middleware.ts           Refresca la sesión del alumno en cada request (Next.js lo exige en la raíz).
 ```
 
@@ -121,20 +122,23 @@ podrían contradecir a la cátedra. Los originales (`complemento_teorico/`) no s
 
 ## Tests
 
-Los tests no usan mocks. Están en dos grupos:
+Los tests no usan mocks. Están en tres grupos:
 
-- **Rápidos** (`backend/tests/rapidos/`): lógica pura, reglas de arquitectura y funciones de la vista. No
-  necesitan Docker ni internet y tardan segundos. ESLint impide que un test de esta carpeta use Supabase,
-  Kroki u OpenAI.
-- **Externos** (`backend/tests/externos/`): corren contra una **copia local de Supabase** en Docker (misma
-  migración, mismo login, mismas políticas RLS, nunca la base real), Kroki y la API real de OpenAI.
+- **Rápidos** (`backend/tests/rapidos/`): lógica pura, reglas de arquitectura, funciones y componentes de la
+  vista. No necesitan Docker ni internet y tardan segundos. ESLint impide que un test de esta carpeta use
+  Supabase, Kroki u OpenAI.
+- **Integración** (`backend/tests/integracion/`): repositorios, RLS, auth y middleware contra una **copia local
+  de Supabase** en Docker (misma migración, mismo login, mismas políticas RLS, nunca la base real). Sin internet.
+- **Externos** (`backend/tests/externos/`): los que hablan con servicios de internet de verdad (OpenAI y Kroki).
+  Pueden fallar por la red o por la cuenta de OpenAI, por eso van aparte.
 
 ```bash
-npm run test:rapidos      # mientras se programa: sin Docker, unos segundos
-
-# Los externos: una vez por sesión (Docker Desktop abierto). La primera vez baja las imágenes.
+# Una vez por sesión (Docker Desktop abierto). La primera vez baja las imágenes.
 npm run db:start
-npm run test:externos     # o `npm test` para correr los dos grupos
+npm test                  # rápidos + integración: lo confiable, sin internet
+npm run test:externos     # OpenAI y Kroki (necesitan internet; los de OpenAI, OPENAI_API_KEY)
+npm run test:rapidos      # solo los rápidos, sin Docker (mientras se programa)
+npm run test:todo         # los tres grupos
 # Al terminar, para liberar memoria:
 npm run db:stop
 ```
