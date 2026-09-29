@@ -32,8 +32,11 @@ export async function actualizarSesion(request: NextRequest): Promise<NextRespon
     },
   });
 
-  // No poner código entre createServerClient y getUser: es lo que dispara el refresco.
-  await supabase.auth.getUser();
+  // No poner código entre createServerClient y getClaims: es lo que dispara el refresco.
+  // getClaims (lo que recomienda hoy la guía de Supabase para el middleware) renueva la sesión si venció y verifica
+  // la firma del JWT: con claves de firma asimétricas lo hace localmente, sin ir al servidor de Auth en cada request.
+  // El middleware no autoriza nada: las páginas y /api/chat siguen confirmando al alumno con getUser().
+  await supabase.auth.getClaims();
 
   return response;
 }

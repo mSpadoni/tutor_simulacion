@@ -41,6 +41,31 @@ export class NavegadorDePrueba {
   nombresDeCookies(): string[] {
     return [...this.cookies.keys()];
   }
+
+  /** Las cookies como las manda el navegador en el header `Cookie` de un request. */
+  headerCookie(): string {
+    return [...this.cookies].map(([nombre, valor]) => `${nombre}=${valor}`).join("; ");
+  }
+
+  /**
+   * Hace como si hubiera pasado más de una hora: marca la sesión guardada como vencida (el refresh token sigue
+   * siendo válido). El próximo request tiene que renovarla, como pasa en el navegador de verdad.
+   * @supabase/ssr guarda la sesión como "base64-<JSON en base64url>", partida en `<nombre>.0`, `.1`... si es larga.
+   */
+  vencerSesion(): void {
+    const partes = [...this.cookies.keys()].filter((nombre) => /-auth-token(\.\d+)?$/.test(nombre)).sort();
+    const valor = partes.map((nombre) => this.cookies.get(nombre)).join("");
+    const sesion = JSON.parse(Buffer.from(valor.replace(/^base64-/, ""), "base64url").toString("utf8"));
+    sesion.expires_at = Math.floor(Date.now() / 1000) - 60;
+    partes.forEach((nombre) => this.cookies.delete(nombre));
+    const nombreBase = partes[0].replace(/\.\d+$/, "");
+    this.cookies.set(nombreBase, `base64-${Buffer.from(JSON.stringify(sesion)).toString("base64url")}`);
+  }
+}
+
+/** Cuándo vence la sesión que guarda una cookie de Supabase ("base64-<JSON>"), en segundos Unix. */
+export function vencimientoDeSesion(valorDeCookie: string): number {
+  return JSON.parse(Buffer.from(valorDeCookie.replace(/^base64-/, ""), "base64url").toString("utf8")).expires_at;
 }
 
 export type AlumnoDePrueba = {
