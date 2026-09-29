@@ -7,12 +7,13 @@ import { createOpenAI } from "@ai-sdk/openai";
 import type { UIMessage } from "ai";
 import { afterAll, describe, expect, it } from "vitest";
 import { ChatController } from "@/backend/controllers/chat.controller";
-import { ErrorDeChat } from "@/backend/tutor/errores";
+import { ErrorDeAplicacion } from "@/backend/errores";
 import { URL_API_OPENAI_POR_DEFECTO } from "@/backend/lib/env";
 import { ConversacionesModel } from "@/backend/models/repositorios/conversaciones.model";
 import { EjerciciosModel } from "@/backend/models/repositorios/ejercicios.model";
 import { PedidoDeChat } from "@/backend/models/dominio/pedidoDeChat.model";
 import type { MetadatosDeRespuesta } from "@/shared/chat";
+import { leerErrorPublico } from "@/shared/errores";
 import { borrarAlumnosDePrueba, crearAlumnoLogueado } from "../helpers/alumnoDePrueba";
 import { conVariablesAsync } from "../helpers/variablesDeEntorno";
 
@@ -40,22 +41,19 @@ async function conversar(controller: ChatController, conversacionId: string, tex
   });
   if (!validacion.ok) throw new Error(validacion.error);
 
-  const respuesta = await controller.responder(validacion.pedido);
-  const cuerpo = await respuesta.text();
-  // El stream es SSE: una línea "data: {json}" por evento, y "data: [DONE]" al final.
-  return cuerpo
-    .split("\n")
-    .filter((linea) => linea.startsWith("data: {"))
-    .map(
-      (linea) =>
-        JSON.parse(linea.slice(6)) as {
-          type: string;
-          errorText?: string;
-          delta?: string;
-          messageMetadata?: MetadatosDeRespuesta;
-        }
-    );
+  // El controller devuelve el stream de partes (la ruta lo convierte en HTTP): se lee evento por evento.
+  const lector = (await controller.responder(validacion.pedido)).getReader();
+  const eventos: Evento[] = [];
+  for (let leido = await lector.read(); !leido.done; leido = await lector.read()) eventos.push(leido.value);
+  return eventos;
 }
+
+/** Lo que miran los tests de cada evento del stream (cada tipo de evento trae solo algunos de estos campos). */
+type Evento = { type: string; errorText?: string; delta?: string; messageMetadata?: MetadatosDeRespuesta };
+
+/** El código del error que llegó dentro del stream (el navegador lo lee igual). */
+const codigoDelError = (eventos: Evento[]) =>
+  leerErrorPublico(eventos.find((evento) => evento.type === "error")?.errorText ?? "")?.codigo;
 
 /** Espera a que la respuesta del tutor quede guardada (se guarda al cerrar el stream) y devuelve los mensajes. */
 async function mensajesGuardados(conversaciones: ConversacionesModel, id: string, cantidad: number) {
@@ -77,7 +75,7 @@ const modeloConClaveInvalida = () =>
   createOpenAI({ apiKey: "sk-clave-invalida-de-prueba", baseURL: URL_API_OPENAI_POR_DEFECTO }).chat("gpt-4o-mini");
 
 describe("ChatController.responder — sin configuración de OpenAI", () => {
-  it("si falta OPENAI_API_KEY, el alumno ve «no está disponible» (502) y no se guarda nada", async () => {
+  it("si falta OPENAI_API_KEY, corta con «tutor_no_disponible» y no se guarda nada", async () => {
     // Sin crearModelo: usa el real, que lee la key de las variables de entorno.
     const alumno = await crearAlumnoLogueado();
     const conversaciones = new ConversacionesModel(alumno.navegador.crearCliente);
@@ -88,8 +86,8 @@ describe("ChatController.responder — sin configuración de OpenAI", () => {
       conversar(controller, id, "Hola").catch((e: unknown) => e)
     );
 
-    expect(error).toBeInstanceOf(ErrorDeChat);
-    expect(error).toMatchObject({ status: 502, mensajeParaAlumno: expect.stringContaining("no está disponible") });
+    expect(error).toBeInstanceOf(ErrorDeAplicacion);
+    expect(error).toMatchObject({ codigo: "tutor_no_disponible" });
     expect(await conversaciones.obtener(id)).toBeNull();
   });
 });
@@ -112,7 +110,7 @@ describe("ChatController.responder — conversación y errores (sin gastar créd
     const eventos = await conversar(controller, randomUUID(), "Hola");
     const error = eventos.find((evento) => evento.type === "error");
 
-    expect(error?.errorText).toContain("El tutor no está disponible");
+    expect(codigoDelError(eventos)).toBe("tutor_no_disponible");
     expect(error?.errorText).not.toMatch(/api key|401|sk-/i);
     // Para el panel de debug: el modelo llega apenas empieza la respuesta, aunque después falle.
     expect(eventos.find((evento) => evento.type === "start")?.messageMetadata).toEqual({ modelo: "gpt-4o-mini" });
@@ -123,23 +121,23 @@ describe("ChatController.responder — conversación y errores (sin gastar créd
 
     const eventos = await conversar(controller, randomUUID(), "Hola");
 
-    expect(eventos.find((evento) => evento.type === "error")?.errorText).toContain("tardó demasiado");
+    expect(codigoDelError(eventos)).toBe("tutor_demorado");
   });
 
-  it("no deja escribir en la conversación de otro alumno (404) y no guarda nada", async () => {
+  it("no deja escribir en la conversación de otro alumno y no guarda nada", async () => {
     const duenio = await alumnoConChat({ crearModelo: modeloConClaveInvalida });
     const intruso = await alumnoConChat({ crearModelo: modeloConClaveInvalida });
     const id = randomUUID();
     await conversar(duenio.controller, id, "Mi conversación");
 
     await expect(conversar(intruso.controller, id, "Hola")).rejects.toMatchObject({
-      constructor: ErrorDeChat,
-      status: 404,
+      constructor: ErrorDeAplicacion,
+      codigo: "conversacion_no_encontrada",
     });
     expect(await duenio.conversaciones.mensajes(id)).toHaveLength(1);
   });
 
-  it("al pasar el límite de mensajes, responde 429 con un mensaje claro y no guarda ni consulta al modelo", async () => {
+  it("al pasar el límite de mensajes, corta con «limite_por_minuto» y no guarda ni consulta al modelo", async () => {
     const { conversaciones, controller } = await alumnoConChat({
       crearModelo: modeloConClaveInvalida,
       limites: { porMinuto: 1, porDia: 100 },
@@ -148,9 +146,9 @@ describe("ChatController.responder — conversación y errores (sin gastar créd
     await conversar(controller, id, "Primero");
 
     await expect(conversar(controller, id, "Segundo")).rejects.toMatchObject({
-      constructor: ErrorDeChat,
-      status: 429,
-      mensajeParaAlumno: expect.stringContaining("Esperá un minuto"),
+      constructor: ErrorDeAplicacion,
+      codigo: "limite_por_minuto",
+      mensajePublico: expect.stringContaining("Esperá un minuto"),
     });
     expect(await conversaciones.mensajes(id)).toHaveLength(1);
   });
@@ -270,6 +268,6 @@ describe.skipIf(!hayClave)("ChatController.responder — respuestas reales (requ
 
     const eventos = await conversar(controller, randomUUID(), "Hola");
 
-    expect(eventos.find((evento) => evento.type === "error")?.errorText).toContain("El tutor no está disponible");
+    expect(codigoDelError(eventos)).toBe("tutor_no_disponible");
   });
 });

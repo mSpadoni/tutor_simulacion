@@ -1,15 +1,16 @@
 import "server-only";
-import { createUIMessageStreamResponse, type LanguageModel } from "ai";
+import type { InferUIMessageChunk, LanguageModel } from "ai";
+import { ErrorDeAplicacion } from "@/backend/errores";
 import { crearModeloOpenAI } from "@/backend/lib/openai";
 import { conversacionesModel, type ConversacionesModel } from "@/backend/models/repositorios/conversaciones.model";
-import { LIMITES_DE_USO, motivoDeLimite, type LimitesDeUso } from "@/backend/models/dominio/limiteDeUso";
+import { LIMITES_DE_USO, limiteAlcanzado, type LimitesDeUso } from "@/backend/models/dominio/limiteDeUso";
 import { ejerciciosModel, type EjerciciosModel } from "@/backend/models/repositorios/ejercicios.model";
 import { obtenerMaterialCatedra, type MaterialCatedra } from "@/backend/models/materialCatedra.model";
 import type { PedidoDeChat } from "@/backend/models/dominio/pedidoDeChat.model";
 import { crearToolsTutor } from "@/backend/tools/tutor.tools";
 import { PAUSA_ENTRE_PALABRAS_MS, responderComoTutor } from "@/backend/tutor/agente";
-import { ErrorDeChat, traducirError } from "@/backend/tutor/errores";
-import { MAX_MENSAJES_CONTEXTO } from "@/shared/chat";
+import { traducirError } from "@/backend/tutor/errores";
+import { MAX_MENSAJES_CONTEXTO, type TutorUIMessage } from "@/shared/chat";
 import { tituloDesde } from "@/shared/conversaciones";
 
 /**
@@ -63,11 +64,12 @@ export class ChatController {
   }
 
   /**
-   * Devuelve la respuesta del tutor como stream (el formato que entiende useChat en el navegador).
-   * Si algo falla antes de empezar (la conversación es de otro alumno, la base no responde) tira un ErrorDeChat;
-   * si falla el modelo en el medio, el error llega dentro del stream con el mensaje para el alumno.
+   * Devuelve la respuesta del tutor como stream de partes (lo que entiende useChat); la ruta la convierte en HTTP.
+   * Si algo falla antes de empezar (límite de uso, conversación de otro alumno) tira un ErrorDeAplicacion; si la
+   * base no responde, el error de Supabase sigue de largo (la ruta lo responde como error interno).
+   * Si falla el modelo en el medio, el error llega dentro del stream, con su código.
    */
-  async responder(pedido: PedidoDeChat): Promise<Response> {
+  async responder(pedido: PedidoDeChat): Promise<ReadableStream<InferUIMessageChunk<TutorUIMessage>>> {
     const conversaciones = this.conversaciones();
     const { conversacionId, mensaje } = pedido;
 
@@ -80,15 +82,21 @@ export class ChatController {
       throw traducirError(error);
     }
 
-    // 1) El límite de uso: cada mensaje gasta crédito. Se revisa antes de guardar nada (429 = demasiados pedidos).
-    const motivo = motivoDeLimite(await conversaciones.usoReciente(), this.limites);
-    if (motivo) throw new ErrorDeChat(motivo, 429);
+    // 1) El límite de uso: cada mensaje gasta crédito. Se revisa antes de guardar nada.
+    const limite = limiteAlcanzado(await conversaciones.usoReciente(), this.limites);
+    if (limite) throw new ErrorDeAplicacion(limite.codigo, limite.mensaje);
 
     // 2) La conversación: si es nueva, se crea con el primer mensaje como título.
     if (!(await conversaciones.obtener(conversacionId))) {
       // Si falla, el id ya existe pero es de otro alumno (RLS no se la deja ver).
       await conversaciones.crear(conversacionId, tituloDesde(pedido.texto)).catch((error: unknown) => {
-        throw new ErrorDeChat("No encontramos esa conversación. Empezá una nueva.", 404, { cause: error });
+        throw new ErrorDeAplicacion(
+          "conversacion_no_encontrada",
+          "No encontramos esa conversación. Empezá una nueva.",
+          {
+            cause: error,
+          }
+        );
       });
     }
 
@@ -99,7 +107,7 @@ export class ChatController {
     await conversaciones.agregarMensajes(conversacionId, [mensaje]);
 
     // 4) La respuesta del agente, en streaming. Al terminar (o si el alumno la corta), se guarda.
-    const stream = await responderComoTutor({
+    return responderComoTutor({
       modelo,
       mensajes: [...historial, mensaje],
       tools: crearToolsTutor({ material: this.material(), ejercicios: this.ejercicios(), conversacionId }),
@@ -110,7 +118,6 @@ export class ChatController {
           console.error("No se pudo guardar la respuesta del tutor:", error);
         }),
     });
-    return createUIMessageStreamResponse({ stream });
   }
 }
 

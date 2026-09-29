@@ -1,35 +1,40 @@
 import "server-only";
 import { APICallError, RetryError, type UIMessageChunk } from "ai";
+import { ErrorDeAplicacion } from "@/backend/errores";
+import type { CuerpoDeError } from "@/shared/errores";
 
-// Qué ve el alumno cuando algo falla con el modelo: cada error técnico se traduce a un mensaje entendible
-// y a un código HTTP. Lo usan el controller (antes de empezar el stream) y el agente (en el medio del stream).
-
-/** Error con un mensaje pensado para mostrarle al alumno (qué pasó y qué hacer) y su código HTTP. */
-// `extends Error`: hereda de Error, así se puede `throw` y atrapar con `catch` como cualquier error.
-export class ErrorDeChat extends Error {
-  // `options?`: parámetro opcional. `cause` guarda el error original (el del proveedor) para poder verlo en los logs.
-  constructor(
-    readonly mensajeParaAlumno: string,
-    readonly status: number,
-    options?: { cause?: unknown }
-  ) {
-    super(mensajeParaAlumno, options); // super(...) llama al constructor de Error (la clase padre).
-  }
-}
+// Los errores del modelo (OpenAI, AI SDK) traducidos a errores de la app: un código estable y un mensaje para el
+// alumno. Lo usan el controller (antes de empezar el stream) y el agente (en el medio del stream).
+// Acá no se loguea: lo hace quien maneja el error (la ruta, o el onError del stream), una sola vez.
 
 /** Lo que ve el alumno cuando el modelo tarda demasiado. */
 export const MENSAJE_TIMEOUT = "El tutor tardó demasiado en responder. Probá de nuevo en unos segundos.";
+
+/**
+ * El texto de un error dentro del stream del chat: el mismo CuerpoDeError que responde la API, en JSON, así el
+ * navegador lee el código igual en los dos casos. (El stream solo admite un texto como error.)
+ */
+export function textoDeErrorEnStream(error: ErrorDeAplicacion): string {
+  const cuerpo: CuerpoDeError = { error: error.publico };
+  return JSON.stringify(cuerpo);
+}
 
 /**
  * Cuando se vence el timeout, el SDK corta el stream con un evento "abort", no "error": en el navegador se vería
  * como si el tutor se hubiera callado. Este paso lo convierte en un error con el mensaje de siempre.
  * (Si el que corta es el alumno con "Detener", el navegador ya cerró la conexión y este evento no le llega.)
  */
-export function timeoutComoError(): TransformStream<UIMessageChunk, UIMessageChunk> {
+export function timeoutComoError<Metadatos = unknown>(): TransformStream<
+  UIMessageChunk<Metadatos>,
+  UIMessageChunk<Metadatos>
+> {
   return new TransformStream({
     transform(evento, salida) {
       if (evento.type === "abort" && /TimeoutError/.test(evento.reason ?? "")) {
-        salida.enqueue({ type: "error", errorText: MENSAJE_TIMEOUT });
+        salida.enqueue({
+          type: "error",
+          errorText: textoDeErrorEnStream(new ErrorDeAplicacion("tutor_demorado", MENSAJE_TIMEOUT)),
+        });
       } else {
         salida.enqueue(evento);
       }
@@ -44,42 +49,43 @@ function esSinSaldo(error: APICallError): boolean {
 }
 
 /**
- * Traduce un error técnico del proveedor a un ErrorDeChat con un mensaje para el alumno y un código HTTP.
+ * Traduce un error del proveedor a un ErrorDeAplicacion. El original queda en `cause` para los logs; al alumno
+ * nunca le llega (ni la clave, ni el cuerpo de la respuesta de OpenAI).
  * `X.isInstance(error)` pregunta "¿este error es de la clase X?" (cada tipo de falla tiene su clase).
  */
-export function traducirError(error: unknown): ErrorDeChat {
-  console.error("Error al consultar a OpenAI:", error);
+export function traducirError(error: unknown): ErrorDeAplicacion {
+  if (error instanceof ErrorDeAplicacion) return error;
 
   // Si se agotaron los reintentos, el SDK envuelve el error: lo que importa es el último.
   const causa = RetryError.isInstance(error) ? error.lastError : error;
 
   // El timeout lo corta el SDK con un DOMException de nombre "TimeoutError".
   if (causa instanceof Error && causa.name === "TimeoutError") {
-    return new ErrorDeChat(MENSAJE_TIMEOUT, 504, {
-      cause: error,
-    });
+    return new ErrorDeAplicacion("tutor_demorado", MENSAJE_TIMEOUT, { cause: error });
   }
   if (APICallError.isInstance(causa)) {
     // Sin saldo no se arregla esperando: cae abajo, en el error de configuración.
     if (causa.statusCode === 429 && !esSinSaldo(causa)) {
-      return new ErrorDeChat(
+      return new ErrorDeAplicacion(
+        "tutor_saturado",
         "El tutor está recibiendo demasiadas consultas. Esperá un minuto y volvé a intentar.",
-        503,
         { cause: error }
       );
     }
     // 5xx: el proveedor está caído o saturado. Es pasajero, no de configuración.
     if (causa.statusCode !== undefined && causa.statusCode >= 500) {
-      return new ErrorDeChat("El tutor está saturado en este momento. Esperá un minuto y volvé a intentar.", 503, {
-        cause: error,
-      });
+      return new ErrorDeAplicacion(
+        "tutor_saturado",
+        "El tutor está saturado en este momento. Esperá un minuto y volvé a intentar.",
+        { cause: error }
+      );
     }
   }
   // Clave inválida, sin permisos, modelo inexistente, sin crédito, variable faltante: es un problema de
   // configuración, no del alumno.
-  return new ErrorDeChat(
+  return new ErrorDeAplicacion(
+    "tutor_no_disponible",
     "El tutor no está disponible en este momento. Probá de nuevo más tarde; si sigue pasando, avisale a quien administra la app.",
-    502,
     { cause: error }
   );
 }

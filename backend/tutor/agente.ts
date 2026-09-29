@@ -11,7 +11,7 @@ import {
 } from "ai";
 import { armarSystemPrompt } from "@/backend/lib/prompts/systemPrompt";
 import type { ToolsDelTutor } from "@/backend/tools/tutor.tools";
-import { timeoutComoError, traducirError } from "@/backend/tutor/errores";
+import { textoDeErrorEnStream, timeoutComoError, traducirError } from "@/backend/tutor/errores";
 import type { MetadatosDeRespuesta, TutorUIMessage } from "@/shared/chat";
 
 // El agente: todo lo que tiene que ver con el LLM (prompt, tools, pasos, streaming, log).
@@ -135,8 +135,13 @@ export async function responderComoTutor({
       onFinish: async ({ responseMessage }) => {
         if (responseMessage.parts.length > 0) await alTerminar(responseMessage);
       },
-      // Cualquier error del modelo llega al alumno con un mensaje entendible, sin detalles técnicos.
-      onError: (error) => traducirError(error).mensajeParaAlumno,
+      // Cualquier error del modelo llega al alumno con su código y un mensaje entendible, sin detalles técnicos.
+      // El original (con el cuerpo de la respuesta de OpenAI) va solo al log del servidor.
+      onError: (error) => {
+        const traducido = traducirError(error);
+        console.error(`Error en el stream del tutor (${traducido.codigo}):`, error);
+        return textoDeErrorEnStream(traducido);
+      },
     })
-    .pipeThrough(timeoutComoError());
+    .pipeThrough(timeoutComoError<MetadatosDeRespuesta>());
 }

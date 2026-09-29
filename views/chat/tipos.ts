@@ -1,24 +1,21 @@
 import { isToolUIPart } from "ai";
 import type { NombreDeHerramienta, ParteDelTutor } from "@/shared/chat";
+import { leerErrorPublico, type ErrorPublico } from "@/shared/errores";
 
 /**
- * El mensaje de error para mostrarle al alumno.
- * - Si falló antes de empezar (401, 400, 404), useChat recibe el cuerpo JSON de la ruta: `{ "error": "..." }`.
- * - Si falló en el medio del stream, recibe directamente el texto que armó el servidor para el alumno.
+ * El error del chat como lo muestra la vista: su código (para decidir qué ofrecer, ej. "Reintentar") y el mensaje
+ * para el alumno. useChat pone en `error.message` el cuerpo de la respuesta (si falló antes de empezar) o el texto
+ * del error del stream (si falló en el medio): en los dos casos el servidor manda `{ error: { codigo, mensaje } }`.
  */
-export function mensajeDeError(error: Error | undefined): string {
-  const generico = "No pudimos contactar al tutor. Revisá tu conexión y probá de nuevo.";
-  if (!error?.message) return generico;
-  try {
-    const cuerpo: unknown = JSON.parse(error.message);
-    if (cuerpo && typeof cuerpo === "object" && "error" in cuerpo && typeof cuerpo.error === "string") {
-      return cuerpo.error;
-    }
-    return generico;
-  } catch {
-    // No era JSON: es el texto del error del stream (ya pensado para el alumno), salvo errores de red del navegador.
-    return /failed to fetch|network|load failed/i.test(error.message) ? generico : error.message;
-  }
+export function errorParaMostrar(error: Error | undefined): ErrorPublico {
+  const delServidor = error?.message ? leerErrorPublico(error.message) : null;
+  if (delServidor) return delServidor;
+  // No vino del servidor: el pedido no llegó (sin internet, servidor caído) o algo que no conocemos. Nunca se muestra
+  // el texto crudo del error.
+  return {
+    codigo: "sin_conexion",
+    mensaje: "No pudimos contactar al tutor. Revisá tu conexión y probá de nuevo.",
+  };
 }
 
 /**

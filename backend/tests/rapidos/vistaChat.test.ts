@@ -3,27 +3,24 @@ import { describe, expect, it } from "vitest";
 import { textoDe, type TutorUIMessage } from "@/shared/chat";
 import { tituloDesde } from "@/shared/conversaciones";
 import { anuncioDeRespuesta, ATAJOS, atajoEstaCompleto, tituloDeLaConversacion } from "@/views/chat/respuesta";
-import { estaCercaDelFinal, mensajeDeError, siguienteScroll } from "@/views/chat/tipos";
+import { errorParaMostrar, estaCercaDelFinal, siguienteScroll } from "@/views/chat/tipos";
 
 // Sin mocks: errores reales como los que arma useChat (Error con el cuerpo de la respuesta o el texto del stream).
 
-describe("mensajeDeError (lo que ve el alumno cuando algo falla)", () => {
-  it("si la ruta respondió JSON { error } (401, 400, 404), muestra ese mensaje", () => {
-    const error = new Error(JSON.stringify({ error: "Tu sesión expiró. Recargá la página." }));
+describe("errorParaMostrar (qué error ve el alumno y con qué código)", () => {
+  it("lo que manda el servidor ({ error: { codigo, mensaje } }, en la respuesta o en el stream) se usa tal cual", () => {
+    const cuerpo = { error: { codigo: "no_autenticado", mensaje: "Tu sesión expiró." } };
 
-    expect(mensajeDeError(error)).toBe("Tu sesión expiró. Recargá la página.");
+    expect(errorParaMostrar(new Error(JSON.stringify(cuerpo)))).toEqual(cuerpo.error);
   });
 
-  it("si el error vino dentro del stream, muestra su texto tal cual (ya está pensado para el alumno)", () => {
-    const error = new Error("El tutor tardó demasiado en responder. Probá de nuevo en unos segundos.");
-
-    expect(mensajeDeError(error)).toBe("El tutor tardó demasiado en responder. Probá de nuevo en unos segundos.");
-  });
-
-  it("un error de red del navegador o un JSON sin «error» se muestra con el mensaje genérico", () => {
-    expect(mensajeDeError(new TypeError("Failed to fetch"))).toContain("Revisá tu conexión");
-    expect(mensajeDeError(new Error(JSON.stringify({ otro: 1 })))).toContain("Revisá tu conexión");
-    expect(mensajeDeError(undefined)).toContain("Revisá tu conexión");
+  it("un error de red, uno desconocido o ninguno es «sin_conexion», sin mostrar el texto crudo", () => {
+    for (const error of [new TypeError("Failed to fetch"), new Error("stack interno"), undefined]) {
+      expect(errorParaMostrar(error)).toMatchObject({
+        codigo: "sin_conexion",
+        mensaje: expect.stringContaining("Revisá tu conexión"),
+      });
+    }
   });
 });
 
