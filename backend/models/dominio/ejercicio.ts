@@ -55,6 +55,9 @@ export type EjercicioARevisar = { enunciado: string; datosAleatorios: DatoAleato
  */
 export const LARGO_MINIMO_DE_PARCIAL = 800;
 
+/** Las oraciones del enunciado: corta en un punto seguido de mayúscula, así "f.d.p. lineal" no se parte. */
+const oraciones = (texto: string) => texto.split(/(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚÑ¿¡])/);
+
 /** Lo que nunca va en un enunciado: la metodología o el vocabulario de la resolución (lo descubre el alumno). */
 const REVELA_LA_RESOLUCION =
   /evento a evento|\bEaE\b|intervalos? constantes?|Δt|\bTPLL\b|\bTPS\b|\bNS\b|\bTEF\b|\bTEI\b/i;
@@ -85,6 +88,20 @@ export function problemasDelEjercicio({ enunciado, datosAleatorios }: EjercicioA
     const { patron, ejemplo } = SE_RECONOCE[forma];
     if (!patron.test(enunciado)) {
       problemas.push(`El dato ${sigla} tiene que aparecer en el enunciado como en la cátedra, ej: ${ejemplo}.`);
+    }
+  }
+  // Cada f.d.p. se tiene que poder resolver con lo que dice su oración del enunciado.
+  for (const oracion of oraciones(enunciado)) {
+    if (/lineal/i.test(oracion) && !/f\s*\(/i.test(oracion)) {
+      problemas.push(
+        `«${oracion.trim()}»: una f.d.p. lineal tiene que decir qué recta es, ej. "donde f(30) = 2·f(10)", o la f(x) ` +
+          "explícita. Sin eso no se puede resolver."
+      );
+    }
+    if (/exponencial/i.test(oracion) && !/media|promedio|λ|lambda|tasa/i.test(oracion)) {
+      problemas.push(
+        `«${oracion.trim()}»: una f.d.p. exponencial tiene que decir su media (o su λ). Sin eso no se puede resolver.`
+      );
     }
   }
   if (enunciado.length < LARGO_MINIMO_DE_PARCIAL) {

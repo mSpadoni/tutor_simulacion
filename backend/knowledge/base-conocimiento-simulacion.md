@@ -73,7 +73,7 @@ Un **evento** es un hecho o acontecimiento que se produce en el sistema. Definic
 **"Generar un evento" es poder decir de manera exacta cuándo va a suceder otro evento.** Ej.: en una LLEGADA a las 10:00 genero IA = 12' → TPLL = 10:12.
 
 ### Tabla de Eventos Independientes (T.E.I.)
-Tiene una fila por evento independiente (si un evento genera dos E.F.C., ocupa dos filas: una por cada E.F.C. con su condición) y **tres columnas**: **EVENTO | E.F.NO C. | E.F.C.**, más una **columna anexa CONDICIÓN** (no es parte de la T.E.I.; tiene las condiciones para que suceda el E.F.C.).
+Tiene tantas filas como eventos independientes tenga el modelo (una por evento) y **tres columnas**: **EVENTO | E.F.NO C. | E.F.C.**, más una **columna anexa CONDICIÓN** (no es parte de la T.E.I.; tiene las condiciones para que suceda el E.F.C.).
 - **E.F.NO C.** (Evento Futuro NO Condicionado): se genera como consecuencia del evento actual; a partir de los datos puedo decir cuándo va a volver a suceder.
 - **E.F.C.** (Evento Futuro Condicionado): también se genera por el evento actual, pero solo si se cumple cierta condición.
 

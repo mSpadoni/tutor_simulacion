@@ -54,27 +54,19 @@ export function AnalisisDelEjercicio({ analisis, avisos }: { analisis: AnalisisP
               </tr>
             </thead>
             <tbody>
-              {analisis.tei.flatMap((fila) => {
-                // Como en la cátedra: si un evento genera varios E.F.C., cada uno va en su fila, con su condición.
-                // El evento y su E.F.NO C. ocupan todas esas filas (rowSpan).
-                const efc = fila.efc.length > 0 ? fila.efc : [{ evento: "---", condicion: "---" }];
-                return efc.map((condicionado, i) => (
-                  <tr key={`${fila.evento}-${i}`}>
-                    {i === 0 && (
-                      <>
-                        <td className={celda} rowSpan={efc.length}>
-                          {fila.evento}
-                        </td>
-                        <td className={celda} rowSpan={efc.length}>
-                          {fila.efnc ?? "---"}
-                        </td>
-                      </>
-                    )}
-                    <td className={celda}>{condicionado.evento}</td>
-                    <td className={celda}>{condicionado.condicion}</td>
-                  </tr>
-                ));
-              })}
+              {analisis.tei.map((fila) => (
+                <tr key={fila.evento}>
+                  <td className={celda}>{fila.evento}</td>
+                  <td className={celda}>{fila.efnc ?? "---"}</td>
+                  {/* Varios E.F.C. van en la misma fila, uno por línea, alineados con su condición. */}
+                  <td className={celda}>
+                    {fila.efc.length === 0 ? "---" : fila.efc.map((efc, i) => <div key={i}>{efc.evento}</div>)}
+                  </td>
+                  <td className={celda}>
+                    {fila.efc.length === 0 ? "---" : fila.efc.map((efc, i) => <div key={i}>{efc.condicion}</div>)}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

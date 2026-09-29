@@ -53,7 +53,7 @@ describe("problemasDelEjercicio", () => {
 
   it("cada dato aparece como en la cátedra, según su forma", () => {
     const casos: [DatoAleatorio["forma"], string, string][] = [
-      ["fdp", "responde a una f.d.p. lineal entre 10 y 30 minutos", "f.d.p."],
+      ["fdp", "responde a una f.d.p. lineal entre 10 y 30 minutos, donde f(30) = 2·f(10)", "f.d.p."],
       ["fdp_conocida", "responde a una f.d.p. conocida", "f.d.p. conocida"],
       ["derivado", "el tiempo de los camiones grandes es el doble que el de los chicos", "doble"],
       ["probabilidades", "el 60% de los clientes tarda 40 minutos y el resto 20", "60%"],
@@ -72,6 +72,35 @@ describe("problemasDelEjercicio", () => {
     ]);
     const sinDerivado = { enunciado: BIEN.enunciado, datosAleatorios: [{ sigla: "X", forma: "derivado" as const }] };
     expect(problemasDelEjercicio(sinDerivado)).toEqual([expect.stringContaining("el doble")]);
+  });
+
+  it("una f.d.p. lineal tiene que decir su recta; con la relación o la f(x), pasa", () => {
+    const sinRecta = {
+      ...BIEN,
+      enunciado: `${BIEN.enunciado} El secado responde a una f.d.p. lineal entre 10 y 30 minutos.`,
+    };
+    const conRecta = {
+      ...BIEN,
+      enunciado: `${BIEN.enunciado} El secado responde a una f.d.p. lineal entre 10 y 30 minutos, donde f(30) = 2·f(10).`,
+    };
+
+    expect(problemasDelEjercicio(sinRecta)).toEqual([
+      expect.stringContaining("una f.d.p. lineal tiene que decir qué recta"),
+    ]);
+    expect(problemasDelEjercicio(conRecta)).toEqual([]);
+  });
+
+  it("una f.d.p. exponencial tiene que decir su media (o su λ)", () => {
+    const sinMedia = { ...BIEN, enunciado: `${BIEN.enunciado} El secado responde a una f.d.p. exponencial.` };
+    const conMedia = {
+      ...BIEN,
+      enunciado: `${BIEN.enunciado} El secado responde a una f.d.p. exponencial de media 20 minutos.`,
+    };
+
+    expect(problemasDelEjercicio(sinMedia)).toEqual([
+      expect.stringContaining("una f.d.p. exponencial tiene que decir su media"),
+    ]);
+    expect(problemasDelEjercicio(conMedia)).toEqual([]);
   });
 
   it("un enunciado corto (de clase, no de parcial) se marca", () => {
