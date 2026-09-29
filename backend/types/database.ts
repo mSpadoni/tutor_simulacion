@@ -114,6 +114,54 @@ export type Database = {
           },
         ];
       };
+      movimientos: {
+        Row: {
+          categoria: string;
+          cotizacion: number | null;
+          creado_en: string;
+          descripcion: string;
+          fecha: string;
+          id: string;
+          medio_de_pago: string;
+          moneda: string;
+          monto: number;
+          monto_en_pesos: number;
+          tipo: string;
+          tipo_de_dolar: string | null;
+          usuario_id: string;
+        };
+        Insert: {
+          categoria: string;
+          cotizacion?: number | null;
+          creado_en?: string;
+          descripcion: string;
+          fecha: string;
+          id?: string;
+          medio_de_pago: string;
+          moneda: string;
+          monto: number;
+          monto_en_pesos: number;
+          tipo: string;
+          tipo_de_dolar?: string | null;
+          usuario_id?: string;
+        };
+        Update: {
+          categoria?: string;
+          cotizacion?: number | null;
+          creado_en?: string;
+          descripcion?: string;
+          fecha?: string;
+          id?: string;
+          medio_de_pago?: string;
+          moneda?: string;
+          monto?: number;
+          monto_en_pesos?: number;
+          tipo?: string;
+          tipo_de_dolar?: string | null;
+          usuario_id?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
