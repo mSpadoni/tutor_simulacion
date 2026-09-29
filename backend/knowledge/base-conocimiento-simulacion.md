@@ -144,7 +144,7 @@ Convenciones de símbolos de la cátedra (las mismas que usa el tutor al dibujar
 - El diagrama se dibuja en partes: el programa principal y una parte por cada rutina.
 
 Patrones recurrentes:
-- **Tiempo Comprometido (TC)**: usado cuando un recurso, una vez que empieza a atender, ya sabe cuánto va a tardar (a diferencia de cuando el TA se conoce recién al comenzar la atención). Ejemplo remisería: cada auto que sale "compromete" un tiempo TC = T + TA; si llega una llamada antes de que se libere (T ≤ TC) el cliente espera; si T > TC hay ocio.
+- **Tiempo Comprometido (TC)**: usado cuando un recurso, una vez que empieza a atender, ya sabe cuánto va a tardar (a diferencia de cuando el TA se conoce recién al comenzar la atención). Ejemplo remisería: cada auto que sale "compromete" un tiempo TC = T + TA; si llega una llamada antes de que se libere (T ≤ TC) el cliente espera; si T > TC hay ocio. Hay un único evento (LLEGADA): ver los casos de tiempo comprometido en la sección 6.
 - **Acumuladores de ocio**: `STO = STO + (T - ITO)` donde ITO es el instante en que el recurso quedó libre (Inicio Tiempo Ocio). Al final: `PTO = STO*100/T`.
 - **Acumuladores de permanencia**: `STS = STS + (TPLL-T)*NS` (o similar) sumado en cada avance de tiempo para ponderar por la cantidad de elementos en el sistema; `PPS = STS/CLL` (CLL = cantidad de llegadas).
 - **Colas con N puestos, 1 sola cola**: el cliente entra si `NS <= N`; busca puesto libre y asigna `TPS(x) = T+TA`.
@@ -170,24 +170,49 @@ Patrones recurrentes:
 - Estado: STCrema (crema disponible).
 - Lógica: cada N minutos se prepara Q kg a $5/kg + $50 fijo; si se agota antes, se prepara sobre la marcha lo justo a $8,50/kg (costo variable más caro) — el objetivo de la simulación es optimizar Q y N para minimizar el costo variable.
 
-### Caso: Colas — 1 puesto, 1 cola
-Datos: IA, TA. Estado: NS. Resultado: PPS, PTO.
-TEI: Llegada→Llegada (EFNC) / Salida (EFC) si NS=1. Salida→Salida (EFC) si NS>0.
-Fórmulas clave: `PPS = (STS-STLL)/CLL` o vía acumulador ponderado; `PTO = STO*100/T`.
+**Cómo usar estos casos:** primero razoná el ejercicio desde su enunciado (secciones 2 y 3: qué varía al azar, qué se decide, qué cambia con cada evento, qué se pide). Después contrastá con el caso más parecido para verificar. No copies un caso: un ejercicio de parcial combina dos o tres y cambia los nombres.
 
-### Caso: Colas — 2 puestos, 2 colas independientes
-Cada puesto tiene su propia cola y su propio NS(i). El cliente entra a la cola que le corresponda según reglas del enunciado (o elige la de menor espera).
+### Caso: Colas — 1 puesto, 1 cola (clase de EaE)
+- Datos: IA, TA. Control: ---. Resultado: PPS, PTO. Estado: NS.
+- T.E.I.: LLEGADA | E.F.NO C.: LLEGADA | E.F.C.: SALIDA si NS = 1. SALIDA | E.F.NO C.: --- | E.F.C.: SALIDA si NS > 0 (NS ya descontado).
+- T.E.F.: TPLL, TPS.
+- Fórmulas: `PPS = (STS − STLL)/CLL` o con el acumulador ponderado; `PTO = STO·100/T`.
 
-### Caso: Colas — N puestos, 1 sola cola (fila única, servidores en paralelo)
-Datos: IA, TA. Control: N. Resultado: PTO(i) por cada puesto. Estado: NS (una sola cola para todos).
-Regla: si NS<=N hay puesto libre inmediato; si NS>N el cliente espera en la única cola.
+### Caso: Colas — N puestos, 1 sola cola (fila única)
+- Datos: IA, TA. Control: N (cantidad de puestos). Resultado: PPS, PTO(i). Estado: NS (una sola cola para todos).
+- T.E.I.: LLEGADA | E.F.NO C.: LLEGADA | E.F.C.: SALIDA(i) si NS ≤ N (hay un puesto libre: entra directo y puedo calcular su salida). SALIDA(i) | --- | E.F.C.: SALIDA(i) si NS ≥ N (NS ya descontado: queda alguien esperando que pasa a ese puesto).
+- T.E.F.: TPLL, TPS(i).
+- Diagrama: MENOR TPS(i) antes de ¿TPLL ≤ TPS(i)?; en la LLEGADA, si NS ≤ N se busca un puesto libre (el que tiene TPS(i) = HV).
 
-### Caso: Colas — N puestos, N colas (cada uno con la suya)
-Estado: NS(i) por cada cola. El cliente se ubica en la cola con MENOR NS(i) (balanceo de carga).
+### Caso: Colas — N puestos, N colas (cada puesto con su fila)
+- Datos: IA, TA. Control: N. Resultado: PPS, PTO(i). Estado: NS(i), la cantidad en cada cola.
+- T.E.I.: LLEGADA | E.F.NO C.: LLEGADA | E.F.C.: SALIDA(i) si NS(i) = 1. SALIDA(i) | --- | E.F.C.: SALIDA(i) si NS(i) > 0.
+- T.E.F.: TPLL, TPS(i).
+- Diagrama: MENOR TPS(i) antes de ¿TPLL ≤ TPS(i)?; en la LLEGADA, MENOR NS(i) para elegir la fila con menos gente, y NS(i) = NS(i) + 1. Con 2 puestos es igual con NS1, NS2, TPS1, TPS2.
 
-### Caso: Colas con Prioridades (2 clases A y B)
-Datos: IA, TAA, TAB (tiempo de atención según clase). Estado: NSA, NSB.
-Regla: se atiende primero cualquier cliente de la cola A; solo se atiende B si NSA=0 (o la cola A está vacía). Condiciones de salida combinan NSA y NSB.
+### Caso: Colas con prioridades (2 colas, 2 puestos, la cola 1 con prioridad)
+- Datos: IA, TA1, TA2. Control: ---. Resultado: PEC, PPS, PTO(i). Estado: NS1, NS2.
+- Eventos: LLEGADA (E.F.NO C.: LLEGADA; E.F.C.: SALIDA1 y SALIDA2), SALIDA1 (E.F.C.: SALIDA1), SALIDA2 (E.F.C.: SALIDA2). T.E.F.: TPLL, TPS1, TPS2.
+- El puesto 2 atiende su fila solo si no hay nadie en la fila 1. Las condiciones las piensa el alumno (la cátedra las deja como ejercicio): guialo con preguntas.
+
+### Caso: Arrepentimiento (se agrega a cualquier caso de colas)
+- No es un evento: es una decisión dentro de la LLEGADA. Se genera **un único R** y se compara con el porcentaje del tramo que corresponde según cuántos hay. Si se arrepiente, se cuenta (CARR) y **no se actualiza NS**. Resultado típico: PARR = CARR·100/CLL.
+
+### Caso: Tiempo comprometido — 1 puesto (clase "Remisería")
+Se usa cuando **el tiempo de atención se conoce desde la llegada** del cliente: al llegar ya se sabe hasta cuándo queda ocupado el puesto.
+- Datos: IA, TA. Control: --- (implícita). Resultado: PEC (promedio de espera en cola), PTO. Estado: **TC** (tiempo comprometido: hasta cuándo está ocupado el puesto).
+- **Hay un único evento, la LLEGADA** (no hay SALIDA: la salida queda comprometida en TC). T.E.I.: LLEGADA | E.F.NO C.: LLEGADA | E.F.C.: --- | CONDICIÓN: ---. T.E.F.: TPLL.
+- Diagrama de la LLEGADA: `T = TPLL` → IA → `TPLL = T + IA` → TA → ¿T ≥ TC? SI (el puesto está libre: hubo ocio de T − TC) → `TC = T + TA`. NO (el cliente espera TC − T) → `TC = TC + TA`.
+
+### Caso: Tiempo comprometido — 2 puestos
+- Datos: IA, TA. Control: --- (implícita). Resultado: PTO1, PTO2. Estado: TC1, TC2. El cliente va al puesto donde espera menos.
+- T.E.I. y T.E.F.: iguales al de 1 puesto (un único evento, LLEGADA; T.E.F.: TPLL).
+- Diagrama de la LLEGADA: … TA → ¿TC1 ≤ TC2? (qué puesto se desocupa primero) SI → ¿T ≥ TC1? SI: `TC1 = T + TA`; NO: `TC1 = TC1 + TA`. NO → lo mismo con TC2.
+
+### Caso: Tiempo comprometido — N puestos
+- Datos: IA, TA. Control: N (cantidad de puestos). Resultado: PTO(i). Estado: TC(i), 1 ≤ i ≤ N.
+- T.E.I. y T.E.F.: iguales (un único evento, LLEGADA; T.E.F.: TPLL).
+- Diagrama de la LLEGADA: … TA → **Busco menor TC(i)** (hexágono: el puesto que se desocupa primero) → ¿T ≥ TC(i)? SI: `TC(i) = T + TA`; NO: `TC(i) = TC(i) + TA`.
 
 ### Caso: Transporte (camiones con balsa/túnel de paso único)
 Concepto de **Tiempo Comprometido de un recurso compartido de paso único** (balsa, túnel): TCB/TCT = el momento en que el recurso vuelve a estar libre. Un camión que llega antes de TCB debe esperar hasta TCB para cruzar; si llega después, cruza directo y actualiza TCB = su propio tiempo de cruce + duración.

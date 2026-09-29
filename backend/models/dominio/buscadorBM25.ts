@@ -25,6 +25,11 @@ export function normalizar(texto: string): string[] {
       // normalize("NFD") separa las tildes de las letras ("ó" → "o" + tilde) y el replace siguiente borra las tildes.
       .normalize("NFD")
       .replace(/[̀-ͯ]/g, "")
+      // "N colas" o "N puestos" es un tipo de sistema: se juntan en una palabra ("ncolas") para que la "N" no se
+      // pierda al descartar las palabras de 1 letra (si no, "N puestos N colas" quedaría como "puestos colas").
+      .replace(/\bn\s+(puestos?|colas?|filas?|servidores?)\b/g, "n$1")
+      // Lo mismo con "1 puesto", "una sola cola"…: el "1" y el "una" también se descartarían.
+      .replace(/\b(?:1|un|una|uno)\s+(?:sol[oa]\s+)?(puestos?|colas?|filas?|servidores?)\b/g, "un$1")
       // Corta en todo lo que no sea letra o número (espacios, signos de puntuación...).
       .split(/[^a-z0-9ñ]+/)
       // Descarta palabras de 1 letra y las "vacías"; después pasa cada una a su raíz.

@@ -25,6 +25,12 @@ describe("normalizar y soloLetras", () => {
     expect(normalizar("¿Cómo armo las Colas?")).toEqual(["armo", "cola"]);
     expect(soloLetras("  Clínica — 2 consultorios! ")).toBe("clinica 2 consultorios");
   });
+
+  it("«N colas», «N puestos» y «una sola cola» cuentan como una palabra: la N o el 1 no se pierden", () => {
+    expect(normalizar("N puestos con N colas")).toEqual(["npuesto", "ncola"]);
+    expect(normalizar("N puestos con 1 sola cola")).toEqual(["npuesto", "uncola"]);
+    expect(normalizar("un puesto con una sola cola")).toEqual(["unpuesto", "uncola"]);
+  });
 });
 
 describe("BuscadorBM25", () => {

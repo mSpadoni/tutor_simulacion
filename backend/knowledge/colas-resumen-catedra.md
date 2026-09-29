@@ -101,3 +101,32 @@ En la clase, las condiciones de la T.E.I. se dejan para que las piense el alumno
 ### Arrepentimiento con varios tramos (un único R)
 
 Otro ejemplo de la clase: según la cantidad de personas en la cola, se arrepiente un porcentaje distinto en cada tramo (ej. 90%, 60% o 20% según el tramo). Se genera **un único R** al principio de la rutina y se compara con el porcentaje del tramo que corresponde. Como siempre, si se arrepiente se cuenta en CARR y **no se actualiza NS**.
+
+### Tiempo comprometido: 1, 2 y N puestos (clase "Remisería")
+
+Fuente: clase "Tiempo Comprometido 1 - 2 - N puestos" de la cátedra (Ing. Quiroga – Ing. Flecha – Ing. Alfiero). Se usa cuando **el tiempo de atención se conoce desde la llegada del cliente al sistema** (en una remisería, al recibir la llamada ya se sabe cuánto dura el viaje): al llegar ya se sabe hasta cuándo queda ocupado el puesto, así que no hace falta un evento de salida.
+
+Enunciado de la clase: los clientes llegan con una f.d.p. equiprobable entre 5 y 20 minutos; el tiempo de atención se conoce desde la llegada y responde a una normal entre 10 y 20 minutos. Se desea el promedio de espera en cola y el porcentaje de tiempo ocioso (con 2 y N puestos, el cliente va al puesto donde espera menos y se pide el ocio de cada puesto).
+
+- **Datos:** IA, TA
+- **Control:** --- (implícita); con N puestos, N (cantidad de puestos)
+- **Resultado:** PEC (promedio de espera en cola), PTO; con varios puestos, PTO(i)
+- **Estado:** TC (tiempo comprometido del puesto); con 2 puestos TC1 y TC2; con N puestos TC(i), 1 ≤ i ≤ N
+
+Hay **un único evento, la LLEGADA**: la salida no es un evento, queda comprometida en TC.
+
+| Evento | E.F.NO C. | E.F.C. | Condición |
+|---|---|---|---|
+| LLEGADA | LLEGADA | --- | --- |
+
+T.E.F. = TPLL
+
+Cómo cambia TC (tabla de la clase): llamada a las 9:10 con viaje de 30' y TC = 9:20 → como T ≤ TC, el cliente espera y TC pasa a 9:50. Llamada a las 11:00 con viaje de 10' y TC = 10:30 → como T > TC, hubo ocio y TC pasa a 11:10.
+
+Diagrama de flujo (en la clase va todo en el programa principal porque hay un solo evento; con la convención del tutor, es la rutina LLEGADA):
+1. **C.I.**
+2. `T = TPLL` (se avanza el tiempo: hay un único evento); generar IA; `TPLL = T + IA` (el E.F.NO C.); generar TA.
+3. 1 puesto: ¿T ≥ TC? SI → `TC = T + TA` (el puesto estaba libre: ocio de T − TC). NO → `TC = TC + TA` (el cliente espera TC − T).
+   2 puestos: ¿TC1 ≤ TC2? (qué puesto se desocupa primero) SI → ¿T ≥ TC1? SI: `TC1 = T + TA`; NO: `TC1 = TC1 + TA`. NO → lo mismo con TC2.
+   N puestos: **Busco menor TC(i)** (el puesto que se desocupa primero) → ¿T ≥ TC(i)? SI: `TC(i) = T + TA`; NO: `TC(i) = TC(i) + TA`.
+4. ¿T ≥ TF? NO → volver a 2. SI → resultados y FIN.

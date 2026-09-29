@@ -50,6 +50,19 @@ describe("enunciadoDe", () => {
 });
 
 describe("consultarModelos", () => {
+  it("encuentra el modelo del tipo de sistema aunque se lo pida con la N o con el 1", () => {
+    expect(consultarModelos(material, "N puestos N colas").fichas[0]).toMatch(/^N puestos con N colas/);
+    expect(consultarModelos(material, "N puestos con una sola cola").fichas[0]).toMatch(/^N puestos con 1 sola cola/);
+    expect(consultarModelos(material, "tiempo comprometido").fichas[0]).toMatch(/^Tiempo comprometido/);
+  });
+
+  it("el modelo de tiempo comprometido tiene su T.E.I.: un único evento, la LLEGADA", () => {
+    const { texto } = consultarModelos(material, "tiempo comprometido remisería");
+
+    expect(texto).toContain("| LLEGADA | LLEGADA | --- | --- |");
+    expect(texto).toContain("T.E.F. = TPLL");
+  });
+
   it("solo devuelve modelos (teoría), nunca ejercicios", () => {
     const { fichas } = consultarModelos(material, "cómo calculo el PTO en tiempo comprometido");
 
