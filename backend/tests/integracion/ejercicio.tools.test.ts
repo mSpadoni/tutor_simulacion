@@ -3,7 +3,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { EjerciciosController } from "@/backend/controllers/ejercicios.controller";
 import { ConversacionesModel } from "@/backend/models/repositorios/conversaciones.model";
 import { EjerciciosModel } from "@/backend/models/repositorios/ejercicios.model";
-import { crearToolsEjercicio, guardarEjercicio, type DatosEjercicio } from "@/backend/tools/ejercicio.tools";
+import { guardarEjercicio, type DatosEjercicio } from "@/backend/tools/ejercicio.tools";
 import { borrarAlumnosDePrueba, crearAlumnoLogueado } from "../helpers/alumnoDePrueba";
 
 // Sin mocks: contra la base local de Supabase, con alumnos reales logueados.
@@ -50,12 +50,6 @@ describe("guardarEjercicio (la tool generar_ejercicio)", () => {
 
     expect(resultado).toMatchObject({ ok: false, error: expect.stringContaining("No se pudo guardar el ejercicio") });
     expect(await ejercicios.listarRecientes()).toEqual([]);
-  });
-
-  it("la tool pide usarla siempre que se da un ejercicio nuevo", () => {
-    const { generar_ejercicio: herramienta } = crearToolsEjercicio(new EjerciciosModel(), randomUUID());
-
-    expect(herramienta.description).toContain("Llamala SIEMPRE que le des un ejercicio nuevo");
   });
 });
 

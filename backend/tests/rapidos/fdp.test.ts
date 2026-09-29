@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { verificarFdp } from "@/backend/models/dominio/fdp";
-import { crearToolsFdp, verificarFdpDesdeTool } from "@/backend/tools/fdp.tools";
+import { verificarFdpDesdeTool } from "@/backend/tools/fdp.tools";
 
 // Sin mocks: cálculo numérico real sobre f.d.p. del TP 4 de la cátedra. Un caso por cosa que verifica.
 
@@ -47,9 +47,5 @@ describe("la tool verificar_fdp", () => {
     const resultado = verificarFdpDesdeTool({ fx: "5*exp(-5*x)", a: 0, b: "infinito", inversa: "-log(1 - R)/5" });
 
     expect(resultado).toMatchObject({ ok: true, valida: true, inversa: { correcta: true } });
-  });
-
-  it("dice en su descripción que se usa siempre al resolver o corregir una f.d.p.", () => {
-    expect(crearToolsFdp().verificar_fdp.description).toContain("Usala SIEMPRE que resuelvas o corrijas una f.d.p.");
   });
 });

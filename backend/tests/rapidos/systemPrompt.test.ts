@@ -1,177 +1,126 @@
-// Cómo se lee un test de Vitest:
-// - describe("tema", () => {...}): agrupa tests relacionados.
-// - it("qué debería pasar", () => {...}): un test. Si alguna línea `expect` no se cumple, el test falla.
-// - expect(valor).toBe(esperado): compara. Otros: toEqual (mismo contenido), toContain, toMatch (regex), toThrow...
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { armarSystemPrompt } from "@/backend/lib/prompts/systemPrompt";
+import { EjerciciosModel } from "@/backend/models/repositorios/ejercicios.model";
+import { MaterialCatedra } from "@/backend/models/materialCatedra.model";
+import { crearToolsTutor } from "@/backend/tools/tutor.tools";
 
-describe("armarSystemPrompt", () => {
-  const prompt = armarSystemPrompt();
+// El CONTRATO del prompt y de las tools: lo que tiene que estar para que el tutor funcione (cada tool presentada,
+// sus secciones, las reglas críticas) y lo que nunca puede aparecer (la metodología). No se afirman oraciones
+// enteras: el prompt se reescribe seguido para mejorar al tutor y eso no tiene que romper los tests. Se buscan
+// encabezados y palabras clave. Si el modelo CUMPLE estas reglas se mide en evals/ (`npm run test:evals`).
 
+const prompt = armarSystemPrompt();
+const tools = crearToolsTutor({
+  material: MaterialCatedra.cargar(),
+  ejercicios: new EjerciciosModel(),
+  conversacionId: "sin-conversacion",
+});
+/** El texto de una sección del prompt (desde su encabezado hasta el siguiente "# "). */
+const seccion = (encabezado: string) => {
+  const inicio = prompt.indexOf(`\n# ${encabezado}`);
+  expect(inicio, `falta la sección «${encabezado}»`).toBeGreaterThan(-1);
+  const fin = prompt.indexOf("\n# ", inicio + 3);
+  return prompt.slice(inicio, fin === -1 ? undefined : fin);
+};
+
+describe("contrato del prompt", () => {
   it("incluye la base de conocimiento completa, tal cual está en el archivo", () => {
-    const base = readFileSync("backend/knowledge/base-conocimiento-simulacion.md", "utf8");
-
-    expect(prompt).toContain(base);
+    expect(prompt).toContain(readFileSync("backend/knowledge/base-conocimiento-simulacion.md", "utf8"));
   });
 
-  it("define los tres modos del tutor", () => {
-    expect(prompt).toContain("Ejercicio nuevo");
-    expect(prompt).toContain("Corrección");
-    expect(prompt).toContain("Consulta teórica");
-  });
-
-  it("pide corregir de a un error y marcarlo con ⚠ (lo que la vista destaca)", () => {
-    expect(prompt).toContain("UN error genuino por vez");
-    expect(prompt).toContain("> ⚠");
-  });
-
-  it("define también el modo de resolver un ejercicio", () => {
-    expect(prompt).toContain("Resolver un ejercicio");
-  });
-
-  it("no trae material fijo: el material lo pide el modelo con las tools", () => {
-    expect(prompt).not.toContain("MATERIAL DE LA CÁTEDRA RELACIONADO");
+  it("es siempre el mismo (no trae material fijo: el material lo pide el modelo con las tools)", () => {
     expect(armarSystemPrompt()).toBe(prompt);
   });
-});
 
-describe("armarSystemPrompt — f.d.p. y fórmulas", () => {
-  const prompt = armarSystemPrompt();
-
-  it("pide verificar toda f.d.p. con verificar_fdp antes de responder", () => {
-    expect(prompt).toContain("**verificar_fdp(fx, a, b, k?, inversa?, M?)**");
-    expect(prompt).toContain("**antes de responder, verificala con verificar_fdp**");
+  it("presenta cada tool que existe, con sus parámetros", () => {
+    for (const nombre of Object.keys(tools)) expect(prompt, nombre).toMatch(new RegExp(`\\*\\*${nombre}\\(`));
   });
 
-  it("pide las fórmulas en LaTeX con $...$ (lo que muestra KaTeX)", () => {
-    expect(prompt).toContain("Las fórmulas van en LaTeX: `$...$` dentro de una línea");
-  });
-});
-
-describe("armarSystemPrompt — diagramas", () => {
-  const prompt = armarSystemPrompt();
-
-  it("presenta la herramienta de diagramas y prohíbe usarla al dar un ejercicio nuevo", () => {
-    expect(prompt).toContain("**generar_diagrama_flujo(titulo, mermaid)**");
-    expect(prompt).toContain("**Nunca al dar un ejercicio nuevo**");
-  });
-
-  it("explica cómo escribir el Mermaid con la convención de símbolos de la cátedra", () => {
-    expect(prompt).toContain("# Cómo dibujar un diagrama");
-    expect(prompt).toContain("Empezá con `flowchart TD`");
-    expect(prompt).toContain("generación de una variable aleatoria → óvalo");
-    expect(prompt).toContain("decisión → rombo");
+  it("tiene las secciones que guían al tutor", () => {
+    for (const encabezado of [
+      "Qué quiere el alumno",
+      "Cómo resolvés",
+      "Cómo corregís",
+      "Cómo dibujar un diagrama",
+      "La metodología la descubre el alumno",
+      "Ejemplos",
+    ]) {
+      seccion(encabezado);
+    }
   });
 
-  it("ya no dice que no puede dibujar", () => {
-    expect(prompt).not.toContain("Por ahora no podés dibujar");
-  });
-});
+  it("define los cuatro modos, y corregir es solo cuando el alumno mandó algo suyo", () => {
+    const modos = seccion("Qué quiere el alumno");
 
-describe("armarSystemPrompt — herramientas", () => {
-  const prompt = armarSystemPrompt();
-
-  it("arranca con la regla de consultar los modelos (al principio pesa más que en el medio del prompt)", () => {
-    const inicio = prompt.slice(0, 800);
-
-    expect(inicio).toContain("**Regla más importante:**");
-    expect(inicio).toContain("**consultá los modelos de la cátedra con la herramienta consultar_modelos**");
+    for (const modo of ["Ejercicio nuevo", "Corrección", "Consulta teórica", "Resolver un ejercicio"]) {
+      expect(modos).toContain(`**${modo}**`);
+    }
+    expect(modos).toMatch(/Corrección\*\*: SOLO si el alumno te mandó/);
   });
 
-  it("presenta la tool que guarda el ejercicio nuevo en «Mis ejercicios»", () => {
-    expect(prompt).toContain("**generar_ejercicio(tema, dificultad, titulo, enunciado, sePide)**");
+  it("al resolver, termina con el diagrama; al dar un ejercicio nuevo, nunca", () => {
+    expect(seccion("Cómo resolvés")).toContain("generar_diagrama_flujo");
+    expect(prompt).toMatch(/\*\*Nunca al dar un ejercicio nuevo\*\*/);
   });
 
-  it("presenta las tres tools y deja que el modelo decida cuáles usar", () => {
-    expect(prompt).toContain("**consultar_modelos(tema)**");
-    expect(prompt).toContain("**buscar_ejercicio(nombre o descripción)**");
-    expect(prompt).toContain("**inspiracion_para_ejercicio(tema)**");
-    expect(prompt).toContain("Decidí vos cuáles usar según lo que pide el alumno");
+  it("la regla de consultar los modelos va al principio (ahí pesa más para el modelo)", () => {
+    expect(prompt.slice(0, 800)).toMatch(/Regla más importante[\s\S]*consultar_modelos/);
   });
 
-  it("las consultas de cómo se hace algo van a los modelos; una definición de la base se puede responder directo", () => {
-    expect(prompt).toContain("**Consulta teórica sobre cómo se hace algo**");
-    expect(prompt).toContain(
-      "llamá **siempre** a consultar_modelos antes de responder, **aunque creas que ya lo sabés**"
-    );
-    expect(prompt).toContain("Solo una definición que está textual en la base de conocimiento");
+  it("una f.d.p. se verifica con verificar_fdp antes de responder", () => {
+    expect(prompt).toMatch(/antes de responder, verificala con verificar_fdp/);
   });
 
-  it("para corregir o resolver, sugiere combinar los modelos con el enunciado", () => {
-    expect(prompt).toContain("**Corrección o resolución** → consultar_modelos **y** buscar_ejercicio");
+  it("la resolución de la cátedra es una referencia a contrastar, no la verdad", () => {
+    expect(prompt).toMatch(/una referencia más, no la verdad/);
   });
 
-  it("la resolución de la cátedra es una referencia a contrastar con la teoría, no la verdad", () => {
-    expect(prompt).toContain("**una referencia más, no la verdad**");
-    expect(prompt).toContain("**contrastala siempre con la base de conocimiento y los modelos**");
-    expect(prompt).toContain("Nunca marques un error del alumno solo porque no coincide con esa resolución");
+  it("corrige de a un error, marcado con «> ⚠» (lo que la vista destaca)", () => {
+    expect(seccion("Cómo corregís")).toContain("> ⚠");
   });
 
-  it("un ejercicio nuevo se crea desde cero, no se copia de la inspiración", () => {
-    expect(prompt).toContain("Creá uno **desde cero**: otro dominio, otro título, otra historia y otros datos");
-    expect(prompt).toContain("Nunca devuelvas un ejercicio de la cátedra tal cual");
+  it("las fórmulas van en LaTeX con $...$ (lo que muestra KaTeX)", () => {
+    expect(prompt).toContain("`$...$`");
   });
 });
 
-describe("armarSystemPrompt — ejemplos (few-shot)", () => {
-  const prompt = armarSystemPrompt();
+describe("la metodología la descubre el alumno", () => {
+  const nombraLaMetodologia = /evento a evento|\bEaE\b|Δt/i;
 
-  it("trae un ejemplo por cada tarea: consulta, corrección y ejercicio nuevo", () => {
-    expect(prompt).toContain("# Ejemplos");
-    expect(prompt).toContain("## Ejemplo 1 — Consulta de cómo se hace algo");
-    expect(prompt).toContain("## Ejemplo 2 — Corrección");
-    expect(prompt).toContain("## Ejemplo 3 — Ejercicio nuevo");
+  it("la presentación del tutor no la nombra", () => {
+    expect(prompt.split("\n")[0]).not.toMatch(nombraLaMetodologia);
   });
 
-  it("cada ejemplo usa las herramientas que corresponden a su tarea", () => {
-    const ejemplo = (numero: number) =>
-      prompt.slice(prompt.indexOf(`## Ejemplo ${numero}`), prompt.indexOf(`## Ejemplo ${numero + 1}`) >>> 0);
-
-    expect(ejemplo(1)).toContain("consultar_modelos");
-    expect(ejemplo(2)).toContain("buscar_ejercicio");
-    expect(ejemplo(2)).toContain("consultar_modelos");
-    expect(ejemplo(3)).toContain("inspiracion_para_ejercicio");
-  });
-
-  it("la corrección del ejemplo sigue el formato de la cátedra: qué va a revisar y un solo error con ⚠", () => {
-    expect(prompt).toContain('"Voy a revisar: 1) metodología 2) variables 3) T.E.I."');
-    expect(prompt).toContain('"> ⚠ **Error en las variables:**');
-  });
-
-  it("el ejercicio del ejemplo no nombra la metodología y termina en «Se pide:»", () => {
+  it("el ejemplo de ejercicio nuevo no la nombra y termina en «Se pide:»", () => {
     // Hasta el separador "---": después viene la base de conocimiento, que sí habla de la metodología.
     const inicio = prompt.indexOf("## Ejemplo 3");
-    const ejemplo3 = prompt.slice(inicio, prompt.indexOf("\n---\n", inicio));
+    const ejemplo = prompt.slice(inicio, prompt.indexOf("\n---\n", inicio));
 
-    expect(ejemplo3).toContain("Se pide:");
-    expect(ejemplo3).not.toMatch(/evento a evento|\bEaE\b|Δt/i);
+    expect(ejemplo).toContain("Se pide:");
+    expect(ejemplo).not.toMatch(nombraLaMetodologia);
   });
 });
 
-describe("armarSystemPrompt — ejercicios nuevos", () => {
-  const prompt = armarSystemPrompt();
-
-  it("pide redactarlos como la Guía Anexa y los parciales, terminando en «Se pide:»", () => {
-    expect(prompt).toContain("redactado como la Guía Anexa y los parciales");
-    expect(prompt).toContain("Se pide:");
-    expect(prompt).toContain("Complejidad de parcial");
+describe("contrato de las tools (lo que lee el modelo para decidir)", () => {
+  it("cada tool tiene una descripción que explica cuándo usarla", () => {
+    for (const [nombre, herramienta] of Object.entries(tools)) {
+      expect(herramienta.description?.length ?? 0, nombre).toBeGreaterThan(50);
+    }
   });
 
-  it("prohíbe decir la metodología en el enunciado: la descubre el alumno", () => {
-    expect(prompt).toContain("# La metodología la descubre el alumno");
-    expect(prompt).toContain("nunca** digas cuál es ni la insinúes");
-    expect(prompt).toContain("Qué no va nunca en el enunciado:");
+  it("generar_diagrama_flujo: siempre al resolver, nunca al dar un ejercicio nuevo", () => {
+    const descripcion = tools.generar_diagrama_flujo.description ?? "";
+
+    expect(descripcion).toMatch(/SIEMPRE al resolver/i);
+    expect(descripcion).toMatch(/NUNCA al dar un ejercicio nuevo/i);
   });
 
-  it("los modelos se usan para explicar y nunca se dan como ejercicio", () => {
-    expect(prompt).toContain("Es la **teoría**. Usala para explicar");
-    expect(prompt).toContain("Los modelos nunca se dan como ejercicio para practicar");
+  it("verificar_fdp: siempre que se resuelve o corrige una f.d.p.", () => {
+    expect(tools.verificar_fdp.description).toMatch(/SIEMPRE que resuelvas o corrijas una f\.d\.p\./i);
   });
 
-  it("la presentación del tutor no nombra la metodología", () => {
-    const primeraLinea = prompt.split("\n")[0];
-
-    expect(primeraLinea).not.toMatch(/evento a evento|EaE/i);
+  it("generar_ejercicio: siempre que se da un ejercicio nuevo", () => {
+    expect(tools.generar_ejercicio.description).toMatch(/SIEMPRE que le des un ejercicio nuevo/i);
   });
 });
