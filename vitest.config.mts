@@ -18,6 +18,8 @@ const conSupabaseLocal = {
 };
 
 export default defineConfig({
+  // tsconfig tiene "jsx": "preserve" (lo transforma Next); en los tests de componentes lo transforma Vite.
+  oxc: { jsx: { runtime: "automatic" } },
   // Hace que el atajo `@/` en los imports apunte a la raíz del proyecto, igual que en tsconfig.json.
   resolve: {
     alias: {
