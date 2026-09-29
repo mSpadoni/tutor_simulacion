@@ -38,8 +38,8 @@ export function crearToolsDiagrama() {
     generar_diagrama_flujo: tool({
       description:
         "Dibuja una parte de un diagrama de flujo (Mermaid → imagen con Kroki) y se la muestra al alumno: una llamada por parte " +
-        "(programa principal, cada rutina). Usala SIEMPRE al resolver un ejercicio (como último paso), al corregir un " +
-        "diagrama o cuando el alumno pide ver uno. NUNCA al dar un ejercicio nuevo.",
+        "(programa principal, cada rutina). Usala SIEMPRE para mostrar un diagrama (nunca escribas Mermaid en el mensaje): al resolver " +
+        "(f.d.p. y diagrama de flujo), al corregir un diagrama o cuando el alumno pide ver uno. NUNCA al dar un ejercicio nuevo.",
       inputSchema: z.object({
         titulo: z
           .string()

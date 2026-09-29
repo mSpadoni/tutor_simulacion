@@ -8,7 +8,7 @@ import { crearToolsTutor } from "@/backend/tools/tutor.tools";
 // El CONTRATO del prompt y de las tools: lo que tiene que estar para que el tutor funcione (cada tool presentada,
 // sus secciones, las reglas críticas) y lo que nunca puede aparecer (la metodología). No se afirman oraciones
 // enteras: el prompt se reescribe seguido para mejorar al tutor y eso no tiene que romper los tests. Se buscan
-// encabezados y palabras clave. Si el modelo CUMPLE estas reglas se mide en evals/ (`npm run test:evals`).
+// encabezados y palabras clave. Si el modelo CUMPLE estas reglas no se prueba acá: depende del modelo real.
 
 const prompt = armarSystemPrompt();
 const tools = crearToolsTutor({
@@ -59,9 +59,32 @@ describe("contrato del prompt", () => {
     expect(modos).toMatch(/Corrección\*\*: SOLO si el alumno te mandó/);
   });
 
-  it("al resolver, termina con el diagrama; al dar un ejercicio nuevo, nunca", () => {
+  it("al resolver, los diagramas van con la herramienta; al dar un ejercicio nuevo, nunca", () => {
     expect(seccion("Cómo resolvés")).toContain("generar_diagrama_flujo");
+    expect(seccion("Cómo resolvés")).toMatch(/Nunca escribas código Mermaid en el mensaje/);
     expect(prompt).toMatch(/\*\*Nunca al dar un ejercicio nuevo\*\*/);
+  });
+
+  it("resuelve en tres respuestas: variables y eventos, f.d.p., diagrama de flujo", () => {
+    const resolver = seccion("Cómo resolvés");
+    const variables = resolver.indexOf("**Variables y eventos**");
+    const fdp = resolver.indexOf("**Las f.d.p.**");
+    const diagrama = resolver.indexOf("**El diagrama de flujo**");
+
+    expect(resolver).toMatch(/\*\*tres respuestas\*\*/);
+    expect(variables).toBeGreaterThan(-1);
+    expect(fdp).toBeGreaterThan(variables);
+    expect(diagrama).toBeGreaterThan(fdp);
+  });
+
+  it("los ejemplos de diagramas del prompt usan la convención de la cátedra", () => {
+    const dibujar = seccion("Cómo dibujar un diagrama");
+
+    expect(dibujar).toContain('CI[["C.I."]]');
+    expect(dibujar).toMatch(/:::conector/);
+    expect(dibujar).toMatch(/shape: f-circ/);
+    expect(dibujar).toMatch(/-- "SI" -->/);
+    expect(dibujar).not.toMatch(/"SÍ"|\(\["Inicio"\]\)/);
   });
 
   it("la regla de consultar los modelos va al principio (ahí pesa más para el modelo)", () => {
@@ -109,10 +132,11 @@ describe("contrato de las tools (lo que lee el modelo para decidir)", () => {
     }
   });
 
-  it("generar_diagrama_flujo: siempre al resolver, nunca al dar un ejercicio nuevo", () => {
+  it("generar_diagrama_flujo: siempre para mostrar un diagrama, nunca al dar un ejercicio nuevo", () => {
     const descripcion = tools.generar_diagrama_flujo.description ?? "";
 
-    expect(descripcion).toMatch(/SIEMPRE al resolver/i);
+    expect(descripcion).toMatch(/SIEMPRE para mostrar un diagrama/i);
+    expect(descripcion).toMatch(/nunca escribas Mermaid en el mensaje/i);
     expect(descripcion).toMatch(/NUNCA al dar un ejercicio nuevo/i);
   });
 
