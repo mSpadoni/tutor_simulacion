@@ -24,6 +24,19 @@ export type NuevoEjercicio = z.infer<typeof EjercicioSchema>;
 export type EjercicioGuardado = Omit<FilaEjercicio, "payload"> & { payload: NuevoEjercicio["payload"] };
 
 /**
+ * La fila con su payload validado. payload es jsonb (la base no conoce su forma): una fila mal formada (guardada a
+ * mano, o con una versión vieja del esquema) da null en vez de romper el sidebar con un campo que falta.
+ */
+function conPayloadValido(fila: FilaEjercicio): EjercicioGuardado | null {
+  const payload = EjercicioSchema.shape.payload.safeParse(fila.payload);
+  if (!payload.success) {
+    console.warn(`Ejercicio ${fila.id} con payload inválido: se omite.`, payload.error.issues[0]?.message);
+    return null;
+  }
+  return { ...fila, payload: payload.data };
+}
+
+/**
  * Acceso a la tabla ejercicios.
  * No filtra por usuario a mano: las políticas RLS ya limitan todo al alumno logueado.
  */
@@ -45,8 +58,8 @@ export class EjerciciosModel {
         .single(),
       "No se pudo guardar el ejercicio"
     );
-    // payload es jsonb (sin tipo en la base): tiene la forma de EjercicioSchema porque se validó antes de guardarlo.
-    return guardado as EjercicioGuardado;
+    // El payload que se devuelve es el que se validó y se guardó recién.
+    return { ...guardado, payload: ejercicio.payload };
   }
 
   /** Los últimos ejercicios del alumno, el más reciente primero. Por defecto 7 (Ley de Miller). */
@@ -56,7 +69,7 @@ export class EjerciciosModel {
       await supabase.from("ejercicios").select("*").order("creado_en", { ascending: false }).limit(limite),
       "No se pudieron leer los ejercicios"
     );
-    return ejercicios as EjercicioGuardado[];
+    return ejercicios.flatMap((fila) => conPayloadValido(fila) ?? []);
   }
 }
 

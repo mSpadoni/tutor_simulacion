@@ -83,3 +83,22 @@ describe("EjerciciosModel", () => {
     );
   });
 });
+
+describe("EjerciciosModel — el payload se valida también al leer", () => {
+  it("una fila con payload mal formado se omite y el resto se lista con sus datos", async () => {
+    const alumno = await crearAlumnoLogueado();
+    const ejercicios = new EjerciciosModel(alumno.navegador.crearCliente);
+    const bueno = await ejercicios.guardar(ejercicio());
+    // Una fila guardada sin pasar por el model (a mano, o con un esquema viejo): le falta el enunciado.
+    const supabase = await alumno.navegador.crearCliente();
+    const insertado = await supabase
+      .from("ejercicios")
+      .insert({ tema: "stock", dificultad: "facil", payload: { titulo: "Roto" } });
+    expect(insertado.error).toBeNull();
+
+    const listados = await ejercicios.listarRecientes();
+
+    expect(listados.map((listado) => listado.id)).toEqual([bueno.id]);
+    expect(listados[0].payload).toEqual(ejercicio().payload);
+  });
+});
