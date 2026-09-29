@@ -105,8 +105,8 @@ describe("MessageBubble — análisis verificado", () => {
       estado: [{ nombre: "NS", descripcion: "clientes en el sistema" }],
     },
     eventos: [
-      { nombre: "LLEGADA", tef: "TPLL" },
-      { nombre: "SALIDA", tef: "TPS" },
+      { nombre: "LLEGADA", tef: "TPLL", modifica: ["NS"] },
+      { nombre: "SALIDA", tef: "TPS", modifica: ["NS"] },
     ],
     tei: [
       { evento: "LLEGADA", efnc: "LLEGADA", efc: [{ evento: "SALIDA", condicion: "NS = 1" }] },

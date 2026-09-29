@@ -24,6 +24,11 @@ export const AnalisisSchema = z.object({
       z.object({
         nombre: Nombre.describe("El evento, ej: 'LLEGADA', 'SALIDA'"),
         tef: Nombre.describe("Su variable de la T.E.F., ej: 'TPLL', 'TPS'"),
+        modifica: z
+          .array(Nombre)
+          .min(1)
+          .max(10)
+          .describe("Las variables de estado que cambia este evento, ej: ['NS']. Si no cambia ninguna, no es evento"),
       })
     )
     .min(1)
@@ -114,6 +119,35 @@ export function problemasDelAnalisis(analisis: Analisis): string[] {
       problemas.push(`${evento.tef} es la variable de la T.E.F. de más de un evento: cada evento tiene la suya.`);
     }
     variablesTef.add(tef);
+  }
+
+  // --- Un evento es lo que modifica al menos una variable de estado; una de estado es la que modifica un evento.
+  const modificadas = new Set<string>();
+  for (const evento of eventos) {
+    const deEstado = evento.modifica.filter((nombre) => categoriaDe.get(base(nombre)) === "estado");
+    for (const nombre of evento.modifica) {
+      if (categoriaDe.get(base(nombre)) !== "estado") {
+        problemas.push(
+          `${evento.nombre} modifica ${nombre}, que no está entre las variables de estado: lo que cambia un evento ` +
+            "es una variable de estado (o no es algo que cambie el evento)."
+        );
+      }
+    }
+    if (deEstado.length === 0) {
+      problemas.push(
+        `${evento.nombre} no modifica ninguna variable de estado: un evento es solo lo que cambia el estado del ` +
+          "sistema. Si no cambia ninguna, es una decisión dentro de otro evento."
+      );
+    }
+    for (const nombre of deEstado) modificadas.add(base(nombre));
+  }
+  for (const variable of variables.estado) {
+    if (base(variable.nombre) !== "T" && !modificadas.has(base(variable.nombre))) {
+      problemas.push(
+        `${variable.nombre} está como variable de estado, pero ningún evento la modifica: las de estado son las que ` +
+          "cambian con los eventos."
+      );
+    }
   }
 
   // --- T.E.I.: una fila por evento, y solo eventos

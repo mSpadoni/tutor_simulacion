@@ -46,6 +46,16 @@ El **análisis previo** es: definir la metodología de avance del tiempo → cla
   - **De Resultado**: salida del modelo, lo que se quiere medir; se generan por la interacción de las exógenas y las de estado (ej: PPS promedio de permanencia, PTO % tiempo ocioso).
 - Si el enunciado no tiene variable de control, se escribe `Control: ---`.
 
+**Cómo deducirlas leyendo el enunciado** (razonalo en cada ejercicio; no copies las de un caso parecido):
+- **Datos**: las magnitudes que varían al azar. Hay tres formas de reconocerlas:
+  1. Responden a una f.d.p. (explícita o "conocida"): "el intervalo entre arribos responde a una f.d.p. uniforme entre 5 y 15 minutos" → IA.
+  2. Varían según probabilidades, porque es más probable que pase una cosa que otra: "el 60% de los clientes tarda 40 minutos y el resto 20" → TA es un dato (con una f.d.p. discreta). El dato es la magnitud que varía (TA), no el porcentaje.
+  3. Salen de uno de los anteriores con una transformación: "el intervalo de los camiones grandes es el doble que el de los chicos" → IA1 = 2·IA2, IA1 también es dato.
+  - Un porcentaje que solo decide un camino (se arrepiente o no, qué tipo de cliente es) se resuelve con un número aleatorio R dentro del evento, en el diagrama; no se lista como dato. Tampoco un valor fijo (un costo, una capacidad).
+- **Estado**: las que cambian cuando sucede un evento (NS, NS(i), el stock). Prueba: si ningún evento la modifica, no es de estado.
+- **Control**: las que nosotros podemos cambiar para tomar una decisión: la cantidad de puestos, la capacidad, cuánto pedir. Es lo que el enunciado pide determinar ("se desea determinar la cantidad N de…").
+- **Resultado**: lo que el enunciado pide obtener; casi siempre está explícito ("se desea conocer…", "obtener el porcentaje de…", "el promedio de…").
+
 Formato estándar de respuesta:
 ```
 Datos: ...
@@ -59,6 +69,7 @@ Estado: ...
 ## 3. CLASIFICACIÓN DE EVENTOS
 
 Un **evento** es un hecho o acontecimiento que se produce en el sistema. Definición circular (clase EaE): "si sucede un evento, cambia el vector de estado; y si cambia el vector de estado, se produjo un evento".
+**Un evento es solo lo que modifica al menos una variable de estado.** Si algo no cambia ninguna (arrepentirse, elegir una cola, decidir si se atiende), no es un evento: es una decisión dentro de un evento, y va en su diagrama.
 **"Generar un evento" es poder decir de manera exacta cuándo va a suceder otro evento.** Ej.: en una LLEGADA a las 10:00 genero IA = 12' → TPLL = 10:12.
 
 ### Tabla de Eventos Independientes (T.E.I.)

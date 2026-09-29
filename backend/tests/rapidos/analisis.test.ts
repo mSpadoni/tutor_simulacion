@@ -27,8 +27,8 @@ const CORRECTO: Analisis = {
     estado: [{ nombre: "NS", descripcion: "clientes en el sistema" }],
   },
   eventos: [
-    { nombre: "LLEGADA", tef: "TPLL" },
-    { nombre: "SALIDA", tef: "TPS" },
+    { nombre: "LLEGADA", tef: "TPLL", modifica: ["NS"] },
+    { nombre: "SALIDA", tef: "TPS", modifica: ["NS"] },
   ],
   tei: [
     { evento: "LLEGADA", efnc: "LLEGADA", efc: [{ evento: "SALIDA", condicion: "NS = 1" }] },
@@ -125,6 +125,36 @@ describe("problemasDelAnalisis", () => {
     expect(problemasDelAnalisis(analisis)).toEqual([]);
   });
 
+  it("un «evento» que no modifica ninguna variable de estado no es un evento (es una decisión dentro de otro)", () => {
+    const analisis = con({
+      eventos: [
+        { nombre: "LLEGADA", tef: "TPLL", modifica: ["NS"] },
+        { nombre: "SALIDA", tef: "TPS", modifica: ["NS"] },
+        { nombre: "ARREPENTIMIENTO", tef: "TPA", modifica: ["PARR"] },
+      ],
+      tei: [...CORRECTO.tei, { evento: "ARREPENTIMIENTO", efnc: "ARREPENTIMIENTO", efc: [] }],
+    });
+
+    const problemas = problemasDelAnalisis(analisis);
+    expect(problemas).toContainEqual(
+      expect.stringContaining("ARREPENTIMIENTO modifica PARR, que no está entre las variables de estado")
+    );
+    expect(problemas).toContainEqual(expect.stringContaining("ARREPENTIMIENTO no modifica ninguna variable de estado"));
+  });
+
+  it("una variable de estado que ningún evento modifica no es de estado", () => {
+    const analisis = con({
+      variables: {
+        ...CORRECTO.variables,
+        estado: [...CORRECTO.variables.estado, { nombre: "ST", descripcion: "stock" }],
+      },
+    });
+
+    expect(problemasDelAnalisis(analisis)).toEqual([
+      expect.stringContaining("ST está como variable de estado, pero ningún evento la modifica"),
+    ]);
+  });
+
   it("T es el reloj: no se clasifica como variable", () => {
     const analisis = con({
       variables: {
@@ -140,8 +170,8 @@ describe("problemasDelAnalisis", () => {
     const analisis = con({
       variables: { ...CORRECTO.variables, control: [{ nombre: "NS", descripcion: "otra vez" }] },
       eventos: [
-        { nombre: "LLEGADA", tef: "TPLL" },
-        { nombre: "SALIDA", tef: "TPLL" },
+        { nombre: "LLEGADA", tef: "TPLL", modifica: ["NS"] },
+        { nombre: "SALIDA", tef: "TPLL", modifica: ["NS"] },
       ],
     });
 
@@ -153,8 +183,8 @@ describe("problemasDelAnalisis", () => {
   it("los nombres se comparan sin importar mayúsculas ni tildes", () => {
     const analisis = con({
       eventos: [
-        { nombre: "Llegada", tef: "TPLL" },
-        { nombre: "Salida", tef: "TPS" },
+        { nombre: "Llegada", tef: "TPLL", modifica: ["NS"] },
+        { nombre: "Salida", tef: "TPS", modifica: ["NS"] },
       ],
     });
 
