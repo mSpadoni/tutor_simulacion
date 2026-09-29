@@ -94,3 +94,58 @@ describe("MessageBubble — contenido", () => {
     expect(within(material).getByText(/diagrama/i)).toBeInTheDocument();
   });
 });
+
+describe("MessageBubble — análisis verificado", () => {
+  const analisis = {
+    metodologia: "Evento a Evento",
+    variables: {
+      datos: [{ nombre: "IA", descripcion: "intervalo entre arribos" }],
+      control: [],
+      resultado: [{ nombre: "PTO", descripcion: "porcentaje de tiempo ocioso" }],
+      estado: [{ nombre: "NS", descripcion: "clientes en el sistema" }],
+    },
+    eventos: [
+      { nombre: "LLEGADA", tef: "TPLL" },
+      { nombre: "SALIDA", tef: "TPS" },
+    ],
+    tei: [
+      { evento: "LLEGADA", efnc: "LLEGADA", efc: [{ evento: "SALIDA", condicion: "NS = 1" }] },
+      { evento: "SALIDA", efnc: null, efc: [{ evento: "SALIDA", condicion: "NS ≥ 1" }] },
+    ],
+  };
+  const verificacion = (ok: boolean): ParteDelTutor => ({
+    type: "tool-verificar_analisis",
+    toolCallId: "t1",
+    state: "output-available",
+    input: analisis,
+    output: { ok, problemas: ok ? [] : ["Falta la fila del evento SALIDA en la T.E.I."], analisis },
+  });
+
+  it("si pasó la verificación, la T.E.I. se muestra como tabla, una fila por evento, con --- donde no hay", () => {
+    mostrar(delTutor("Las dos filas salen de la clase de EaE.", [verificacion(true)]));
+
+    const seccion = screen.getByRole("region", { name: "Análisis del ejercicio" });
+    const [tei] = within(seccion).getAllByRole("table");
+    const filas = within(tei).getAllByRole("row").slice(1);
+    expect(
+      filas.map((fila) =>
+        within(fila)
+          .getAllByRole("cell")
+          .map((celda) => celda.textContent)
+      )
+    ).toEqual([
+      ["LLEGADA", "LLEGADA", "SALIDA", "NS = 1"],
+      ["SALIDA", "---", "SALIDA", "NS ≥ 1"],
+    ]);
+    expect(seccion).toHaveTextContent("Control: ---");
+  });
+
+  it("si tenía problemas, no se muestra (el tutor lo corrige) y el aviso no lo marca como falla", () => {
+    mostrar(delTutor("", [verificacion(false)]));
+
+    expect(screen.queryByRole("region", { name: "Análisis del ejercicio" })).toBeNull();
+    const material = screen.getByRole("list", { name: "Material que consultó el tutor" });
+    expect(material).toHaveTextContent("Revisó el análisis con las reglas de la cátedra");
+    expect(material).not.toHaveTextContent("⚠");
+  });
+});

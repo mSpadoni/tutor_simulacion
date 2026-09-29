@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { EjerciciosModel } from "@/backend/models/repositorios/ejercicios.model";
 import { MaterialCatedra } from "@/backend/models/materialCatedra.model";
+import type { EjercicioGenerado } from "@/backend/tools/ejercicio.tools";
 import { crearToolsTutor } from "@/backend/tools/tutor.tools";
 import type { NombreDeHerramienta, TutorUIMessage } from "@/shared/chat";
 import { TEXTOS_DE_HERRAMIENTAS } from "@/views/chat/tipos";
@@ -33,9 +34,7 @@ describe("contrato del chat: tools ↔ vista", () => {
 
   it("las partes de tool del mensaje llevan el tipo de la tool (datos y resultado)", () => {
     type ParteEjercicio = Extract<TutorUIMessage["parts"][number], { type: "tool-generar_ejercicio" }>;
-    expectTypeOf<Extract<ParteEjercicio, { state: "output-available" }>["output"]>().toEqualTypeOf<
-      { ok: true; id: string } | { ok: false; error: string }
-    >();
+    expectTypeOf<Extract<ParteEjercicio, { state: "output-available" }>["output"]>().toEqualTypeOf<EjercicioGenerado>();
   });
 });
 

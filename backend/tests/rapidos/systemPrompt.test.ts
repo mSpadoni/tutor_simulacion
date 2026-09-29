@@ -115,12 +115,13 @@ describe("la metodología la descubre el alumno", () => {
     expect(prompt.split("\n")[0]).not.toMatch(nombraLaMetodologia);
   });
 
-  it("el ejemplo de ejercicio nuevo no la nombra y termina en «Se pide:»", () => {
+  it("el ejemplo de ejercicio nuevo no la nombra, va por generar_ejercicio y trae sus f.d.p. y la decisión", () => {
     // Hasta el separador "---": después viene la base de conocimiento, que sí habla de la metodología.
     const inicio = prompt.indexOf("## Ejemplo 3");
     const ejemplo = prompt.slice(inicio, prompt.indexOf("\n---\n", inicio));
 
-    expect(ejemplo).toContain("Se pide:");
+    expect(ejemplo).toContain("generar_ejercicio");
+    for (const campo of ["sePide", "datosAleatorios", "seDecide"]) expect(ejemplo).toContain(campo);
     expect(ejemplo).not.toMatch(nombraLaMetodologia);
   });
 });
@@ -144,7 +145,8 @@ describe("contrato de las tools (lo que lee el modelo para decidir)", () => {
     expect(tools.verificar_fdp.description).toMatch(/SIEMPRE que resuelvas o corrijas una f\.d\.p\./i);
   });
 
-  it("generar_ejercicio: siempre que se da un ejercicio nuevo", () => {
-    expect(tools.generar_ejercicio.description).toMatch(/SIEMPRE que le des un ejercicio nuevo/i);
+  it("generar_ejercicio: siempre para dar un ejercicio nuevo, en vez de escribirlo en el mensaje", () => {
+    expect(tools.generar_ejercicio.description).toMatch(/SIEMPRE para dar un ejercicio nuevo/i);
+    expect(tools.generar_ejercicio.description).toMatch(/en vez de escribirlo/i);
   });
 });

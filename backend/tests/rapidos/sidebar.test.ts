@@ -71,6 +71,8 @@ describe("ejerciciosGuardadosEn", () => {
     titulo,
     enunciado: "Un taller de bicicletas atiende a los clientes que llegan con un intervalo entre arribos.",
     sePide: ["El tiempo medio de espera en cola"],
+    datosAleatorios: [{ sigla: "IA", fdp: "uniforme entre 5 y 15 minutos" }],
+    seDecide: "la cantidad de mecánicos",
   });
 
   it("toma los ejercicios que la tool guardó bien (id del resultado, título de lo que le pasó el modelo)", () => {
@@ -79,7 +81,7 @@ describe("ejerciciosGuardadosEn", () => {
       toolCallId: "t1",
       state: "output-available",
       input: datos("Taller de bicicletas"),
-      output: { ok: true, id: "e9" },
+      output: { ok: true, id: "e9", ejercicio: { titulo: "Taller de bicicletas", enunciado: "…", sePide: [] } },
     };
 
     expect(ejerciciosGuardadosEn(mensaje([{ type: "text", text: "Acá va" }, guardado]), "c")).toEqual([

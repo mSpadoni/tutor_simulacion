@@ -4,9 +4,11 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { getStaticToolName, isStaticToolUIPart, type ToolUIPart } from "ai";
 import { textoDe, type HerramientasDelTutor, type TutorUIMessage } from "@/shared/chat";
+import { AnalisisDelEjercicio } from "./AnalisisDelEjercicio";
 import { DiagramaDeFlujo, DiagramaDelTexto } from "./DiagramaDeFlujo";
+import { EjercicioNuevo } from "./EjercicioNuevo";
 import { partirEnBloques } from "./diagramasEnTexto";
-import { diagramaDe, herramientaFallo, TEXTOS_DE_HERRAMIENTAS } from "./tipos";
+import { analisisDe, diagramaDe, ejercicioDe, herramientaFallo, TEXTOS_DE_HERRAMIENTAS } from "./tipos";
 
 // react-markdown no renderiza HTML crudo: lo que escriba el modelo no puede inyectar scripts.
 // Este objeto dice cómo dibujar cada elemento del Markdown (párrafo, lista, tabla...) con estilos propios.
@@ -64,6 +66,8 @@ export default function MessageBubble({ mensaje }: { mensaje: TutorUIMessage }) 
   // Un mensaje del AI SDK viene en partes: texto, tools usadas, inicio de cada paso...
   const texto = textoDe(mensaje, "\n\n");
   const tools = mensaje.parts.filter(isStaticToolUIPart);
+  const ejercicios = tools.flatMap((parte) => ejercicioDe(parte) ?? []);
+  const analisis = tools.flatMap((parte) => analisisDe(parte) ?? []);
   const diagramas = tools.flatMap((parte) => diagramaDe(parte) ?? []);
   if (!texto && tools.length === 0) return null;
 
@@ -84,6 +88,12 @@ export default function MessageBubble({ mensaje }: { mensaje: TutorUIMessage }) 
             ))}
           </ul>
         )}
+        {ejercicios.map((ejercicio, indice) => (
+          <EjercicioNuevo key={indice} ejercicio={ejercicio} />
+        ))}
+        {analisis.map((datos, indice) => (
+          <AnalisisDelEjercicio key={indice} analisis={datos} />
+        ))}
         {diagramas.map((diagrama, indice) => (
           <DiagramaDeFlujo key={indice} diagrama={diagrama} />
         ))}

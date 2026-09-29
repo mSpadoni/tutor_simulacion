@@ -1,7 +1,7 @@
 import "server-only";
 import { tool } from "ai";
 import { z } from "zod";
-import { EjercicioSchema } from "@/backend/models/dominio/ejercicio";
+import { EjercicioSchema, problemasDelEjercicio } from "@/backend/models/dominio/ejercicio";
 import type { EjerciciosModel } from "@/backend/models/repositorios/ejercicios.model";
 
 /** Los datos del ejercicio que arma el modelo (validados con Zod antes de guardarlos). */
@@ -15,28 +15,76 @@ export const DatosEjercicioSchema = z.object({
     "El sistema contado en prosa, con los datos como f.d.p. y lo que se desea determinar (sin el «Se pide»)"
   ),
   sePide: EjercicioSchema.shape.payload.shape.sePide.describe("Cada consigna del «Se pide:», en orden"),
+  // No se guardan: obligan a pensar el ejercicio antes de escribirlo y permiten revisarlo.
+  datosAleatorios: z
+    .array(
+      z.object({
+        sigla: z.string().trim().min(1).max(10).describe("La sigla del dato, ej: 'IA'"),
+        fdp: z
+          .string()
+          .trim()
+          .min(5)
+          .max(200)
+          .describe(
+            "Su f.d.p. copiada tal cual del enunciado, ej: 'lineal entre 10 y 30 minutos, donde f(30) = 2·f(10)'"
+          ),
+      })
+    )
+    .describe("Cada dato aleatorio del enunciado con su f.d.p."),
+  seDecide: z
+    .string()
+    .trim()
+    .min(5)
+    .max(200)
+    .describe("Qué se busca decidir (la variable de control), ej: 'la cantidad N de cajas'. Queda fija en la corrida."),
 });
 
 export type DatosEjercicio = z.infer<typeof DatosEjercicioSchema>;
 
-/** Lo que devuelve la tool: si se guardó (con su id) o por qué no. */
-export type EjercicioGenerado = { ok: true; id: string } | { ok: false; error: string };
+/** El ejercicio como se guardó (lo muestra la vista). */
+export type EjercicioGuardado = { titulo: string; enunciado: string; sePide: string[] };
+
+/**
+ * Lo que devuelve la tool: el ejercicio guardado; las reglas de la cátedra que no cumple (no se guarda, el modelo
+ * lo corrige); o por qué no se pudo guardar.
+ */
+export type EjercicioGenerado =
+  | { ok: true; id: string; ejercicio: EjercicioGuardado }
+  | { ok: false; problemas: string[] }
+  | { ok: false; error: string };
 
 /** Guarda el ejercicio en "Mis ejercicios" del alumno, asociado a la conversación donde se generó. */
 export async function guardarEjercicio(
   ejercicios: EjerciciosModel,
   conversacionId: string,
-  { tema, dificultad, titulo, enunciado, sePide }: DatosEjercicio
+  { tema, dificultad, titulo, enunciado, sePide, datosAleatorios }: DatosEjercicio
 ): Promise<EjercicioGenerado> {
+  const problemas = problemasDelEjercicio({ enunciado, datosAleatorios });
+  if (problemas.length > 0) return { ok: false, problemas };
   try {
     const guardado = await ejercicios.guardar(
       { tema, dificultad, payload: { titulo, enunciado, sePide } },
       conversacionId
     );
-    return { ok: true, id: guardado.id };
+    return { ok: true, id: guardado.id, ejercicio: { titulo, enunciado, sePide } };
   } catch (error) {
     return { ok: false, error: `No se pudo guardar el ejercicio: ${(error as Error).message}` };
   }
+}
+
+/** Lo que lee el modelo del resultado: si se guardó, que no lo repita; si no, qué corregir. */
+export function resumenDelEjercicio(resultado: EjercicioGenerado): string {
+  if (resultado.ok) {
+    return "Ejercicio guardado en «Mis ejercicios» y mostrado al alumno. No lo repitas en texto: deseale suerte en una línea.";
+  }
+  if ("problemas" in resultado) {
+    return (
+      "El ejercicio no cumple estas reglas de la cátedra (no se guardó y el alumno todavía no lo ve):\n" +
+      resultado.problemas.map((problema) => `- ${problema}`).join("\n") +
+      "\nCorregilo y volvé a llamar a generar_ejercicio."
+    );
+  }
+  return `${resultado.error}. Mostrale el ejercicio en texto y avisale que no se pudo guardar.`;
 }
 
 /** La tool para `streamText`. Se crea por pedido: guarda con la sesión del alumno y en su conversación. */
@@ -44,10 +92,12 @@ export function crearToolsEjercicio(ejercicios: EjerciciosModel, conversacionId:
   return {
     generar_ejercicio: tool({
       description:
-        "Guarda el ejercicio nuevo que creaste en «Mis ejercicios» del alumno, con sus datos estructurados " +
-        "(título, enunciado y consignas). Llamala SIEMPRE que le des un ejercicio nuevo, después de crearlo.",
+        "Revisa el ejercicio nuevo que creaste con las reglas de la cátedra y, si las cumple, lo guarda en «Mis " +
+        "ejercicios» y se lo muestra al alumno. Llamala SIEMPRE para dar un ejercicio nuevo, en vez de escribirlo en " +
+        "el mensaje: si devuelve problemas, corregilo y volvé a llamarla.",
       inputSchema: DatosEjercicioSchema,
       execute: (datos) => guardarEjercicio(ejercicios, conversacionId, datos),
+      toModelOutput: ({ output }) => ({ type: "text", value: resumenDelEjercicio(output) }),
     }),
   };
 }

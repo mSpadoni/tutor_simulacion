@@ -69,7 +69,42 @@ export const TEXTOS_DE_HERRAMIENTAS: Record<NombreDeHerramienta, { usando: strin
     usando: "Verificando la f.d.p. con cálculo numérico…",
     usada: "Verificó la f.d.p. con cálculo numérico",
   },
+  verificar_analisis: {
+    usando: "Revisando el análisis con las reglas de la cátedra…",
+    usada: "Revisó el análisis con las reglas de la cátedra",
+  },
 };
+
+/** El análisis que devuelve verificar_analisis (tipado desde la tool: si cambia, la vista no compila). */
+export type AnalisisParaMostrar = Extract<
+  ParteDelTutor,
+  { type: "tool-verificar_analisis"; state: "output-available" }
+>["output"]["analisis"];
+
+/**
+ * Si la parte del mensaje es un análisis que pasó la verificación de la cátedra, sus datos para mostrarlo como
+ * tablas; si no, null (todavía se está verificando, o tenía problemas y el tutor lo está corrigiendo).
+ */
+export function analisisDe(parte: ParteDelTutor): AnalisisParaMostrar | null {
+  if (parte.type !== "tool-verificar_analisis" || parte.state !== "output-available") return null;
+  return parte.output.ok ? parte.output.analisis : null;
+}
+
+/** Un ejercicio nuevo tal como se guardó en «Mis ejercicios» (tipado desde la tool). */
+export type EjercicioParaMostrar = Extract<
+  Extract<ParteDelTutor, { type: "tool-generar_ejercicio"; state: "output-available" }>["output"],
+  { ok: true }
+>["ejercicio"];
+
+/**
+ * Si la parte del mensaje es un ejercicio nuevo que pasó la revisión y se guardó, sus datos para mostrarlo; si no,
+ * null. Los mensajes guardados antes de que la tool devolviera el ejercicio no lo traen: ahí el ejercicio está en el
+ * texto del tutor.
+ */
+export function ejercicioDe(parte: ParteDelTutor): EjercicioParaMostrar | null {
+  if (parte.type !== "tool-generar_ejercicio" || parte.state !== "output-available" || !parte.output.ok) return null;
+  return parte.output.ejercicio ?? null;
+}
 
 /** Un diagrama listo para mostrar: el SVG va como data URL en un <img> (así el navegador no ejecuta nada de adentro). */
 export type DiagramaParaMostrar = { titulo: string; mermaid: string; src: string };
@@ -92,6 +127,11 @@ export function diagramaDe(parte: ParteDelTutor): DiagramaParaMostrar | null {
 /** ¿La tool terminó pero falló? (ej. el diagrama no se pudo generar) — para mostrar el aviso con ⚠. */
 export function herramientaFallo(parte: ParteDelTutor): boolean {
   if (!isToolUIPart(parte)) return false;
+  // Un análisis o un ejercicio con problemas no es una falla: el tutor lo corrige y lo vuelve a revisar.
+  if (parte.type === "tool-verificar_analisis") return false;
+  if (parte.type === "tool-generar_ejercicio" && parte.state === "output-available" && "problemas" in parte.output) {
+    return false;
+  }
   if (parte.state === "output-error") return true;
   if (parte.state !== "output-available") return false;
   // Algunas tools devuelven texto (las del material) y otras un resultado { ok, ... }.

@@ -14,8 +14,12 @@ const EJERCICIO: DatosEjercicio = {
   dificultad: "media",
   titulo: "Taller de bicicletas",
   enunciado:
-    "Un taller de bicicletas tiene N mecánicos. Las bicicletas llegan según una f.d.p. conocida y el 20% de los clientes se va si hay más de 4 esperando.",
+    "Un taller de bicicletas tiene N mecánicos. Las bicicletas llegan con un intervalo (IA) que responde a una f.d.p. " +
+    "uniforme entre 5 y 15 minutos, y el 20% de los clientes se va si hay más de 4 esperando. Se desea determinar " +
+    "la cantidad N de mecánicos.",
   sePide: ["Análisis completo: metodología, variables, T.E.I. y T.E.F.", "Diagrama de flujo"],
+  datosAleatorios: [{ sigla: "IA", fdp: "uniforme entre 5 y 15 minutos" }],
+  seDecide: "la cantidad N de mecánicos",
 };
 
 /** Un alumno logueado con una conversación propia y sus models. */
@@ -33,7 +37,10 @@ describe("guardarEjercicio (la tool generar_ejercicio)", () => {
 
     const resultado = await guardarEjercicio(ejercicios, conversacionId, EJERCICIO);
 
-    expect(resultado.ok).toBe(true);
+    expect(resultado).toMatchObject({
+      ok: true,
+      ejercicio: { titulo: EJERCICIO.titulo, enunciado: EJERCICIO.enunciado, sePide: EJERCICIO.sePide },
+    });
     const [guardado] = await ejercicios.listarRecientes();
     expect(guardado).toMatchObject({ conversacion_id: conversacionId, tema: EJERCICIO.tema });
     expect(guardado.payload).toEqual({
@@ -41,6 +48,20 @@ describe("guardarEjercicio (la tool generar_ejercicio)", () => {
       enunciado: EJERCICIO.enunciado,
       sePide: EJERCICIO.sePide,
     });
+  });
+
+  it("si no cumple las reglas de la cátedra, le devuelve los problemas al modelo y no guarda nada", async () => {
+    const { ejercicios, conversacionId } = await alumnoConConversacion();
+    const sinRecta = {
+      ...EJERCICIO,
+      enunciado: EJERCICIO.enunciado.replace("uniforme entre 5 y 15 minutos", "lineal entre 5 y 15 minutos"),
+      datosAleatorios: [{ sigla: "IA", fdp: "lineal entre 5 y 15 minutos" }],
+    };
+
+    const resultado = await guardarEjercicio(ejercicios, conversacionId, sinRecta);
+
+    expect(resultado).toEqual({ ok: false, problemas: [expect.stringContaining("es lineal pero no dice qué recta")] });
+    expect(await ejercicios.listarRecientes()).toEqual([]);
   });
 
   it("si los datos no pasan la validación, le devuelve el error al modelo y no guarda nada", async () => {

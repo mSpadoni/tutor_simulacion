@@ -1,6 +1,7 @@
 import "server-only";
 import type { EjerciciosModel } from "@/backend/models/repositorios/ejercicios.model";
 import type { MaterialCatedra } from "@/backend/models/materialCatedra.model";
+import { crearToolsAnalisis } from "@/backend/tools/analisis.tools";
 import { crearToolsDiagrama } from "@/backend/tools/diagrama.tools";
 import { crearToolsEjercicio } from "@/backend/tools/ejercicio.tools";
 import { crearToolsFdp } from "@/backend/tools/fdp.tools";
@@ -24,6 +25,7 @@ export function crearToolsTutor({ material, ejercicios, conversacionId }: Contex
     ...crearToolConsultarModelos(material),
     ...crearToolBuscarEjercicio(material),
     ...crearToolInspiracionParaEjercicio(material),
+    ...crearToolsAnalisis(),
     ...crearToolsDiagrama(),
     ...crearToolsFdp(),
     ...crearToolsEjercicio(ejercicios, conversacionId),

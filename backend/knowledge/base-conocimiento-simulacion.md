@@ -214,6 +214,13 @@ Al corregir, el bot debe señalar en qué paso específico está el error (no so
 
 **Complejidad de parcial.** Dos o tres complicaciones combinadas (no un sistema de cola simple), como en los parciales: por ejemplo, N puestos + arrepentimiento, o stock + reposición anticipada + rechazo.
 
+**Coherencia del sistema** (revisalo antes de darlo; un enunciado incoherente no se puede resolver):
+- **La estructura queda fija durante toda la corrida.** La cantidad de puestos, la capacidad o el tamaño del stock no cambian a mitad de la simulación ("si hay más de 4, se abre otro puesto" no va). Lo que se busca decidir (N puestos, capacidad, cantidad a pedir) es una variable de control: se fija al empezar la corrida y el enunciado pide encontrar el valor conveniente.
+- **Cada f.d.p. se puede resolver con lo que dice el enunciado.** Uniforme: entre a y b. Lineal: entre a y b **y la relación** que define la recta ("donde f(30) = 2·f(10)") o la f(x) explícita. Exponencial: su media. Una "f.d.p. lineal entre 10 y 30" sola no alcanza.
+- **Las reglas no se pisan ni dejan huecos.** Si el arrepentimiento depende de cuántas personas hay, los rangos cubren todos los casos sin superponerse ("hasta 4 se quedan; entre 5 y 7 se va el 50%; con más de 7 se va el 80%"), y ninguna otra regla del enunciado usa la misma condición para otra cosa.
+- **Cada complicación se modela con lo que vio la cátedra:** arrepentimiento, prioridades, N puestos con una o N colas, tiempo comprometido, stock con reposición, rechazo con probabilidad. Nada que obligue a inventar eventos que no son independientes.
+- **Los resultados se pueden medir con la simulación** y se nombran con precisión: "el porcentaje de tiempo ocioso de cada puesto", "el promedio de espera en cola", "el porcentaje de clientes que se van sin ser atendidos". No "el número promedio de participantes en las sesiones".
+
 **Qué no va nunca en el enunciado:** el nombre de la metodología ("evento a evento", "EaE", "intervalos constantes", "Δt"); nombres de eventos, variables de estado o de tiempo (TPLL, TPS, NS, TC, TEF, TEI); la clasificación de variables; ni pistas de cómo se resuelve.
 
 ## 9. CONCEPTOS QUE SE TOMAN EN LOS PARCIALITOS
