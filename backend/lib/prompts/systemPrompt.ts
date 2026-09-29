@@ -115,7 +115,7 @@ function promptBase(): string {
 
 /**
  * System prompt del tutor: instrucciones + base de conocimiento. El material de la cátedra no va acá:
- * el modelo lo pide con las tools (ver backend/tools/material.tools.ts).
+ * el modelo lo pide con las tools (ver backend/tools/consultarModelos.tools.ts, buscarEjercicio.tools.ts e inspiracionParaEjercicio.tools.ts).
  */
 export function armarSystemPrompt(): string {
   return promptBase();

@@ -4,7 +4,9 @@ import type { MaterialCatedra } from "@/backend/models/materialCatedra.model";
 import { crearToolsDiagrama } from "@/backend/tools/diagrama.tools";
 import { crearToolsEjercicio } from "@/backend/tools/ejercicio.tools";
 import { crearToolsFdp } from "@/backend/tools/fdp.tools";
-import { crearToolsMaterial } from "@/backend/tools/material.tools";
+import { crearToolBuscarEjercicio } from "@/backend/tools/buscarEjercicio.tools";
+import { crearToolConsultarModelos } from "@/backend/tools/consultarModelos.tools";
+import { crearToolInspiracionParaEjercicio } from "@/backend/tools/inspiracionParaEjercicio.tools";
 
 /** Lo que necesitan las tools para un pedido: el material, dónde guardar ejercicios y en qué conversación. */
 export type ContextoDeTools = {
@@ -19,7 +21,9 @@ export type ContextoDeTools = {
  */
 export function crearToolsTutor({ material, ejercicios, conversacionId }: ContextoDeTools) {
   return {
-    ...crearToolsMaterial(material),
+    ...crearToolConsultarModelos(material),
+    ...crearToolBuscarEjercicio(material),
+    ...crearToolInspiracionParaEjercicio(material),
     ...crearToolsDiagrama(),
     ...crearToolsFdp(),
     ...crearToolsEjercicio(ejercicios, conversacionId),

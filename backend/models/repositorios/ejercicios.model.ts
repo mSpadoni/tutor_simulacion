@@ -1,26 +1,12 @@
 import "server-only";
-import { z } from "zod";
 import { datosOError } from "@/backend/lib/supabase/consultas";
 import { crearClienteServidor, type ClienteSupabase } from "@/backend/lib/supabase/server";
+import { EjercicioSchema, type NuevoEjercicio } from "@/backend/models/dominio/ejercicio";
 import type { Database } from "@/backend/types/database";
 
 type FilaEjercicio = Database["public"]["Tables"]["ejercicios"]["Row"];
 
-/**
- * Un ejercicio generado para el alumno, validado con Zod antes de guardarlo.
- * `payload` es el ejercicio completo: título, enunciado y consignas ("Se pide:").
- */
-export const EjercicioSchema = z.object({
-  tema: z.string().trim().min(1).max(80),
-  dificultad: z.enum(["facil", "media", "dificil"]),
-  payload: z.object({
-    titulo: z.string().trim().min(1).max(120),
-    enunciado: z.string().trim().min(50),
-    sePide: z.array(z.string().trim().min(1)).min(1),
-  }),
-});
-
-export type NuevoEjercicio = z.infer<typeof EjercicioSchema>;
+/** Un ejercicio tal como está en la base, con su payload ya validado (ver models/dominio/ejercicio.ts). */
 export type EjercicioGuardado = Omit<FilaEjercicio, "payload"> & { payload: NuevoEjercicio["payload"] };
 
 /**

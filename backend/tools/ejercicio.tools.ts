@@ -1,7 +1,8 @@
 import "server-only";
 import { tool } from "ai";
 import { z } from "zod";
-import { EjercicioSchema, type EjerciciosModel } from "@/backend/models/repositorios/ejercicios.model";
+import { EjercicioSchema } from "@/backend/models/dominio/ejercicio";
+import type { EjerciciosModel } from "@/backend/models/repositorios/ejercicios.model";
 
 /** Los datos del ejercicio que arma el modelo (validados con Zod antes de guardarlos). */
 export const DatosEjercicioSchema = z.object({

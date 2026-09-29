@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { enunciadoDe, resolucionDe } from "@/backend/models/dominio/ficha";
 import { MaterialCatedra } from "@/backend/models/materialCatedra.model";
+import { buscarEjercicio, crearToolBuscarEjercicio } from "@/backend/tools/buscarEjercicio.tools";
+import { consultarModelos, crearToolConsultarModelos } from "@/backend/tools/consultarModelos.tools";
 import {
-  buscarEjercicio,
-  consultarModelos,
-  crearToolsMaterial,
+  crearToolInspiracionParaEjercicio,
   inspiracionParaEjercicio,
-} from "@/backend/tools/material.tools";
+} from "@/backend/tools/inspiracionParaEjercicio.tools";
 
 // Sin mocks: las tools trabajan sobre el material real de backend/knowledge.
 const material = MaterialCatedra.cargar();
@@ -128,8 +128,12 @@ describe("inspiracionParaEjercicio", () => {
   });
 });
 
-describe("crearToolsMaterial", () => {
-  const tools = crearToolsMaterial(material);
+describe("las tres tools del material", () => {
+  const tools = {
+    ...crearToolConsultarModelos(material),
+    ...crearToolBuscarEjercicio(material),
+    ...crearToolInspiracionParaEjercicio(material),
+  };
   const opciones = { toolCallId: "prueba", messages: [], context: {} };
 
   it("expone las tres tools con descripción", () => {
