@@ -73,6 +73,7 @@ describe("ejerciciosGuardadosEn", () => {
     sePide: ["El tiempo medio de espera en cola"],
     datosAleatorios: [{ sigla: "IA", fdp: "uniforme entre 5 y 15 minutos" }],
     seDecide: "la cantidad de mecánicos",
+    complicaciones: ["N puestos", "arrepentimiento"],
   });
 
   it("toma los ejercicios que la tool guardó bien (id del resultado, título de lo que le pasó el modelo)", () => {

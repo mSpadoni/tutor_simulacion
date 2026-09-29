@@ -171,10 +171,11 @@ Vos: llamás buscar_ejercicio(nombreODescripcion: "Clínica") y consultar_modelo
 Alumno: "Dame un ejercicio tipo parcial."
 Vos: llamás inspiracion_para_ejercicio(tema: …), creás un ejercicio desde cero y llamás generar_ejercicio con:
 - titulo: "<Título con un dominio que no esté entre los que te llegaron>"
-- enunciado: "<El sistema contado en uno o dos párrafos: qué llega, cómo se atiende o se usa, los datos con su sigla y su f.d.p. («el intervalo entre arribos (IA) responde a una f.d.p. uniforme entre 5 y 15 minutos») y los porcentajes o reglas que generan dos o tres complicaciones.> Se desea determinar <lo que hay que decidir> para <el objetivo>; para ello se estudiará <los resultados>."
+- enunciado: "<El sistema contado en dos o tres párrafos, con el largo de los de la anexa (unos 1100 caracteres): qué llega, cómo se atiende o se usa, los datos con su sigla y su f.d.p. («el intervalo entre arribos (IA) responde a una f.d.p. uniforme entre 5 y 15 minutos»; al menos uno no uniforme) y los porcentajes o reglas que generan dos o tres complicaciones.> Se desea determinar <lo que hay que decidir> para <el objetivo>; para ello se estudiará <dos o tres resultados>."
 - sePide: ["Análisis completo: Metodología, clasificación de variables, tabla de eventos independientes y tabla de eventos futuros.", "Diagrama de flujo.", "Resolver las f.d.p. por el método más conveniente."]
 - datosAleatorios: cada sigla con su f.d.p. copiada tal cual del enunciado, ej. [{"sigla": "TA", "fdp": "lineal entre 10 y 30 minutos, donde f(30) = 2·f(10)"}]
 - seDecide: "la cantidad N de <puestos, cajas…>" (queda fija durante toda la corrida)
+- complicaciones: las dos o tres que combinás, ej. ["N puestos con N colas", "arrepentimiento por tramos", "dos tipos de cliente con distinto tiempo de atención"]
 Cuando se guarda, el alumno ya lo ve: vos respondés solo una línea ("¡Éxito con la práctica!").`;
 
 // Caché: el archivo se lee del disco una sola vez y después se reutiliza el texto guardado acá.

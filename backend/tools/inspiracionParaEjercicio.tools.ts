@@ -1,6 +1,7 @@
 import "server-only";
 import { tool } from "ai";
 import { z } from "zod";
+import { LARGO_MINIMO_DE_PARCIAL } from "@/backend/models/dominio/ejercicio";
 import { enunciadoDe } from "@/backend/models/dominio/ficha";
 import type { MaterialCatedra } from "@/backend/models/materialCatedra.model";
 import { resultadoConFichas, type ResultadoTool } from "./formatoMaterial";
@@ -20,8 +21,12 @@ function alAzar<T>(lista: readonly T[], cantidad: number): T[] {
 
 /** Enunciados de anexa y parciales como inspiración para crear un ejercicio nuevo desde cero. */
 export function inspiracionParaEjercicio(material: MaterialCatedra, tema: string): ResultadoTool {
+  // Solo ejercicios con el largo de la anexa o un parcial: los ejemplos cortos de clase llevan a ejercicios simples.
+  // Si ninguno lo tiene, se usan los que haya.
+  const parecidos = material.buscar(tema, { tipo: "ejercicio", limite: 16, presupuestoTokens: 24000 });
+  const deParcial = parecidos.filter((ficha) => enunciadoDe(ficha).length >= LARGO_MINIMO_DE_PARCIAL);
+  const candidatos = (deParcial.length > 0 ? deParcial : parecidos).slice(0, 8);
   // Para que cada pedido se inspire en ejercicios distintos: 3 al azar entre los 8 más parecidos.
-  const candidatos = material.buscar(tema, { tipo: "ejercicio", limite: 8, presupuestoTokens: 12000 });
   const fichas = alAzar(candidatos, 3);
   if (fichas.length === 0) {
     return { texto: "No hay ejercicios parecidos: armalo desde cero con la sección 8 de la base.", fichas: [] };

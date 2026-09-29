@@ -22,10 +22,17 @@ const EJERCICIO: DatosEjercicio = {
   enunciado:
     "Un taller de bicicletas tiene N mecánicos. Las bicicletas llegan con un intervalo (IA) que responde a una f.d.p. " +
     "uniforme entre 5 y 15 minutos, y el 20% de los clientes se va si hay más de 4 esperando. Se desea determinar " +
-    "la cantidad N de mecánicos.",
+    "la cantidad N de mecánicos. Cada mecánico tiene su propia fila y la bicicleta que llega se ubica en la fila con " +
+    "menos bicicletas esperando; si hay empate, elige la de menor número. El arreglo de una bicicleta demora un " +
+    "tiempo que depende del tipo de rotura: el 70% son pinchaduras, que se arreglan en 15 minutos, y el resto son " +
+    "problemas de cambios, que llevan 40 minutos. El dueño quiere saber cuántos mecánicos le conviene contratar: un " +
+    "mecánico ocioso le cuesta el jornal y cada cliente que se va es un arreglo perdido. Para decidirlo se estudiará " +
+    "el porcentaje de tiempo ocioso de cada mecánico, el promedio de espera en la fila y el porcentaje de clientes que " +
+    "se van sin dejar la bicicleta.",
   sePide: ["Análisis completo: metodología, variables, T.E.I. y T.E.F.", "Diagrama de flujo"],
   datosAleatorios: [{ sigla: "IA", fdp: "uniforme entre 5 y 15 minutos" }],
   seDecide: "la cantidad N de mecánicos",
+  complicaciones: ["N puestos", "arrepentimiento"],
 };
 
 /** Un alumno logueado con una conversación propia y sus models. */

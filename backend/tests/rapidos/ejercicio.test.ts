@@ -1,14 +1,28 @@
 import { describe, expect, it } from "vitest";
-import { problemasDelEjercicio, type EjercicioARevisar } from "@/backend/models/dominio/ejercicio";
+import {
+  LARGO_MINIMO_DE_PARCIAL,
+  problemasDelEjercicio,
+  type EjercicioARevisar,
+} from "@/backend/models/dominio/ejercicio";
 
 // Las reglas de la cátedra para un ejercicio nuevo que se pueden comprobar sin interpretar el sistema
 // (sección 8 de la base de conocimiento). Lógica pura.
+
+/** Un párrafo más del sistema, para que el enunciado tenga el largo de uno de la anexa. */
+const RESTO_DEL_SISTEMA =
+  " Cada máquina tiene su propia fila de pedidos y el pedido que llega se ubica en la fila con menos pedidos " +
+  "esperando; si hay empate, elige la de menor número. Los clientes que al llegar encuentran hasta 3 pedidos en esa " +
+  "fila los dejan; si encuentran entre 4 y 6, el 40% se lleva la ropa a otro lavadero, y si encuentran más de 6 se " +
+  "la lleva el 80%. El dueño quiere saber cuántas máquinas le conviene tener: una máquina ociosa le cuesta el alquiler " +
+  "del día y cada cliente que se va es una venta perdida, así que para decidirlo se estudiará el porcentaje de tiempo " +
+  "ocioso de cada máquina, el promedio de espera de los pedidos en la fila y el porcentaje de clientes que se van.";
 
 const BIEN: EjercicioARevisar = {
   enunciado:
     "Un lavadero tiene N máquinas. Los pedidos llegan con un intervalo (IA) que responde a una f.d.p. uniforme entre " +
     "5 y 15 minutos, y el lavado (TL) responde a una f.d.p. lineal entre 20 y 40 minutos, donde f(40) = 2·f(20). " +
-    "Se desea determinar la cantidad N de máquinas.",
+    "Se desea determinar la cantidad N de máquinas." +
+    RESTO_DEL_SISTEMA,
   datosAleatorios: [
     { sigla: "IA", fdp: "uniforme entre 5 y 15 minutos" },
     { sigla: "TL", fdp: "lineal entre 20 y 40 minutos, donde f(40) = 2·f(20)" },
@@ -18,6 +32,13 @@ const BIEN: EjercicioARevisar = {
 describe("problemasDelEjercicio", () => {
   it("un enunciado que cumple las reglas no tiene problemas", () => {
     expect(problemasDelEjercicio(BIEN)).toEqual([]);
+  });
+
+  it("un enunciado corto (de clase, no de parcial) se marca", () => {
+    const corto = { ...BIEN, enunciado: BIEN.enunciado.replace(RESTO_DEL_SISTEMA, "") };
+
+    expect(corto.enunciado.length).toBeLessThan(LARGO_MINIMO_DE_PARCIAL);
+    expect(problemasDelEjercicio(corto)).toEqual([expect.stringContaining("Es un ejercicio de clase, no de parcial")]);
   });
 
   it("una f.d.p. lineal sin la relación que define la recta no se puede resolver", () => {
@@ -80,7 +101,11 @@ describe("problemasDelEjercicio", () => {
 
   it("tiene que decir qué se busca decidir, y tener al menos un dato aleatorio", () => {
     const ejercicio = {
-      enunciado: BIEN.enunciado.replace("Se desea determinar la cantidad N de máquinas.", ""),
+      // Sin la decisión: ni "se desea determinar" ni "le conviene" ni "para decidirlo".
+      enunciado: BIEN.enunciado
+        .replace("Se desea determinar la cantidad N de máquinas.", "")
+        .replace("quiere saber cuántas máquinas le conviene tener", "tiene varias máquinas")
+        .replace("así que para decidirlo se estudiará", "y se estudiará"),
       datosAleatorios: [],
     };
 

@@ -170,6 +170,7 @@ describe("MessageBubble — ejercicio nuevo", () => {
     sePide: ["Diagrama de flujo."],
     datosAleatorios: [{ sigla: "IA", fdp: "uniforme entre 5 y 15 minutos" }],
     seDecide: "la cantidad de máquinas",
+    complicaciones: ["N puestos", "arrepentimiento"],
   };
 
   it("un ejercicio guardado se muestra desde lo guardado; los intentos rechazados no dicen «Guardó»", () => {

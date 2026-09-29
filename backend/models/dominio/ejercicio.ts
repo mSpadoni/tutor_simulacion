@@ -25,6 +25,12 @@ export type DatoAleatorio = { sigla: string; fdp: string };
 /** Lo que se revisa de un ejercicio nuevo antes de guardarlo y mostrarlo. */
 export type EjercicioARevisar = { enunciado: string; datosAleatorios: DatoAleatorio[] };
 
+/**
+ * Largo mínimo de un enunciado de parcial: los de la Guía Anexa tienen una mediana de ~1100 caracteres y los más
+ * cortos rondan los 800; los ejemplos de clase, ~500. Menos que esto es un ejercicio de clase.
+ */
+export const LARGO_MINIMO_DE_PARCIAL = 800;
+
 /** Lo que nunca va en un enunciado: la metodología o el vocabulario de la resolución (lo descubre el alumno). */
 const REVELA_LA_RESOLUCION =
   /evento a evento|\bEaE\b|intervalos? constantes?|Δt|\bTPLL\b|\bTPS\b|\bNS\b|\bTEF\b|\bTEI\b/i;
@@ -82,6 +88,12 @@ export function problemasDelEjercicio({ enunciado, datosAleatorios }: EjercicioA
         `La f.d.p. de ${sigla} es exponencial pero no dice su media (o su λ): sin eso no se puede resolver.`
       );
     }
+  }
+  if (enunciado.length < LARGO_MINIMO_DE_PARCIAL) {
+    problemas.push(
+      `El enunciado tiene ${enunciado.length} caracteres: los de la Guía Anexa rondan los 1100 (los más cortos, ` +
+        `${LARGO_MINIMO_DE_PARCIAL}). Es un ejercicio de clase, no de parcial: combiná más complicaciones y datos.`
+    );
   }
   if (!/determinar|decidir|conviene|conveniente/i.test(enunciado)) {
     problemas.push(

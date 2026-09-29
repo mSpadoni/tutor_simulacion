@@ -37,6 +37,14 @@ export const DatosEjercicioSchema = z.object({
     .min(5)
     .max(200)
     .describe("Qué se busca decidir (la variable de control), ej: 'la cantidad N de cajas'. Queda fija en la corrida."),
+  complicaciones: z
+    .array(z.string().trim().min(3).max(120))
+    .min(2, "Un ejercicio de parcial combina al menos dos complicaciones.")
+    .max(4)
+    .describe(
+      "Las complicaciones que combinás (dos o tres), ej: ['N puestos con N colas', 'arrepentimiento por tramos', " +
+        "'dos tipos de cliente con distinto tiempo de atención']"
+    ),
 });
 
 export type DatosEjercicio = z.infer<typeof DatosEjercicioSchema>;

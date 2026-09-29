@@ -248,7 +248,11 @@ Al corregir, el bot debe señalar en qué paso específico está el error (no so
 - **Qué se busca decidir** (las variables de control, sin llamarlas así) y **qué se quiere medir**: "Se desea determinar la cantidad N de …, para ello se estudiará el porcentaje de … y el promedio de …".
 - La **consigna**, como en la guía y los parciales: "Se pide: a) Análisis completo: Metodología, clasificación de variables, tabla de eventos independientes, tabla de eventos futuros. b) Diagrama de flujo. c) Resolver las f.d.p. por el método más conveniente."
 
-**Complejidad de parcial.** Dos o tres complicaciones combinadas (no un sistema de cola simple), como en los parciales: por ejemplo, N puestos + arrepentimiento, o stock + reposición anticipada + rechazo.
+**Complejidad de parcial.** Un ejercicio de la anexa o de un parcial no es un sistema de cola simple. Tiene:
+- **Dos o tres complicaciones combinadas**, por ejemplo: N puestos con N colas + arrepentimiento por tramos; tiempo comprometido + dos tipos de cliente con distinto tiempo de atención; prioridades + un puesto que atiende las dos filas; stock + reposición anticipada + rechazo del pedido; puestos que se rompen o hacen una pausa cada cierto tiempo.
+- **Varios datos**, y al menos uno con una f.d.p. para resolver en el punto c) que no sea uniforme (lineal con su recta, una f(x) explícita, una empírica por porcentajes).
+- **Una decisión** (lo que se busca determinar) y **dos o tres resultados** para medirla.
+- **El largo de la anexa**: los enunciados de la Guía Anexa tienen alrededor de 1100 caracteres (los más cortos, unos 800) y los de parciales, más. Un enunciado de 3 o 4 líneas es un ejercicio de clase, no de parcial.
 
 **Coherencia del sistema** (revisalo antes de darlo; un enunciado incoherente no se puede resolver):
 - **La estructura queda fija durante toda la corrida.** La cantidad de puestos, la capacidad o el tamaño del stock no cambian a mitad de la simulación ("si hay más de 4, se abre otro puesto" no va). Lo que se busca decidir (N puestos, capacidad, cantidad a pedir) es una variable de control: se fija al empezar la corrida y el enunciado pide encontrar el valor conveniente.
