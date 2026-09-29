@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { armarSystemPrompt } from "@/backend/lib/prompts/systemPrompt";
-import { AnalisisSchema, problemasDelAnalisis, type Analisis } from "@/backend/models/dominio/analisis";
+import {
+  AnalisisSchema,
+  problemasDelAnalisis,
+  problemasEntreEnunciadoYAnalisis,
+  type Analisis,
+} from "@/backend/models/dominio/analisis";
 import {
   crearToolsAnalisis,
   type AnalisisVerificado,
@@ -218,7 +223,8 @@ describe("verificar_analisis: tope de rechazos por respuesta", () => {
   const opciones = { toolCallId: "t", messages: [], context: {} };
   /** Una llamada a la tool como la hace el SDK (acá execute devuelve el resultado, no un stream). */
   const verificar = async (herramienta: ReturnType<typeof crearToolsAnalisis>["verificar_analisis"]) =>
-    (await herramienta.execute!(conProblemas, opciones)) as AnalisisVerificado;
+    (await herramienta.execute!({ ...conProblemas, enunciado: ENUNCIADO }, opciones)) as AnalisisVerificado;
+  const ENUNCIADO = "Un banco con un cajero atiende clientes que llegan según una f.d.p. conocida.";
   const conProblemas = con({ tei: [{ evento: "LLEGADA", efnc: "LLEGADA", efc: [] }] });
 
   it(`rechaza hasta ${RECHAZOS_POR_RESPUESTA} veces; después lo muestra igual, con los problemas como avisos`, async () => {
@@ -275,5 +281,39 @@ describe("problemasDelAnalisis — N puestos", () => {
 
     expect(problemasDelAnalisis(conTps)).toEqual([]);
     expect(problemasDelAnalisis(conTc)).toEqual([]);
+  });
+});
+
+describe("problemasEntreEnunciadoYAnalisis (lo que el enunciado dice textualmente)", () => {
+  it("si el enunciado pide determinar algo, el análisis tiene que tener variable de control", () => {
+    const enunciado = "Un lavadero con bocas de lavado. Se desea determinar la cantidad de bocas.";
+
+    expect(problemasEntreEnunciadoYAnalisis(enunciado, CORRECTO)).toEqual([
+      expect.stringContaining("no tiene variable de control"),
+    ]);
+  });
+
+  it("si cada puesto tiene su propia fila, el estado va indexado por puesto", () => {
+    const enunciado = "Hay N bocas de lavado, cada una con su propia fila.";
+    const conIndice = con({
+      variables: { ...CORRECTO.variables, estado: [{ nombre: "NS(i)", descripcion: "fila i" }] },
+    });
+
+    expect(problemasEntreEnunciadoYAnalisis(enunciado, CORRECTO)).toEqual([
+      expect.stringContaining("el estado no está indexado"),
+    ]);
+    expect(problemasEntreEnunciadoYAnalisis(enunciado, conIndice)).toEqual([]);
+  });
+
+  it("un enunciado sin decisión ni filas propias no agrega problemas", () => {
+    expect(problemasEntreEnunciadoYAnalisis("Un banco con un cajero y una cola única.", CORRECTO)).toEqual([]);
+  });
+
+  it("la regla de N puestos reconoce los sinónimos de puesto (bocas de lavado, surtidores…)", () => {
+    const conBocas = con({
+      variables: { ...CORRECTO.variables, control: [{ nombre: "N", descripcion: "cantidad de bocas de lavado" }] },
+    });
+
+    expect(problemasDelAnalisis(conBocas)).toEqual([expect.stringContaining("nada está indexado por puesto")]);
   });
 });

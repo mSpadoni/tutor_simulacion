@@ -114,7 +114,12 @@ export class ChatController {
     return this.agente.responder({
       modelo,
       mensajes: [...historial, mensaje],
-      tools: crearToolsTutor({ material: this.material(), ejercicios: this.ejercicios(), conversacionId }),
+      tools: crearToolsTutor({
+        material: this.material(),
+        ejercicios: this.ejercicios(),
+        conversacionId,
+        mensajeDelAlumno: pedido.texto,
+      }),
       alTerminar: (respuesta) =>
         conversaciones.agregarMensajes(conversacionId, [respuesta]).catch((error: unknown) => {
           console.error("No se pudo guardar la respuesta del tutor:", error);

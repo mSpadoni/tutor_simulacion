@@ -6,6 +6,7 @@ import { ConversacionesModel } from "@/backend/models/repositorios/conversacione
 import { EjerciciosModel } from "@/backend/models/repositorios/ejercicios.model";
 import {
   crearToolsEjercicio,
+  ENUNCIADO_DEL_ALUMNO,
   guardarEjercicio,
   RECHAZOS_POR_RESPUESTA,
   resumenDelEjercicio,
@@ -101,6 +102,27 @@ describe("guardarEjercicio (la tool generar_ejercicio)", () => {
 
     expect(intentos.map((intento) => intento.ok)).toEqual([...Array(RECHAZOS_POR_RESPUESTA).fill(false), true]);
     expect(intentos.at(-1)).toMatchObject({ avisos: [expect.stringContaining("El enunciado nombra la variable IA")] });
+    expect(await ejercicios.listarRecientes()).toHaveLength(1);
+  });
+
+  it("no guarda como ejercicio nuevo el enunciado que el alumno pegó para resolver, y no guarda dos por respuesta", async () => {
+    const { ejercicios, conversacionId } = await alumnoConConversacion();
+    const opciones = { toolCallId: "t", messages: [], context: {} };
+    const delAlumno = crearToolsEjercicio(
+      ejercicios,
+      conversacionId,
+      `Resolveme este ejercicio: ${EJERCICIO.enunciado}`
+    ).generar_ejercicio;
+    const nuevo = crearToolsEjercicio(ejercicios, conversacionId, "Dame un ejercicio tipo parcial").generar_ejercicio;
+
+    expect(await delAlumno.execute!(EJERCICIO, opciones)).toEqual({ ok: false, error: ENUNCIADO_DEL_ALUMNO });
+    expect(await ejercicios.listarRecientes()).toEqual([]);
+
+    expect(await nuevo.execute!(EJERCICIO, opciones)).toMatchObject({ ok: true });
+    expect(await nuevo.execute!(EJERCICIO, opciones)).toMatchObject({
+      ok: false,
+      error: expect.stringContaining("Ya guardaste"),
+    });
     expect(await ejercicios.listarRecientes()).toHaveLength(1);
   });
 

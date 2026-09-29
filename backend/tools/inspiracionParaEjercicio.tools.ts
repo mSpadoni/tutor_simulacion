@@ -46,8 +46,9 @@ export function crearToolInspiracionParaEjercicio(material: MaterialCatedra) {
   return {
     inspiracion_para_ejercicio: tool({
       description:
-        "Trae enunciados de la Guía Anexa y parciales como inspiración para crear un ejercicio NUEVO. Usala cuando " +
-        "el alumno pide un ejercicio para practicar. No los copies: creá uno desde cero.",
+        "Trae enunciados de la Guía Anexa y parciales como inspiración para crear un ejercicio NUEVO. Usala SOLO " +
+        "cuando el alumno te pide que le des un ejercicio para practicar. NUNCA si el alumno te pasa un enunciado para " +
+        "resolver o corregir. No los copies: creá uno desde cero.",
       inputSchema: z.object({
         tema: z.string().min(2).describe("Tipo de sistema o tema pedido, ej: 'colas con arrepentimiento', 'stock'"),
       }),

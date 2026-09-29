@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { enunciadoDe, resolucionDe } from "@/backend/models/dominio/ficha";
 import { MaterialCatedra } from "@/backend/models/materialCatedra.model";
 import { buscarEjercicio, crearToolBuscarEjercicio } from "@/backend/tools/buscarEjercicio.tools";
+import { buscarResueltosParecidos } from "@/backend/tools/resueltosParecidos.tools";
 import { consultarModelos, crearToolConsultarModelos } from "@/backend/tools/consultarModelos.tools";
 import {
   crearToolInspiracionParaEjercicio,
@@ -125,6 +126,38 @@ describe("buscarEjercicio", () => {
 
     expect(fichas).toEqual([]);
     expect(texto).toContain("Pedile al alumno el enunciado");
+  });
+});
+
+describe("buscarResueltosParecidos", () => {
+  // Un ejercicio que no es de la cátedra: N puestos con su propia cola y arrepentimiento.
+  const enunciado =
+    "Un lavadero de autos tiene varias bocas de lavado, cada una con su propia fila. Los autos llegan con un intervalo " +
+    "que responde a una f.d.p. uniforme entre 3 y 9 minutos y se ubican en la fila con menos autos. Si la fila más " +
+    "corta tiene más de 5 autos, el 40% se va. Se desea determinar la cantidad de bocas de lavado.";
+
+  it("trae ejercicios de la cátedra con su resolución, marcados como parecidos (no el mismo), y los modelos", () => {
+    const { texto, fichas } = buscarResueltosParecidos(material, enunciado);
+    const ejercicios = fichas.filter((titulo) => porTitulo.get(titulo)?.tipo === "ejercicio");
+
+    expect(ejercicios.length).toBeGreaterThan(0);
+    expect(ejercicios.every((titulo) => resolucionDe(porTitulo.get(titulo)!) !== "")).toBe(true);
+    expect(texto).toContain("PARECIDOS al tuyo (no son el mismo ejercicio)");
+    expect(texto).toContain("#### Resolución de la cátedra");
+    expect(texto).toContain("## Modelos de la cátedra de este tipo de sistema");
+  });
+
+  it("busca por el tipo de sistema que dedujo el modelo, no por las palabras del dominio", () => {
+    const { fichas } = buscarResueltosParecidos(material, enunciado, "N puestos con N colas, arrepentimiento");
+
+    expect(fichas).toContain("N puestos con N colas (cada puesto tiene su fila)");
+    expect(fichas).toContain("Arrepentimiento con varios tramos (un único R)");
+  });
+
+  it("los ejercicios van antes que los modelos, y cada uno con su enunciado antes de su resolución", () => {
+    const { texto } = buscarResueltosParecidos(material, enunciado);
+
+    expect(texto.indexOf("#### Resolución de la cátedra")).toBeLessThan(texto.indexOf("## Modelos de la cátedra"));
   });
 });
 

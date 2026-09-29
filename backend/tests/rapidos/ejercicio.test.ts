@@ -1,6 +1,7 @@
 import { ANALISIS_DE_PRUEBA } from "../helpers/analisisDePrueba";
 import { describe, expect, it } from "vitest";
 import {
+  esElEnunciadoDelAlumno,
   LARGO_MINIMO_DE_PARCIAL,
   problemasDelAnalisisDelEjercicio,
   problemasDelEjercicio,
@@ -169,5 +170,28 @@ describe("problemasDelAnalisisDelEjercicio (el análisis que el modelo arma de s
     expect(problemasDelAnalisisDelEjercicio({ datosAleatorios, seDecide, analisis })).toEqual([
       expect.stringContaining("no tiene variable de control"),
     ]);
+  });
+});
+
+describe("esElEnunciadoDelAlumno (no guardar como nuevo el enunciado que el alumno pegó para resolver)", () => {
+  it("el mismo enunciado, pegado dentro del mensaje del alumno, es el del alumno", () => {
+    expect(esElEnunciadoDelAlumno(BIEN.enunciado, `Resolveme este ejercicio: ${BIEN.enunciado}`)).toBe(true);
+  });
+
+  it("aunque el modelo lo haya retocado un poco, sigue siendo el del alumno", () => {
+    const retocado = BIEN.enunciado.replace(
+      "Un lavadero tiene N máquinas.",
+      "Un lavadero industrial tiene N máquinas."
+    );
+    expect(esElEnunciadoDelAlumno(retocado, `Resolveme: ${BIEN.enunciado}`)).toBe(true);
+  });
+
+  it("un pedido corto («dame un ejercicio de colas») o un enunciado distinto no lo es", () => {
+    expect(esElEnunciadoDelAlumno(BIEN.enunciado, "Dame un ejercicio nuevo de colas con arrepentimiento")).toBe(false);
+    const otro =
+      "Una balsa cruza un río con camiones que llegan según una f.d.p. conocida. Cada camión espera que la balsa " +
+      "vuelva si está del otro lado. Se desea determinar la capacidad de la balsa para que la espera sea razonable, " +
+      "estudiando el promedio de espera y el porcentaje de viajes vacíos que hace la balsa en el día.";
+    expect(esElEnunciadoDelAlumno(BIEN.enunciado, `Resolveme este: ${otro}`)).toBe(false);
   });
 });

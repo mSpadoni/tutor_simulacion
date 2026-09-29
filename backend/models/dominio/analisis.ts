@@ -37,7 +37,13 @@ export const AnalisisSchema = z.object({
     .array(
       z.object({
         evento: Nombre,
-        efnc: Nombre.nullable().describe("E.F.NO C.: el mismo evento de la fila, o null si no genera ninguno"),
+        // "---", "-" o vacío (como se escribe en la tabla) también es "no genera ninguno".
+        efnc: z
+          .preprocess(
+            (valor) => (typeof valor === "string" && /^\s*-*\s*$/.test(valor) ? null : valor),
+            Nombre.nullable()
+          )
+          .describe("E.F.NO C.: el mismo evento de la fila, o null si no genera ninguno"),
         efc: z
           .array(
             z.object({
@@ -74,6 +80,10 @@ function base(nombre: string): string {
 function identificadores(condicion: string): string[] {
   return [...clave(condicion).matchAll(/[A-Z_][A-Z0-9_]*/g)].map((m) => m[0]);
 }
+
+/** Palabras con las que un enunciado nombra a los puestos de atención (en mayúsculas y sin tildes, como `clave`). */
+const PUESTOS =
+  /PUESTO|SERVIDOR|CAJA|MAQUINA|MECANICO|EMPLEADO|CAJERO|BOX|CONSULTORIO|BOCA|SURTIDOR|VENTANILLA|CABINA|MESA|MOSTRADOR|OPERARIO|MEDICO|TECNICO|ESTACION|DARSENA|MUELLE|LINEA|CANAL/;
 
 const CATEGORIAS = ["datos", "control", "resultado", "estado"] as const;
 const NOMBRE_DE_CATEGORIA = { datos: "un dato", control: "de control", resultado: "de resultado", estado: "de estado" };
@@ -122,9 +132,7 @@ export function problemasDelAnalisis(analisis: Analisis): string[] {
   }
 
   // --- Con N puestos (la cantidad es de control), lo de cada puesto va indexado: TPS(i), NS(i) o TC(i).
-  const hayNPuestos = variables.control.some((variable) =>
-    /puesto|servidor|caja|maquina|mecanico|empleado|cajero|box|consultorio/i.test(clave(variable.descripcion))
-  );
+  const hayNPuestos = variables.control.some((variable) => PUESTOS.test(clave(variable.descripcion)));
   const hayIndexadas = [...variables.estado.map((v) => v.nombre), ...eventos.map((e) => e.tef)].some((nombre) =>
     /\(\s*\w+\s*\)/.test(nombre)
   );
@@ -234,5 +242,29 @@ export function problemasDelAnalisis(analisis: Analisis): string[] {
     }
   }
 
+  return problemas;
+}
+
+/**
+ * Lo que el análisis no refleja del enunciado que analiza: lo que el enunciado dice textualmente y el análisis
+ * no puede ignorar. No interpreta el sistema; solo cruza dos cosas que se leen en el texto.
+ */
+export function problemasEntreEnunciadoYAnalisis(enunciado: string, analisis: Analisis): string[] {
+  const problemas: string[] = [];
+  const texto = clave(enunciado);
+  if (/DETERMINAR|DECIDIR|CONVIENE|CONVENIENTE/.test(texto) && analisis.variables.control.length === 0) {
+    problemas.push(
+      "El enunciado pide determinar algo (lo que se decide), pero el análisis no tiene variable de control: lo que " +
+        "se busca determinar es una variable de control."
+    );
+  }
+  const cadaUnoConSuFila = /(CADA|UNA|UNO)[^.]{0,40}(SU PROPIA|SU|CON SU) (FILA|COLA)|(FILA|COLA) PROPIA/.test(texto);
+  const estadoIndexado = analisis.variables.estado.some((variable) => /\(\s*\w+\s*\)/.test(variable.nombre));
+  if (cadaUnoConSuFila && !estadoIndexado) {
+    problemas.push(
+      "El enunciado dice que cada puesto tiene su propia fila, pero el estado no está indexado: la cantidad en cada " +
+        "fila va por puesto, NS(i)."
+    );
+  }
   return problemas;
 }

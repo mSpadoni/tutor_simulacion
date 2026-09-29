@@ -118,7 +118,7 @@ describe("MessageBubble — análisis verificado", () => {
     type: "tool-verificar_analisis",
     toolCallId: "t1",
     state: "output-available",
-    input: analisis,
+    input: { ...analisis, enunciado: "Un banco con un cajero atiende clientes que llegan según una f.d.p. conocida." },
     output: { ok, problemas: ok ? [] : ["Falta la fila del evento SALIDA en la T.E.I."], analisis },
   });
 

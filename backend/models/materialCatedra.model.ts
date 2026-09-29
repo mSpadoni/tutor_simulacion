@@ -9,7 +9,13 @@ const DIRECTORIO_CONOCIMIENTO = path.join(process.cwd(), "backend", "knowledge")
 const ARCHIVO_BASE = "base-conocimiento-simulacion.md";
 
 /** Opciones de buscar(). El `?` las hace opcionales: si no se pasan, se usan los valores por defecto. */
-type OpcionesBusqueda = { limite?: number; presupuestoTokens?: number; tipo?: TipoDeFicha };
+type OpcionesBusqueda = {
+  limite?: number;
+  presupuestoTokens?: number;
+  tipo?: TipoDeFicha;
+  /** Además del tipo, qué fichas se aceptan (ej. solo las que tienen resolución). */
+  filtro?: (ficha: Ficha) => boolean;
+};
 
 /**
  * El material de la cátedra (ejercicios resueltos, guía de TP, parciales), leído de backend/knowledge.
@@ -67,9 +73,10 @@ export class MaterialCatedra {
    * `{ limite = 3, presupuestoTokens = 6000 }: OpcionesBusqueda = {}`: el segundo parámetro es un objeto opcional
    * que se desestructura en el momento, con valores por defecto para cada propiedad. Ej: buscar("colas", { limite: 5 }).
    */
-  buscar(consulta: string, { limite = 3, presupuestoTokens = 6000, tipo }: OpcionesBusqueda = {}): Ficha[] {
+  buscar(consulta: string, { limite = 3, presupuestoTokens = 6000, tipo, filtro }: OpcionesBusqueda = {}): Ficha[] {
     const candidatas: Ficha[] = [];
-    const esDelTipo = (ficha: Ficha) => tipo === undefined || ficha.tipo === tipo;
+    const esDelTipo = (ficha: Ficha) =>
+      (tipo === undefined || ficha.tipo === tipo) && (filtro === undefined || filtro(ficha));
 
     const deLaGuia = this.ejercicioDeLaGuiaNombrado(consulta);
     if (deLaGuia && esDelTipo(deLaGuia)) candidatas.push(deLaGuia);

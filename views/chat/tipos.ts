@@ -57,6 +57,10 @@ export const TEXTOS_DE_HERRAMIENTAS: Record<NombreDeHerramienta, { usando: strin
     usando: "Buscando ejercicios de la cátedra para inspirarse…",
     usada: "Se inspiró en ejercicios de la cátedra",
   },
+  buscar_resueltos_parecidos: {
+    usando: "Buscando ejercicios resueltos parecidos en el material de la cátedra…",
+    usada: "Comparó con ejercicios resueltos parecidos de la cátedra",
+  },
   generar_diagrama_flujo: {
     usando: "Dibujando el diagrama de flujo…",
     usada: "Dibujó el diagrama de flujo",

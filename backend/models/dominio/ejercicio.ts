@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { problemasDelAnalisis, type Analisis } from "./analisis";
+import { problemasDelAnalisis, problemasEntreEnunciadoYAnalisis, type Analisis } from "./analisis";
+import { normalizar } from "./buscadorBM25";
 
 // Qué es un ejercicio generado para el alumno. Lo usan la tool generar_ejercicio (lo que arma el LLM tiene que
 // cumplirlo) y el repositorio de ejercicios (lo valida al guardarlo y al leerlo de la base).
@@ -125,15 +126,23 @@ export function problemasDelEjercicio({ enunciado, datosAleatorios }: EjercicioA
  * decidir), está mal planteado: el modelo lo tiene que rehacer antes de dárselo al alumno.
  */
 export function problemasDelAnalisisDelEjercicio({
+  enunciado = "",
   datosAleatorios,
   seDecide,
   analisis,
 }: {
+  enunciado?: string;
   datosAleatorios: DatoAleatorio[];
   seDecide: string;
   analisis: Analisis;
 }): string[] {
-  const problemas = problemasDelAnalisis(analisis).map((problema) => `En el análisis de tu ejercicio: ${problema}`);
+  // Lo de la variable de control se revisa abajo con lo que se decide: acá quedan las demás.
+  const delEnunciado = enunciado
+    ? problemasEntreEnunciadoYAnalisis(enunciado, analisis).filter((problema) => !/variable de control/.test(problema))
+    : [];
+  const problemas = [...problemasDelAnalisis(analisis), ...delEnunciado].map(
+    (problema) => `En el análisis de tu ejercicio: ${problema}`
+  );
   const datosDelAnalisis = new Set(analisis.variables.datos.map((dato) => dato.nombre.trim().toUpperCase()));
   for (const { sigla } of datosAleatorios) {
     if (!datosDelAnalisis.has(sigla.trim().toUpperCase())) {
@@ -147,4 +156,16 @@ export function problemasDelAnalisisDelEjercicio({
     );
   }
   return problemas;
+}
+
+/**
+ * ¿El enunciado que el modelo quiere guardar como ejercicio nuevo es el que el alumno acaba de pegar? Si casi todas
+ * sus palabras están en el mensaje del alumno, lo trajo el alumno para resolverlo o corregirlo: no es uno nuevo.
+ */
+export function esElEnunciadoDelAlumno(enunciado: string, mensajeDelAlumno: string): boolean {
+  const delAlumno = new Set(normalizar(mensajeDelAlumno));
+  const palabras = normalizar(enunciado);
+  if (delAlumno.size < 20 || palabras.length === 0) return false;
+  const enComun = palabras.filter((palabra) => delAlumno.has(palabra)).length;
+  return enComun / palabras.length >= 0.6;
 }

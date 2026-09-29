@@ -1,6 +1,12 @@
 import "server-only";
 import { tool } from "ai";
-import { AnalisisSchema, problemasDelAnalisis, type Analisis } from "@/backend/models/dominio/analisis";
+import { z } from "zod";
+import {
+  AnalisisSchema,
+  problemasDelAnalisis,
+  problemasEntreEnunciadoYAnalisis,
+  type Analisis,
+} from "@/backend/models/dominio/analisis";
 
 // verificar_analisis: el modelo arma el análisis previo razonando sobre el enunciado y, antes de mostrarlo, lo
 // verifica contra las reglas de la cátedra (como verificar_fdp con las f.d.p.). Si pasa, la vista lo muestra como
@@ -18,14 +24,25 @@ export const RECHAZOS_POR_RESPUESTA = 2;
  */
 export type AnalisisVerificado = { ok: boolean; problemas: string[]; analisis: Analisis };
 
-/** Verifica el análisis contra las reglas de la cátedra. Con `rechazar: false`, lo acepta igual con avisos. */
+/**
+ * Verifica el análisis contra las reglas de la cátedra y, si viene el enunciado, contra lo que dice el enunciado.
+ * Con `rechazar: false`, lo acepta igual con avisos.
+ */
 export function verificarAnalisis(
   analisis: Analisis,
-  { rechazar = true }: { rechazar?: boolean } = {}
+  { rechazar = true, enunciado = "" }: { rechazar?: boolean; enunciado?: string } = {}
 ): AnalisisVerificado {
-  const problemas = problemasDelAnalisis(analisis);
+  const problemas = [
+    ...problemasDelAnalisis(analisis),
+    ...(enunciado ? problemasEntreEnunciadoYAnalisis(enunciado, analisis) : []),
+  ];
   return { ok: problemas.length === 0 || !rechazar, problemas, analisis };
 }
+
+/** Lo que recibe la tool: el análisis y el enunciado que se analiza. */
+const EntradaSchema = AnalisisSchema.extend({
+  enunciado: z.string().min(30).describe("El enunciado completo del ejercicio que estás analizando"),
+});
 
 /** Lo que lee el modelo del resultado: si se muestra, que no repita las tablas; si no, qué corregir. */
 export function resumenDelAnalisis(resultado: AnalisisVerificado): string {
@@ -58,9 +75,9 @@ export function crearToolsAnalisis() {
         "Verifica el análisis previo de un ejercicio (metodología, variables, eventos, T.E.I. y T.E.F.) contra las " +
         "reglas de la cátedra y, si las cumple, se lo muestra al alumno como tablas. Usala SIEMPRE al resolver, antes " +
         "de mostrar el análisis: si devuelve problemas, corregilo y volvé a llamarla.",
-      inputSchema: AnalisisSchema,
-      execute: async (analisis) => {
-        const resultado = verificarAnalisis(analisis, { rechazar: rechazos < RECHAZOS_POR_RESPUESTA });
+      inputSchema: EntradaSchema,
+      execute: async ({ enunciado, ...analisis }) => {
+        const resultado = verificarAnalisis(analisis, { rechazar: rechazos < RECHAZOS_POR_RESPUESTA, enunciado });
         if (!resultado.ok) rechazos += 1;
         return resultado;
       },
