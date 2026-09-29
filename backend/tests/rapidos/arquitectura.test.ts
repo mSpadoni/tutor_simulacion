@@ -42,6 +42,20 @@ describe("reglas de dependencia (ESLint)", () => {
     ).toEqual([expect.stringContaining("El backend no depende de las rutas")]);
   });
 
+  it("los casos de uso, datos y tutor no manejan HTTP; la infraestructura (lib/) sí puede", async () => {
+    for (const archivo of [
+      "backend/controllers/ejemplo.ts",
+      "backend/models/repositorios/ejemplo.ts",
+      "backend/tutor/ejemplo.ts",
+      "backend/tools/ejemplo.ts",
+    ]) {
+      expect(await erroresDeDependencia('import { NextResponse } from "next/server";', archivo), archivo).toEqual([
+        expect.stringContaining("Los casos de uso no manejan HTTP"),
+      ]);
+    }
+    expect(await erroresDeDependencia('import { cookies } from "next/headers";', "backend/lib/ejemplo.ts")).toEqual([]);
+  });
+
   it("las rutas pasan por un controller: no usan Supabase ni los repositorios directamente", async () => {
     const archivo = "app/ejemplo/page.tsx";
 

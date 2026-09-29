@@ -44,6 +44,20 @@ const reglasDeDependencia = [
     rules: prohibir(backendNoDependeDeAppNiViews),
   },
   {
+    // Casos de uso, datos, tutor y errores: no saben de HTTP ni de Next. La respuesta HTTP la arman las rutas.
+    files: [
+      "backend/controllers/**/*.ts",
+      "backend/models/**/*.ts",
+      "backend/tutor/**/*.ts",
+      "backend/tools/**/*.ts",
+      "backend/errores.ts",
+    ],
+    rules: prohibir(backendNoDependeDeAppNiViews, {
+      group: ["next/server", "next/headers", "next/navigation"],
+      message: "Los casos de uso no manejan HTTP: devuelven datos o tiran un ErrorDeAplicacion y la ruta responde.",
+    }),
+  },
+  {
     // Rutas: delegan en controllers; no tocan Supabase ni los repositorios directamente.
     files: ["app/**/*.{ts,tsx}"],
     rules: prohibir({
