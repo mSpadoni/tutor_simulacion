@@ -1,17 +1,16 @@
 import "server-only";
 import { envKroki } from "@/backend/lib/env";
+import { problemaDeMermaid } from "@/backend/models/dominio/mermaid";
 // Cliente de Kroki (https://kroki.io): recibe el código Mermaid de un diagrama y devuelve la imagen en SVG.
 // Es la API externa del tutor. No necesita API key. Se puede cambiar el servidor con KROKI_URL (ej. uno propio).
 
-/** Largo máximo del código Mermaid: un diagrama de la materia entra de sobra; más es un error del modelo. */
-export const MAX_CARACTERES_MERMAID = 6000;
 /** Tamaño máximo del SVG que se acepta (en caracteres): evita guardar o mostrar respuestas desmedidas. */
 export const MAX_CARACTERES_SVG = 600_000;
 
 /** Por qué no se pudo generar el diagrama (el modelo lo usa para decidir si corrige y reintenta). */
 export type MotivoError =
   | "codigo_invalido" // no es Mermaid de un diagrama de flujo, o está vacío (no se llama a Kroki)
-  | "demasiado_largo" // supera MAX_CARACTERES_MERMAID (no se llama a Kroki)
+  | "demasiado_largo" // supera MAX_CARACTERES_MERMAID de models/dominio/mermaid.ts (no se llama a Kroki)
   | "sintaxis" // Kroki respondió 400: el Mermaid tiene un error; `detalle` dice dónde
   | "tiempo" // Kroki no respondió a tiempo
   | "limite" // Kroki respondió 429: demasiados pedidos
@@ -30,29 +29,11 @@ export type OpcionesKroki = {
   reintentos?: number;
   /** Máximo que se espera por un Retry-After de un 429 (ms); si piden más, no se reintenta. */
   maxEsperaReintentoMs?: number;
+  /** Cuánto esperar antes de reintentar un 429 que no dice cuánto (sin Retry-After), en ms. */
+  esperaSinRetryAfterMs?: number;
 };
 
 const esperar = (ms: number) => new Promise((listo) => setTimeout(listo, ms));
-
-/** Valida el Mermaid antes de llamar a Kroki: vacío, largo o que no sea un diagrama de flujo no viajan. */
-export function validarMermaid(codigo: string): ResultadoKroki | null {
-  const limpio = codigo.trim();
-  if (!/^(flowchart|graph)\s+(TD|TB|LR|RL|BT)\b/.test(limpio)) {
-    return {
-      ok: false,
-      motivo: "codigo_invalido",
-      detalle: 'El código tiene que ser un diagrama de flujo de Mermaid: empezar con "flowchart TD".',
-    };
-  }
-  if (limpio.length > MAX_CARACTERES_MERMAID) {
-    return {
-      ok: false,
-      motivo: "demasiado_largo",
-      detalle: `El diagrama tiene ${limpio.length} caracteres; el máximo es ${MAX_CARACTERES_MERMAID}. Simplificalo.`,
-    };
-  }
-  return null;
-}
 
 /**
  * Cliente de Kroki: se configura una vez (servidor, timeout, reintentos) y renderiza muchos diagramas.
@@ -64,12 +45,20 @@ export class ClienteKroki {
   private readonly timeoutMs: number;
   private readonly reintentos: number;
   private readonly maxEsperaReintentoMs: number;
+  private readonly esperaSinRetryAfterMs: number;
 
-  constructor({ endpoint, timeoutMs = 8000, reintentos = 1, maxEsperaReintentoMs = 3000 }: OpcionesKroki = {}) {
+  constructor({
+    endpoint,
+    timeoutMs = 8000,
+    reintentos = 1,
+    maxEsperaReintentoMs = 3000,
+    esperaSinRetryAfterMs = 1000,
+  }: OpcionesKroki = {}) {
     this.endpointConfigurado = endpoint;
     this.timeoutMs = timeoutMs;
     this.reintentos = reintentos;
     this.maxEsperaReintentoMs = maxEsperaReintentoMs;
+    this.esperaSinRetryAfterMs = esperaSinRetryAfterMs;
   }
 
   /** El endpoint configurado o el de KROKI_URL. Se lee al usarlo (no al crear el cliente), como el resto de env. */
@@ -79,10 +68,11 @@ export class ClienteKroki {
 
   /** Pide a Kroki el SVG de un diagrama Mermaid, con timeout, reintentos y validación de la respuesta. */
   async renderizar(codigo: string): Promise<ResultadoKroki> {
-    const { endpoint, timeoutMs, reintentos, maxEsperaReintentoMs } = this;
+    const { endpoint, timeoutMs, reintentos, maxEsperaReintentoMs, esperaSinRetryAfterMs } = this;
 
-    const invalido = validarMermaid(codigo);
-    if (invalido) return invalido;
+    // Lo que no es un diagrama aceptable no viaja a Kroki (ver models/dominio/mermaid.ts).
+    const problema = problemaDeMermaid(codigo);
+    if (problema) return { ok: false, ...problema };
 
     let ultimoError: ResultadoKroki = { ok: false, motivo: "servicio", detalle: "Kroki no respondió." };
     for (let intento = 0; intento <= reintentos; intento++) {
@@ -113,7 +103,7 @@ export class ClienteKroki {
       if (respuesta.status === 429) {
         const segundos = Number(respuesta.headers.get("retry-after"));
         ultimoError = { ok: false, motivo: "limite", detalle: "Kroki está recibiendo demasiados pedidos." };
-        const esperaMs = Number.isFinite(segundos) && segundos > 0 ? segundos * 1000 : 1000;
+        const esperaMs = Number.isFinite(segundos) && segundos > 0 ? segundos * 1000 : esperaSinRetryAfterMs;
         if (intento < reintentos && esperaMs <= maxEsperaReintentoMs) await esperar(esperaMs);
         else if (esperaMs > maxEsperaReintentoMs) break;
         continue;
