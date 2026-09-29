@@ -1,13 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { crearToolsDiagrama, resumenParaElModelo, type DiagramaGenerado } from "@/backend/tools/diagrama.tools";
+import { ClienteKroki } from "@/backend/lib/kroki";
+import {
+  crearToolsDiagrama,
+  generarDiagramaFlujo,
+  resumenParaElModelo,
+  type DiagramaGenerado,
+} from "@/backend/tools/diagrama.tools";
 import type { ParteDelTutor } from "@/shared/chat";
 import { diagramaDe, herramientaFallo } from "@/views/chat/tipos";
+import { levantarServidor } from "../helpers/servidorHttpLocal";
 
 // La tool generar_diagrama_flujo con la vista: qué lee el modelo del resultado y qué muestra el chat.
 // Los resultados son datos fijos con el tipo real (DiagramaGenerado): no hace falta llamar a Kroki para armarlos.
-// Que Kroki devuelva el SVG se prueba en externos/; cómo se maneja cada respuesta, en integracion/kroki.test.ts.
+// Cómo se maneja cada respuesta de Kroki se prueba en integracion/kroki.test.ts.
 
-const MERMAID = 'flowchart TD\n  A(["Inicio"]) --> B["T = TPLL"]';
+const MERMAID = 'flowchart TD\n  CI[["C.I."]] --> B["T = TPLL"]';
 const SVG = '<svg xmlns="http://www.w3.org/2000/svg"><text>T = TPLL</text></svg>';
 
 const generado: DiagramaGenerado = { ok: true, titulo: "Llegada", mermaid: MERMAID, svg: SVG };
@@ -25,6 +32,28 @@ const conServicioCaido: DiagramaGenerado = {
   motivo: "servicio",
   detalle: "Kroki falló (HTTP 503).",
 };
+
+describe("generarDiagramaFlujo", () => {
+  it("dibuja los conectores de la cátedra en azul: agrega su estilo al código que manda a Kroki y muestra", async () => {
+    const servidor = await levantarServidor(() => ({
+      status: 200,
+      headers: { "content-type": "image/svg+xml" },
+      cuerpo: SVG,
+    }));
+    const kroki = new ClienteKroki({ endpoint: servidor.url });
+    const conConector = 'flowchart TD\n  A1(("A")):::conector --> B["T = TPLL"]';
+
+    try {
+      const diagrama = await generarDiagramaFlujo("Principal", conConector, kroki);
+
+      expect(diagrama).toMatchObject({ ok: true, titulo: "Principal", svg: SVG });
+      expect(diagrama.mermaid).toMatch(/^flowchart TD\n\s*classDef conector /);
+      expect(diagrama.mermaid).toContain('A1(("A")):::conector --> B["T = TPLL"]');
+    } finally {
+      await servidor.cerrar();
+    }
+  });
+});
 
 describe("resumenParaElModelo (lo único que lee el modelo del resultado)", () => {
   it("si salió, le dice que ya se mostró y que no lo repita, sin mandarle el SVG", () => {

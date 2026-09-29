@@ -121,12 +121,16 @@ Diagrama completo del caso base (1 puesto, 1 cola, sistema cautivo — clase EaE
 - Por qué `TPS = HV` en la salida: si no queda nadie y no se actualiza TPS, el modelo queda en un loop sin avanzar; con HV se fuerza que el próximo evento sea una LLEGADA.
 - Software de la cátedra: **Victoria** (Campus Virtual): análisis previo, generar diagrama y simular. La cátedra pide hacer la "prueba de escritorio" del modelo.
 
-Convenciones de símbolos usadas en el material (para describirlos en texto, ya que el chat no dibuja):
-- Óvalo: generación de variable aleatoria (a partir de una fdp).
-- Hexágono/rombo alargado: obtención de número aleatorio R.
+Convenciones de símbolos de la cátedra (las mismas que usa el tutor al dibujar):
+- Proceso predefinido (rectángulo con doble barra lateral): C.I.
 - Rectángulo: asignación/cálculo.
-- Rombo: decisión (bifurcación SI/NO).
-- Círculo pequeño: conector (referencias tipo "a", "1" para reconectar el diagrama).
+- Rombo: decisión, con las ramas SI / NO.
+- Hexágono: llamada a otra rutina — generar una variable aleatoria (IA, TA, Random(r)), buscar un índice (MENOR TPS(i), MENOR NS(x), puesto libre), un evento (LLEGADA, SALIDA), arrepentimiento, vaciamiento.
+- Paralelogramo: impresión de resultados.
+- Círculo: FIN del programa (y "R", fin de una rutina que vuelve al programa principal).
+- Círculo azul con una letra: conector. **A** vuelve al ciclo: sale de la rama SI de ¿T < TF? y se une a la línea que sale de las C.I. **B** es el arrepentimiento: el que se va salta a B, que se une justo antes de ¿T < TF?. Los ciclos dentro de una rutina usan C, D…
+- Punto de unión: donde se juntan varias líneas antes de entrar a un nodo; de ahí sale una sola flecha.
+- El diagrama se dibuja en partes: el programa principal y una parte por cada rutina.
 
 Patrones recurrentes:
 - **Tiempo Comprometido (TC)**: usado cuando un recurso, una vez que empieza a atender, ya sabe cuánto va a tardar (a diferencia de cuando el TA se conoce recién al comenzar la atención). Ejemplo remisería: cada auto que sale "compromete" un tiempo TC = T + TA; si llega una llamada antes de que se libere (T ≤ TC) el cliente espera; si T > TC hay ocio.

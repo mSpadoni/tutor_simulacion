@@ -2,6 +2,7 @@ import "server-only";
 import { tool } from "ai";
 import { z } from "zod";
 import { clienteKroki, type ClienteKroki, type ResultadoKroki } from "@/backend/lib/kroki";
+import { conEstilosDeLaCatedra } from "@/backend/models/dominio/mermaid";
 
 /** Lo que devuelve la tool: el SVG va a la vista (se muestra como imagen); el modelo solo recibe un resumen. */
 export type DiagramaGenerado = { titulo: string; mermaid: string } & ResultadoKroki;
@@ -12,7 +13,8 @@ export async function generarDiagramaFlujo(
   mermaid: string,
   kroki: ClienteKroki = clienteKroki
 ): Promise<DiagramaGenerado> {
-  return { titulo, mermaid, ...(await kroki.renderizar(mermaid)) };
+  const codigo = conEstilosDeLaCatedra(mermaid);
+  return { titulo, mermaid: codigo, ...(await kroki.renderizar(codigo)) };
 }
 
 /** Lo que lee el modelo del resultado: si salió, que no lo repita en texto; si no, qué pasó y si puede corregirlo. */
@@ -35,10 +37,15 @@ export function crearToolsDiagrama() {
   return {
     generar_diagrama_flujo: tool({
       description:
-        "Dibuja un diagrama de flujo (Mermaid → imagen con Kroki) y se lo muestra al alumno. Usala SIEMPRE al resolver " +
-        "un ejercicio (como último paso), al corregir un diagrama o cuando el alumno pide ver uno. NUNCA al dar un ejercicio nuevo.",
+        "Dibuja una parte de un diagrama de flujo (Mermaid → imagen con Kroki) y se la muestra al alumno: una llamada por parte " +
+        "(programa principal, cada rutina). Usala SIEMPRE al resolver un ejercicio (como último paso), al corregir un " +
+        "diagrama o cuando el alumno pide ver uno. NUNCA al dar un ejercicio nuevo.",
       inputSchema: z.object({
-        titulo: z.string().min(2).max(120).describe("De qué es el diagrama, ej: 'Clínica — diagrama completo'"),
+        titulo: z
+          .string()
+          .min(2)
+          .max(120)
+          .describe("Qué parte es, ej: 'Clínica — programa principal' o 'Clínica — LLEGADA'"),
         mermaid: z
           .string()
           .min(10)

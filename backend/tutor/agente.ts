@@ -21,7 +21,7 @@ import type { MetadatosDeRespuesta, TutorUIMessage } from "@/shared/chat";
  * Máximo de pasos por respuesta: hasta 5 rondas de tools y la respuesta final. Resolver un ejercicio usa varias
  * (buscar el enunciado, los modelos, a veces verificar la f.d.p., y el diagrama al final). Evita loops sin fin.
  */
-const MAXIMO_DE_PASOS = 6;
+const MAXIMO_DE_PASOS = 8;
 
 /**
  * El modelo manda el texto en ráfagas irregulares; así la respuesta se lee más cómoda: sale palabra por palabra,

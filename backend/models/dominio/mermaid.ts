@@ -4,6 +4,16 @@
 /** Largo máximo del código Mermaid: un diagrama de la materia entra de sobra; más es un error del modelo. */
 export const MAX_CARACTERES_MERMAID = 6000;
 
+/** Estilo de los conectores de la cátedra (círculo azul con letra): el modelo solo marca el nodo con `:::conector`. */
+const ESTILO_CONECTOR = "classDef conector fill:#2563eb,stroke:#1e40af,color:#ffffff";
+
+/** Agrega el estilo de los conectores debajo de la primera línea (`flowchart TD`), si el código no lo define ya. */
+export function conEstilosDeLaCatedra(codigo: string): string {
+  if (/classDef\s+conector\b/.test(codigo)) return codigo;
+  const [primera, ...resto] = codigo.trim().split("\n");
+  return [primera, `  ${ESTILO_CONECTOR}`, ...resto].join("\n");
+}
+
 /** Por qué un código no es un diagrama aceptable. */
 export type ProblemaDeMermaid = { motivo: "codigo_invalido" | "demasiado_largo"; detalle: string };
 

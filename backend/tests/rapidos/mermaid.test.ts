@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { MAX_CARACTERES_MERMAID, problemaDeMermaid } from "@/backend/models/dominio/mermaid";
+import { conEstilosDeLaCatedra, MAX_CARACTERES_MERMAID, problemaDeMermaid } from "@/backend/models/dominio/mermaid";
 
 // Qué código Mermaid se acepta antes de mandarlo a Kroki. Lógica pura: sin red.
 
-const DIAGRAMA = 'flowchart TD\n  A(["Inicio"]) --> B{"¿TPLL ≤ TPS?"}';
+const DIAGRAMA = 'flowchart TD\n  CI[["C.I."]] --> B{"TPLL ≤ TPS"}';
 
 describe("problemaDeMermaid", () => {
   it("un diagrama de flujo de Mermaid no tiene problemas (con cualquier orientación)", () => {
@@ -24,5 +24,23 @@ describe("problemaDeMermaid", () => {
       motivo: "demasiado_largo",
       detalle: expect.stringContaining(String(MAX_CARACTERES_MERMAID)),
     });
+  });
+});
+
+describe("conEstilosDeLaCatedra", () => {
+  it("define el estilo de los conectores debajo de flowchart TD, sin tocar el resto", () => {
+    const codigo = 'flowchart TD\n  A1(("A")):::conector --> B["T = TPLL"]';
+
+    const conEstilo = conEstilosDeLaCatedra(codigo).split("\n");
+
+    expect(conEstilo[0]).toBe("flowchart TD");
+    expect(conEstilo[1]).toMatch(/^\s*classDef conector /);
+    expect(conEstilo.slice(2).join("\n")).toBe('  A1(("A")):::conector --> B["T = TPLL"]');
+  });
+
+  it("si el código ya define el estilo, lo deja como está", () => {
+    const codigo = "flowchart TD\n  classDef conector fill:#000\n  A --> B";
+
+    expect(conEstilosDeLaCatedra(codigo)).toBe(codigo);
   });
 });
