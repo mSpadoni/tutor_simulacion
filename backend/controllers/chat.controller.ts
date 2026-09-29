@@ -6,10 +6,10 @@ import { conversacionesModel, type ConversacionesModel } from "@/backend/models/
 import { LIMITES_DE_USO, limiteAlcanzado, type LimitesDeUso } from "@/backend/models/dominio/limiteDeUso";
 import { ejerciciosModel, type EjerciciosModel } from "@/backend/models/repositorios/ejercicios.model";
 import { obtenerMaterialCatedra, type MaterialCatedra } from "@/backend/models/materialCatedra.model";
-import type { PedidoDeChat } from "@/backend/models/dominio/pedidoDeChat.model";
 import { crearToolsTutor } from "@/backend/tools/tutor.tools";
 import { PAUSA_ENTRE_PALABRAS_MS, responderComoTutor } from "@/backend/tutor/agente";
 import { traducirError } from "@/backend/tutor/errores";
+import { validarPedidoDeChat } from "./validaciones";
 import { MAX_MENSAJES_CONTEXTO, type TutorUIMessage } from "@/shared/chat";
 import { tituloDesde } from "@/shared/conversaciones";
 
@@ -69,7 +69,9 @@ export class ChatController {
    * base no responde, el error de Supabase sigue de largo (la ruta lo responde como error interno).
    * Si falla el modelo en el medio, el error llega dentro del stream, con su código.
    */
-  async responder(pedido: PedidoDeChat): Promise<ReadableStream<InferUIMessageChunk<TutorUIMessage>>> {
+  async responder(cuerpo: unknown): Promise<ReadableStream<InferUIMessageChunk<TutorUIMessage>>> {
+    // Lo que manda el navegador se valida primero: si no es válido, se corta acá (pedido_invalido).
+    const pedido = validarPedidoDeChat(cuerpo);
     const conversaciones = this.conversaciones();
     const { conversacionId, mensaje } = pedido;
 

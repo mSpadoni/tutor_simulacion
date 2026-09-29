@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
 
   // Si vino el code, se canjea por una sesión; si no (el alumno canceló), directamente es false.
-  const ok = code ? await authController.completarLogin(code) : false;
+  const ok = await authController.completarLogin(code);
 
   return NextResponse.redirect(ok ? `${origin}/` : `${origin}/?error=login`);
 }

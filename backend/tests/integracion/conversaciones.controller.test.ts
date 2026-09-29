@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { UIMessage } from "ai";
 import { afterAll, describe, expect, it } from "vitest";
-import { ConversacionesController, esIdDeConversacion } from "@/backend/controllers/conversaciones.controller";
+import { ConversacionesController } from "@/backend/controllers/conversaciones.controller";
+import { esIdDeConversacion } from "@/backend/controllers/validaciones";
 import { ConversacionesModel } from "@/backend/models/repositorios/conversaciones.model";
 import { borrarAlumnosDePrueba, crearAlumnoLogueado } from "../helpers/alumnoDePrueba";
 

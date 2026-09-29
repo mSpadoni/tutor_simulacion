@@ -2,7 +2,8 @@ import { notFound, redirect } from "next/navigation";
 import { cerrarSesion } from "@/app/auth/actions";
 import { borrarConversacion } from "@/app/conversacion/actions";
 import { authController } from "@/backend/controllers/auth.controller";
-import { conversacionesController, esIdDeConversacion } from "@/backend/controllers/conversaciones.controller";
+import { conversacionesController } from "@/backend/controllers/conversaciones.controller";
+import { esIdDeConversacion } from "@/backend/controllers/validaciones";
 import { ejerciciosController } from "@/backend/controllers/ejercicios.controller";
 import PantallaDeChat from "@/views/chat/PantallaDeChat";
 

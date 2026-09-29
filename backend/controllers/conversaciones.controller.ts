@@ -1,23 +1,21 @@
 import "server-only";
 import type { TutorUIMessage } from "@/shared/chat";
-import { z } from "zod";
 import {
   conversacionesModel,
   type ConversacionesModel,
   type ConversacionGuardada,
 } from "@/backend/models/repositorios/conversaciones.model";
+import { esIdDeConversacion } from "./validaciones";
 
 /** Una conversación abierta: sus datos (null si todavía no se guardó ningún mensaje) y su historial. */
 export type ConversacionAbierta = { conversacion: ConversacionGuardada | null; mensajes: TutorUIMessage[] };
 
-/** ¿Es un id válido de conversación? (los genera el servidor con crypto.randomUUID) */
-export function esIdDeConversacion(id: string): boolean {
-  return z.uuid().safeParse(id).success;
-}
+const SIN_CONVERSACION: ConversacionAbierta = { conversacion: null, mensajes: [] };
 
 /**
  * Casos de uso de las conversaciones del alumno: la lista del costado, abrir una y borrarla.
  * Todo pasa por el model con la sesión del alumno, así que RLS limita a sus propias conversaciones.
+ * El id viene del navegador (la URL o el botón de borrar): se valida antes de llegar al model.
  */
 export class ConversacionesController {
   constructor(private readonly conversaciones: () => ConversacionesModel = () => conversacionesModel) {}
@@ -28,17 +26,18 @@ export class ConversacionesController {
   }
 
   /**
-   * Abre una conversación. Si no existe (es nueva, o es de otro alumno y RLS la oculta) devuelve
-   * `conversacion: null` y sin mensajes: el chat arranca vacío y se guarda con el primer mensaje.
+   * Abre una conversación. Si no existe (es nueva, o es de otro alumno y RLS la oculta) o el id no es válido,
+   * devuelve `conversacion: null` y sin mensajes: el chat arranca vacío y se guarda con el primer mensaje.
    */
-  async abrir(id: string): Promise<ConversacionAbierta> {
+  async abrir(id: unknown): Promise<ConversacionAbierta> {
+    if (!esIdDeConversacion(id)) return SIN_CONVERSACION;
     const conversacion = await this.conversaciones().obtener(id);
-    if (!conversacion) return { conversacion: null, mensajes: [] };
+    if (!conversacion) return SIN_CONVERSACION;
     return { conversacion, mensajes: await this.conversaciones().mensajes(id) };
   }
 
-  /** Borra una conversación del alumno. Devuelve false si no existía o no era suya. */
-  borrar(id: string): Promise<boolean> {
+  /** Borra una conversación del alumno. Devuelve false si el id no es válido, no existía o no era suya. */
+  borrar(id: unknown): Promise<boolean> {
     if (!esIdDeConversacion(id)) return Promise.resolve(false);
     return this.conversaciones().borrar(id);
   }

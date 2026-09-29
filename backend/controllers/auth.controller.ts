@@ -1,6 +1,7 @@
 import "server-only";
 import { crearClienteServidor, type ClienteSupabase } from "@/backend/lib/supabase/server";
 import { Usuario } from "@/backend/models/dominio/usuario.model";
+import { codigoDeLogin } from "./validaciones";
 
 /** Todo lo relacionado con el login: iniciar sesión con Google, saber quién está logueado y cerrar sesión. */
 export class AuthController {
@@ -33,10 +34,13 @@ export class AuthController {
    * Canjea el `code` que manda Google por una sesión (queda guardada en cookies).
    * Devuelve true si salió bien, false si no.
    */
-  async completarLogin(code: string): Promise<boolean> {
+  async completarLogin(code: unknown): Promise<boolean> {
+    // Viene en la URL (lo manda el navegador): se valida antes de dárselo a Supabase.
+    const codigo = codigoDeLogin(code);
+    if (!codigo) return false;
     const supabase = await this.crearCliente();
     // Acá solo interesa `error`, por eso se desestructura solo esa propiedad.
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { error } = await supabase.auth.exchangeCodeForSession(codigo);
 
     if (error) {
       console.error("Error al completar el login:", error);

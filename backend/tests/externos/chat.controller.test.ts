@@ -11,7 +11,6 @@ import { ErrorDeAplicacion } from "@/backend/errores";
 import { URL_API_OPENAI_POR_DEFECTO } from "@/backend/lib/env";
 import { ConversacionesModel } from "@/backend/models/repositorios/conversaciones.model";
 import { EjerciciosModel } from "@/backend/models/repositorios/ejercicios.model";
-import { PedidoDeChat } from "@/backend/models/dominio/pedidoDeChat.model";
 import type { MetadatosDeRespuesta } from "@/shared/chat";
 import { leerErrorPublico } from "@/shared/errores";
 import { borrarAlumnosDePrueba, crearAlumnoLogueado } from "../helpers/alumnoDePrueba";
@@ -35,14 +34,14 @@ async function alumnoConChat(dependencias: ConstructorParameters<typeof ChatCont
 
 /** Manda un mensaje como useChat, lee el stream completo y devuelve sus eventos. */
 async function conversar(controller: ChatController, conversacionId: string, texto: string) {
-  const validacion = PedidoDeChat.validar({
+  // El cuerpo tal cual lo manda el navegador: lo valida el controller.
+  const cuerpo = {
     id: conversacionId,
     mensaje: { id: randomUUID(), role: "user", parts: [{ type: "text", text: texto }] },
-  });
-  if (!validacion.ok) throw new Error(validacion.error);
+  };
 
   // El controller devuelve el stream de partes (la ruta lo convierte en HTTP): se lee evento por evento.
-  const lector = (await controller.responder(validacion.pedido)).getReader();
+  const lector = (await controller.responder(cuerpo)).getReader();
   const eventos: Evento[] = [];
   for (let leido = await lector.read(); !leido.done; leido = await lector.read()) eventos.push(leido.value);
   return eventos;

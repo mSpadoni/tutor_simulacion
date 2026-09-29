@@ -1,7 +1,6 @@
 import { createUIMessageStreamResponse } from "ai";
 import { authController } from "@/backend/controllers/auth.controller";
 import { chatController } from "@/backend/controllers/chat.controller";
-import { PedidoDeChat } from "@/backend/models/dominio/pedidoDeChat.model";
 import { respuestaDeError, respuestaDeErrorPublico } from "../respuestaDeError";
 
 // En Vercel, cuánto puede durar la función como máximo (segundos): el stream del tutor con sus tools.
@@ -22,17 +21,13 @@ export async function POST(request: Request) {
     });
   }
 
-  // 2) Leer y validar lo que mandó el navegador. Si el cuerpo no es JSON válido, `.catch` lo convierte en null
-  //    y la validación lo rechaza (pedido mal formado).
+  // 2) El cuerpo tal cual lo mandó el navegador (si no es JSON, null): lo valida el controller con Zod.
   const cuerpo: unknown = await request.json().catch(() => null);
-  const validacion = PedidoDeChat.validar(cuerpo);
-  if (!validacion.ok) {
-    return respuestaDeErrorPublico({ codigo: "pedido_invalido", mensaje: validacion.error });
-  }
 
-  // 3) La respuesta del tutor en streaming. Los errores de antes de empezar se responden con su código.
+  // 3) La respuesta del tutor en streaming. Los errores de antes de empezar (pedido inválido, límite de uso,
+  //    conversación ajena...) se responden con su código.
   try {
-    return createUIMessageStreamResponse({ stream: await chatController.responder(validacion.pedido) });
+    return createUIMessageStreamResponse({ stream: await chatController.responder(cuerpo) });
   } catch (error) {
     return respuestaDeError(error);
   }
