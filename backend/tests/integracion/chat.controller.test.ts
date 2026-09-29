@@ -60,33 +60,74 @@ describe("ChatController.responder — conversación", () => {
 });
 
 describe("ChatController.responder — lo que recibe el modelo", () => {
-  it("del historial solo va el texto: lo que devolvieron las tools no se reenvía (costo en tokens)", async () => {
+  it("de la última respuesta del tutor va lo que devolvieron sus tools; de las anteriores, solo el texto", async () => {
     const modelo = modeloQueResponde("Seguimos.");
     const { conversaciones, controller } = await alumnoConChat({ crearModelo: () => modelo });
     const id = randomUUID();
     await conversaciones.crear(id, "Tiempo comprometido");
-    const conTool: TutorUIMessage = {
+    /** Una respuesta del tutor que consultó los modelos. */
+    const conTool = (toolCallId: string, modelos: string, texto: string): TutorUIMessage => ({
       id: randomUUID(),
       role: "assistant",
       parts: [
         {
           type: "tool-consultar_modelos",
-          toolCallId: "t1",
+          toolCallId,
           state: "output-available",
           input: { tema: "tiempo comprometido" },
-          output: "CONTENIDO LARGO DEL MODELO DE LA CÁTEDRA",
+          output: modelos,
         },
-        { type: "text", text: "Así se calcula el PTO." },
+        { type: "text", text: texto },
       ],
-    };
-    await conversaciones.agregarMensajes(id, [mensaje("user", "¿Cómo calculo el PTO?"), conTool]);
+    });
+    await conversaciones.agregarMensajes(id, [
+      mensaje("user", "¿Cómo calculo el PTO?"),
+      conTool("t1", "MODELO DE LA PRIMERA RESPUESTA", "Así se calcula el PTO."),
+      mensaje("user", "Resolveme el Lavadero"),
+      conTool("t2", "MODELO DE LA ÚLTIMA RESPUESTA", "Variables y eventos. ¿Seguimos con las f.d.p.?"),
+    ]);
 
-    await conversar(controller, id, "¿Y el tiempo ocioso?");
+    await conversar(controller, id, "Sí, seguí");
 
     const prompt = JSON.stringify(modelo.doStreamCalls[0].prompt);
     expect(prompt).toContain("Así se calcula el PTO.");
-    expect(prompt).toContain("¿Y el tiempo ocioso?");
-    expect(prompt).not.toContain("CONTENIDO LARGO DEL MODELO DE LA CÁTEDRA");
+    expect(prompt).not.toContain("MODELO DE LA PRIMERA RESPUESTA");
+    // La resolución sigue en la respuesta nueva: la teoría que leyó en la anterior sigue a mano.
+    expect(prompt).toContain("MODELO DE LA ÚLTIMA RESPUESTA");
+    expect(prompt).toContain("Sí, seguí");
+  });
+
+  it("de un diagrama anterior le llega el resumen, no el SVG", async () => {
+    const modelo = modeloQueResponde("Listo.");
+    const { conversaciones, controller } = await alumnoConChat({ crearModelo: () => modelo });
+    const id = randomUUID();
+    await conversaciones.crear(id, "Diagrama");
+    const conDiagrama: TutorUIMessage = {
+      id: randomUUID(),
+      role: "assistant",
+      parts: [
+        {
+          type: "tool-generar_diagrama_flujo",
+          toolCallId: "t1",
+          state: "output-available",
+          input: { titulo: "Principal", mermaid: 'flowchart TD\n  CI[["C.I."]]' },
+          output: {
+            ok: true,
+            titulo: "Principal",
+            mermaid: 'flowchart TD\n  CI[["C.I."]]',
+            svg: "<svg><text>SVG DEL DIAGRAMA</text></svg>",
+          },
+        },
+        { type: "text", text: "Ahí está el programa principal." },
+      ],
+    };
+    await conversaciones.agregarMensajes(id, [mensaje("user", "Dibujá el principal"), conDiagrama]);
+
+    await conversar(controller, id, "¿Y la llegada?");
+
+    const prompt = JSON.stringify(modelo.doStreamCalls[0].prompt);
+    expect(prompt).toContain("Diagrama generado y mostrado al alumno");
+    expect(prompt).not.toContain("SVG DEL DIAGRAMA");
   });
 
   it(`del historial van los últimos ${MAX_MENSAJES_CONTEXTO} mensajes, más el nuevo`, async () => {

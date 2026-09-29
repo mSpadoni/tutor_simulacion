@@ -77,6 +77,20 @@ describe("buscarEjercicio", () => {
     expect(texto).toContain("contrastala con la base de conocimiento y los modelos");
   });
 
+  it("junto con el ejercicio trae la teoría: modelos de la cátedra, después del enunciado", () => {
+    const { texto, fichas } = buscarEjercicio(material, "Clínica");
+    const iEnunciado = texto.indexOf("dos consultorios");
+    const iTeoria = texto.indexOf("## Teoría de la cátedra para este tipo de sistema");
+    const modelos = texto.slice(iTeoria);
+    const titulosDeModelos = [...modelos.matchAll(/^### (.+)$/gm)].map((m) => m[1]);
+
+    expect(iTeoria).toBeGreaterThan(iEnunciado);
+    expect(titulosDeModelos.length).toBeGreaterThan(0);
+    expect(titulosDeModelos.every((titulo) => porTitulo.get(titulo)?.tipo === "modelo")).toBe(true);
+    // Los títulos que devuelve son los de los ejercicios encontrados, no los de la teoría agregada.
+    expect(fichas.every((titulo) => porTitulo.get(titulo)?.tipo === "ejercicio")).toBe(true);
+  });
+
   it("si el ejercicio no tiene resolución publicada, lo aclara", () => {
     expect(buscarEjercicio(material, "Garage").texto).toContain("La cátedra no publicó resolución");
   });

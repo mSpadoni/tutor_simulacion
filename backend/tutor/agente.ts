@@ -49,13 +49,20 @@ export type PedidoAlAgente = {
   alTerminar: (respuesta: TutorUIMessage) => Promise<void>;
 };
 
-/**
- * Para el contexto del modelo, de los mensajes anteriores solo va el texto: lo que devolvieron las tools
- * (modelos, enunciados) ocupa miles de tokens y, si lo necesita otra vez, el modelo vuelve a pedirlo.
- * En la base se guarda todo, para mostrarlo al reabrir la conversación.
- */
+/** Un mensaje sin lo que usaron las tools: solo su texto. */
 function soloTexto(mensaje: TutorUIMessage): TutorUIMessage {
   return { ...mensaje, parts: mensaje.parts.filter((parte) => parte.type === "text") };
+}
+
+/**
+ * Lo que ve el modelo de la conversación. De la última respuesta del tutor va todo, con lo que devolvieron sus
+ * tools: una resolución sigue en varias respuestas ("¿Seguimos con las f.d.p.?") y la teoría y el enunciado que
+ * leyó tienen que seguir a mano. De las anteriores, solo el texto: las tools ocupan miles de tokens y, si las
+ * necesita otra vez, el modelo vuelve a pedirlas. En la base se guarda todo, para mostrarlo al reabrir la conversación.
+ */
+export function mensajesParaElModelo(mensajes: TutorUIMessage[]): TutorUIMessage[] {
+  const ultimaDelTutor = mensajes.findLastIndex((mensaje) => mensaje.role === "assistant");
+  return mensajes.map((mensaje, indice) => (indice === ultimaDelTutor ? mensaje : soloTexto(mensaje)));
 }
 
 /** El nombre del modelo configurado (el SDK acepta un string o un objeto de modelo). */
@@ -125,7 +132,12 @@ export class AgenteTutor {
     const resultado = streamText({
       model: modelo,
       system: armarSystemPrompt(),
-      messages: await convertToModelMessages(mensajes.map(soloTexto)),
+      // Con las tools, cada resultado anterior se le pasa al modelo como lo define su toModelOutput (del diagrama,
+      // el resumen y no el SVG). Una tool que quedó a medias (el alumno cortó la respuesta) no se manda.
+      messages: await convertToModelMessages(mensajesParaElModelo(mensajes), {
+        tools,
+        ignoreIncompleteToolCalls: true,
+      }),
       tools,
       toolChoice: "auto", // el modelo decide si usa tools y cuáles
       stopWhen: stepCountIs(MAXIMO_DE_PASOS),
