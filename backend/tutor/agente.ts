@@ -23,6 +23,9 @@ import type { MetadatosDeRespuesta, TutorUIMessage } from "@/shared/chat";
  */
 const MAXIMO_DE_PASOS = 8;
 
+/** Tokens de salida por paso: alcanza para el texto y varias partes de un diagrama a la vez (gpt-4.1 admite 32k). */
+export const MAXIMO_TOKENS_DE_SALIDA = 8000;
+
 /**
  * El modelo manda el texto en ráfagas irregulares; así la respuesta se lee más cómoda: sale palabra por palabra,
  * a un ritmo parejo (~30 palabras por segundo).
@@ -141,7 +144,9 @@ export class AgenteTutor {
       tools,
       toolChoice: "auto", // el modelo decide si usa tools y cuáles
       stopWhen: stepCountIs(MAXIMO_DE_PASOS),
-      maxOutputTokens: 2000,
+      // Por paso. El modelo puede dibujar varias partes del diagrama en paralelo en un mismo paso: con 2000 el
+      // Mermaid se cortaba a la mitad y el JSON de la tool quedaba incompleto (se caía la respuesta entera).
+      maxOutputTokens: MAXIMO_TOKENS_DE_SALIDA,
       maxRetries: 1,
       temperature: temperatura,
       timeout: timeoutMs,
