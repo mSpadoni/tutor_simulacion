@@ -6,7 +6,7 @@ import { z } from "zod";
 // - No lleva `server-only` porque también la usa el middleware (Edge). Las views no la pueden importar (regla de ESLint).
 
 export const URL_API_OPENAI_POR_DEFECTO = "https://api.openai.com/v1";
-export const MODELO_OPENAI_POR_DEFECTO = "gpt-4o-mini";
+export const MODELO_OPENAI_POR_DEFECTO = "gpt-4.1";
 export const URL_KROKI_POR_DEFECTO = "https://kroki.io";
 
 /** Falta una variable de entorno o tiene un valor inválido. El mensaje dice cuál y dónde verlo. */

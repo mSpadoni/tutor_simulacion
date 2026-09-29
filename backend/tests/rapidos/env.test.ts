@@ -60,7 +60,7 @@ describe("envOpenAI", () => {
       modelo: MODELO_OPENAI_POR_DEFECTO,
     });
     expect(URL_API_OPENAI_POR_DEFECTO).toBe("https://api.openai.com/v1");
-    expect(MODELO_OPENAI_POR_DEFECTO).toBe("gpt-4o-mini");
+    expect(MODELO_OPENAI_POR_DEFECTO).toBe("gpt-4.1");
   });
 
   it("si están definidos, usa la URL y el modelo configurados", () => {
