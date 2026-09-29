@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { ANALISIS_DE_PRUEBA } from "../helpers/analisisDePrueba";
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -171,6 +172,7 @@ describe("MessageBubble — ejercicio nuevo", () => {
     datosAleatorios: [{ sigla: "IA", fdp: "uniforme entre 5 y 15 minutos" }],
     seDecide: "la cantidad de máquinas",
     complicaciones: ["N puestos", "arrepentimiento"],
+    analisis: ANALISIS_DE_PRUEBA,
   };
 
   it("un ejercicio guardado se muestra desde lo guardado; los intentos rechazados no dicen «Guardó»", () => {

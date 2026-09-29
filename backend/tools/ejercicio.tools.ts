@@ -1,7 +1,12 @@
 import "server-only";
 import { tool } from "ai";
 import { z } from "zod";
-import { EjercicioSchema, problemasDelEjercicio } from "@/backend/models/dominio/ejercicio";
+import { AnalisisSchema } from "@/backend/models/dominio/analisis";
+import {
+  EjercicioSchema,
+  problemasDelAnalisisDelEjercicio,
+  problemasDelEjercicio,
+} from "@/backend/models/dominio/ejercicio";
 import type { EjerciciosModel } from "@/backend/models/repositorios/ejercicios.model";
 
 /** Los datos del ejercicio que arma el modelo (validados con Zod antes de guardarlos). */
@@ -45,6 +50,10 @@ export const DatosEjercicioSchema = z.object({
       "Las complicaciones que combinás (dos o tres), ej: ['N puestos con N colas', 'arrepentimiento por tramos', " +
         "'dos tipos de cliente con distinto tiempo de atención']"
     ),
+  analisis: AnalisisSchema.describe(
+    "Tu propio análisis del ejercicio (no se le muestra al alumno), armado con los pasos de la sección 7 de la base: " +
+      "si no podés armar una T.E.I. válida, el ejercicio está mal planteado"
+  ),
 });
 
 export type DatosEjercicio = z.infer<typeof DatosEjercicioSchema>;
@@ -63,7 +72,15 @@ export const RECHAZOS_POR_RESPUESTA = 2;
  * reglas de la cátedra que no cumple (no se guarda, el modelo lo corrige); o por qué no se pudo guardar.
  */
 export type EjercicioGenerado =
-  | { ok: true; id: string; ejercicio: EjercicioGuardado; avisos: string[] }
+  | {
+      ok: true;
+      id: string;
+      ejercicio: EjercicioGuardado;
+      /** Lo que no cumple el enunciado: la vista se lo muestra al alumno. */
+      avisos: string[];
+      /** Lo que no cumple el análisis interno: solo lo lee el modelo (mostrarlo revelaría la metodología). */
+      avisosDelAnalisis?: string[];
+    }
   | { ok: false; problemas: string[] }
   | { ok: false; error: string };
 
@@ -74,17 +91,26 @@ export type EjercicioGenerado =
 export async function guardarEjercicio(
   ejercicios: EjerciciosModel,
   conversacionId: string,
-  { tema, dificultad, titulo, enunciado, sePide, datosAleatorios }: DatosEjercicio,
+  { tema, dificultad, titulo, enunciado, sePide, datosAleatorios, seDecide, analisis }: DatosEjercicio,
   { rechazar = true }: { rechazar?: boolean } = {}
 ): Promise<EjercicioGenerado> {
-  const problemas = problemasDelEjercicio({ enunciado, datosAleatorios });
-  if (problemas.length > 0 && rechazar) return { ok: false, problemas };
+  const delEnunciado = problemasDelEjercicio({ enunciado, datosAleatorios });
+  const delAnalisis = problemasDelAnalisisDelEjercicio({ datosAleatorios, seDecide, analisis });
+  if (delEnunciado.length + delAnalisis.length > 0 && rechazar) {
+    return { ok: false, problemas: [...delEnunciado, ...delAnalisis] };
+  }
   try {
     const guardado = await ejercicios.guardar(
       { tema, dificultad, payload: { titulo, enunciado, sePide } },
       conversacionId
     );
-    return { ok: true, id: guardado.id, ejercicio: { titulo, enunciado, sePide }, avisos: problemas };
+    return {
+      ok: true,
+      id: guardado.id,
+      ejercicio: { titulo, enunciado, sePide },
+      avisos: delEnunciado,
+      avisosDelAnalisis: delAnalisis,
+    };
   } catch (error) {
     return { ok: false, error: `No se pudo guardar el ejercicio: ${(error as Error).message}` };
   }
@@ -92,11 +118,14 @@ export async function guardarEjercicio(
 
 /** Lo que lee el modelo del resultado: si se guardó, que no lo repita; si no, qué corregir. */
 export function resumenDelEjercicio(resultado: EjercicioGenerado): string {
-  if (resultado.ok && resultado.avisos.length > 0) {
+  const delAnalisis = resultado.ok ? (resultado.avisosDelAnalisis ?? []) : [];
+  if (resultado.ok && resultado.avisos.length + delAnalisis.length > 0) {
     return (
       "Ejercicio guardado y mostrado al alumno, pero no cumple:\n" +
-      resultado.avisos.map((aviso) => `- ${aviso}`).join("\n") +
-      "\nNo lo repitas ni lo vuelvas a generar: avisale al alumno en una línea qué le falta al enunciado."
+      [...resultado.avisos, ...delAnalisis].map((aviso) => `- ${aviso}`).join("\n") +
+      "\nNo lo repitas ni lo vuelvas a generar. Avisale al alumno en una línea que el enunciado puede tener " +
+      "inconsistencias y ofrecele generar otro. No le cuentes los problemas del análisis (revelarían la metodología, " +
+      "que la descubre él): nada de eventos, variables, T.E.I., T.E.F. ni índices."
     );
   }
   if (resultado.ok) {

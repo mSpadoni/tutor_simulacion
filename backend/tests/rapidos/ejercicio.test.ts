@@ -1,6 +1,8 @@
+import { ANALISIS_DE_PRUEBA } from "../helpers/analisisDePrueba";
 import { describe, expect, it } from "vitest";
 import {
   LARGO_MINIMO_DE_PARCIAL,
+  problemasDelAnalisisDelEjercicio,
   problemasDelEjercicio,
   type EjercicioARevisar,
 } from "@/backend/models/dominio/ejercicio";
@@ -112,5 +114,43 @@ describe("problemasDelEjercicio", () => {
     const problemas = problemasDelEjercicio(ejercicio);
     expect(problemas).toContainEqual(expect.stringContaining("no dice qué se busca decidir"));
     expect(problemas).toContainEqual(expect.stringContaining("no tiene datos aleatorios"));
+  });
+});
+
+describe("problemasDelAnalisisDelEjercicio (el análisis que el modelo arma de su propio ejercicio)", () => {
+  const datosAleatorios = [
+    { sigla: "IA", fdp: "uniforme entre 5 y 15 minutos" },
+    { sigla: "TA", fdp: "lineal entre 10 y 30 minutos, donde f(30) = 2·f(10)" },
+  ];
+  const seDecide = "la cantidad N de puestos";
+
+  it("si el análisis cumple las reglas y coincide con el enunciado, no hay problemas", () => {
+    expect(problemasDelAnalisisDelEjercicio({ datosAleatorios, seDecide, analisis: ANALISIS_DE_PRUEBA })).toEqual([]);
+  });
+
+  it("si la T.E.I. del propio ejercicio no cumple las reglas, el ejercicio está mal planteado", () => {
+    const analisis = structuredClone(ANALISIS_DE_PRUEBA);
+    analisis.tei.push({ evento: "ABRIR PUESTO", efnc: null, efc: [] });
+
+    expect(problemasDelAnalisisDelEjercicio({ datosAleatorios, seDecide, analisis })).toContainEqual(
+      expect.stringMatching(/^En el análisis de tu ejercicio: La fila «ABRIR PUESTO»/)
+    );
+  });
+
+  it("cada dato del enunciado tiene que estar entre los datos del análisis", () => {
+    const conOtroDato = [...datosAleatorios, { sigla: "TR", fdp: "exponencial de media 30 minutos" }];
+
+    expect(
+      problemasDelAnalisisDelEjercicio({ datosAleatorios: conOtroDato, seDecide, analisis: ANALISIS_DE_PRUEBA })
+    ).toEqual(["El dato TR del enunciado no está entre los datos del análisis de tu ejercicio."]);
+  });
+
+  it("lo que se decide tiene que ser una variable de control", () => {
+    const analisis = structuredClone(ANALISIS_DE_PRUEBA);
+    analisis.variables.control = [];
+
+    expect(problemasDelAnalisisDelEjercicio({ datosAleatorios, seDecide, analisis })).toEqual([
+      expect.stringContaining("no tiene variable de control"),
+    ]);
   });
 });

@@ -121,6 +121,20 @@ export function problemasDelAnalisis(analisis: Analisis): string[] {
     variablesTef.add(tef);
   }
 
+  // --- Con N puestos (la cantidad es de control), lo de cada puesto va indexado: TPS(i), NS(i) o TC(i).
+  const hayNPuestos = variables.control.some((variable) =>
+    /puesto|servidor|caja|maquina|mecanico|empleado|cajero|box|consultorio/i.test(clave(variable.descripcion))
+  );
+  const hayIndexadas = [...variables.estado.map((v) => v.nombre), ...eventos.map((e) => e.tef)].some((nombre) =>
+    /\(\s*\w+\s*\)/.test(nombre)
+  );
+  if (hayNPuestos && !hayIndexadas) {
+    problemas.push(
+      "La cantidad de puestos es de control (N), pero nada está indexado por puesto: con N puestos, lo de cada " +
+        "puesto va con su índice (TPS(i) y SALIDA(i), NS(i) si cada uno tiene su cola, o TC(i) con tiempo comprometido)."
+    );
+  }
+
   // --- Un evento es lo que modifica al menos una variable de estado; una de estado es la que modifica un evento.
   const modificadas = new Set<string>();
   for (const evento of eventos) {

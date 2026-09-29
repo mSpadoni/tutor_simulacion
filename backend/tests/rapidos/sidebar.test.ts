@@ -1,3 +1,4 @@
+import { ANALISIS_DE_PRUEBA } from "../helpers/analisisDePrueba";
 import type { ParteDelTutor, TutorUIMessage } from "@/shared/chat";
 import { describe, expect, it } from "vitest";
 import {
@@ -74,6 +75,7 @@ describe("ejerciciosGuardadosEn", () => {
     datosAleatorios: [{ sigla: "IA", fdp: "uniforme entre 5 y 15 minutos" }],
     seDecide: "la cantidad de mecánicos",
     complicaciones: ["N puestos", "arrepentimiento"],
+    analisis: ANALISIS_DE_PRUEBA,
   });
 
   it("toma los ejercicios que la tool guardó bien (id del resultado, título de lo que le pasó el modelo)", () => {

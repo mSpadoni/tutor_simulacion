@@ -117,6 +117,19 @@ Pasos (ver diagrama tipo en el material):
 
 ## 5. CONVENCIÓN DE DIAGRAMAS DE FLUJO (EaE)
 
+### Los pasos de la metodología Evento a Evento (clase "Metodología EaE — Pasos", Ing. Milin – Ing. Mammana)
+Es la secuencia que sigue **cualquier** simulación Evento a Evento. Con estos pasos se arma el diagrama de cualquier ejercicio, aunque no se parezca a ningún caso conocido:
+1. **Fijación de las condiciones iniciales del modelo** (C.I.).
+2. **Determinación del instante T en que ocurrirá el próximo evento**: se mira la T.E.F. y se busca el menor de todos los tiempos que aparecen (ej. ¿TPLL ≤ TPS?; con N puestos, primero MENOR TPS(i)).
+3. **Avance del tiempo hasta ese instante T** (T = TPLL, T = TPS(i)…).
+4. **Determinación del tipo de evento que ocurre en el instante T** (el que tenía ese tiempo en la T.E.F.).
+5. **Determinación de los instantes en que ocurrirán los eventos futuros NO condicionados** consecuencia del evento actual: se genera el dato y se actualiza la T.E.F. (ej. generar IA; TPLL = T + IA).
+6. **Actualización del vector de estado del modelo** (ej. NS = NS + 1). Es un buen momento para pensar en los **resultados**: acá se actualizan los acumuladores (STS, STO, CLL, CARR…).
+7. **Determinación de los instantes en que ocurrirán los eventos futuros condicionados** consecuencia del evento actual: si se cumple la condición de la T.E.I., se genera el dato y se actualiza la T.E.F. (ej. ¿NS = 1? → generar TA; TPS = T + TA).
+8. **¿Fin de la simulación?** NO → volver al paso 2. SI → **cálculo de resultados** → **impresión de resultados** → parar.
+
+La T.E.F. alimenta los pasos 2 y 4 (de ahí sale el próximo evento) y la actualizan los pasos 5 y 7. Cada rutina de evento del diagrama es, en orden, los pasos 3, 5, 6 y 7 para ese evento.
+
 Estructura típica de un diagrama:
 1. **C.I.** (Condiciones Iniciales): casi todos los valores en 0 (T, TPLL, NS, acumuladores) y **TPS = HV** para que lo primero sea una llegada. Con N puestos: `TPS(i) = HV`, `ITO(i) = STO(i) = NS(i) = 0` para i = 1..N.
 2. Determinar cuál es el PRÓXIMO evento: ir a la T.E.F. y buscar el menor de todos (ej: `TPLL ≤ TPS?` → SI: llegada; NO: salida. Con empate va la llegada). Con N puestos primero se busca el menor TPS(i) (rutina "MENOR TPS(i)": `MEN = HV`; para j = 1..N, si `TPS(j) < MEN` → `i = j`, `MEN = TPS(j)`).
@@ -233,6 +246,15 @@ Ante un enunciado nuevo, la secuencia esperada de un alumno (y lo que el bot deb
 5. Si el enunciado incluye una f.d.p. no uniforme, pedir/verificar la generación de esa variable aleatoria (método de la inversa o del rechazo, sección 4).
 
 Al corregir, el bot debe señalar en qué paso específico está el error (no solo decir "está mal"), y puede reusar el caso de referencia más parecido de la sección 6 como plantilla de comparación.
+
+### Cómo resolver un ejercicio desde cero (sin un caso parecido)
+1. **Datos, control y resultados** desde el enunciado, con las reglas de la sección 2: qué varía al azar (datos), qué se busca decidir (control), qué se pide obtener (resultados).
+2. **Estado**: qué describe cómo está el sistema en cada momento (cuántos hay en cada cola, el stock, hasta cuándo está ocupado un puesto).
+3. **Eventos**: qué hechos modifican esas variables de estado (sección 3). Lo que no modifica ninguna es una decisión dentro de un evento, no un evento.
+4. **T.E.F.**: una variable de tiempo por cada evento (TPLL, TPS(i), TC…).
+5. **T.E.I.**, evento por evento: ¿con un dato puedo decir cuándo vuelve a pasar este mismo evento, sin ninguna condición? → E.F.NO C. ¿Qué otros eventos puedo programar desde este, y bajo qué condición sobre las variables de estado? → E.F.C. con su condición.
+6. **Diagrama**: los pasos de la metodología (sección 5). Cada rutina de evento: avanzar el tiempo, E.F.NO C., actualizar el estado y los acumuladores, E.F.C.
+7. **Contrastar** con el caso más parecido de la sección 6, si hay uno. Si no hay, alcanza con los pasos.
 
 ## 8. CÓMO GENERAR UN EJERCICIO NUEVO (para modo simulacro)
 

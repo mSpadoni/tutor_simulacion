@@ -116,9 +116,13 @@ describe("problemasDelAnalisis", () => {
   it("la condición puede usar variables de control y de la T.E.F., junto con las de estado; con índices también", () => {
     const analisis = con({
       variables: { ...CORRECTO.variables, control: [{ nombre: "N", descripcion: "cantidad de puestos" }] },
+      eventos: [
+        { nombre: "LLEGADA", tef: "TPLL", modifica: ["NS"] },
+        { nombre: "SALIDA(i)", tef: "TPS(i)", modifica: ["NS"] },
+      ],
       tei: [
-        { evento: "LLEGADA", efnc: "LLEGADA", efc: [{ evento: "SALIDA", condicion: "NS(i) <= N" }] },
-        { evento: "SALIDA", efnc: null, efc: [{ evento: "SALIDA", condicion: "NS >= N y TPS < HV" }] },
+        { evento: "LLEGADA", efnc: "LLEGADA", efc: [{ evento: "SALIDA(i)", condicion: "NS(i) <= N" }] },
+        { evento: "SALIDA(i)", efnc: null, efc: [{ evento: "SALIDA(i)", condicion: "NS >= N y TPS(i) < HV" }] },
       ],
     });
 
@@ -234,5 +238,42 @@ describe("verificar_analisis: tope de rechazos por respuesta", () => {
 
     const nueva = crearToolsAnalisis().verificar_analisis;
     expect((await verificar(nueva)).ok).toBe(false);
+  });
+});
+
+describe("problemasDelAnalisis — N puestos", () => {
+  const conNPuestos = (cambios: Partial<Analisis>) =>
+    con({
+      variables: { ...CORRECTO.variables, control: [{ nombre: "N", descripcion: "cantidad de puestos de atención" }] },
+      ...cambios,
+    });
+
+  it("si la cantidad de puestos es de control, lo de cada puesto va indexado", () => {
+    expect(problemasDelAnalisis(conNPuestos({}))).toEqual([expect.stringContaining("nada está indexado por puesto")]);
+  });
+
+  it("con SALIDA(i) y TPS(i), o con TC(i) en tiempo comprometido, está bien", () => {
+    const conTps = conNPuestos({
+      eventos: [
+        { nombre: "LLEGADA", tef: "TPLL", modifica: ["NS"] },
+        { nombre: "SALIDA(i)", tef: "TPS(i)", modifica: ["NS"] },
+      ],
+      tei: [
+        { evento: "LLEGADA", efnc: "LLEGADA", efc: [{ evento: "SALIDA(i)", condicion: "NS ≤ N" }] },
+        { evento: "SALIDA(i)", efnc: null, efc: [{ evento: "SALIDA(i)", condicion: "NS ≥ N" }] },
+      ],
+    });
+    const conTc = conNPuestos({
+      variables: {
+        ...CORRECTO.variables,
+        control: [{ nombre: "N", descripcion: "cantidad de puestos" }],
+        estado: [{ nombre: "TC(i)", descripcion: "tiempo comprometido de cada puesto" }],
+      },
+      eventos: [{ nombre: "LLEGADA", tef: "TPLL", modifica: ["TC(i)"] }],
+      tei: [{ evento: "LLEGADA", efnc: "LLEGADA", efc: [] }],
+    });
+
+    expect(problemasDelAnalisis(conTps)).toEqual([]);
+    expect(problemasDelAnalisis(conTc)).toEqual([]);
   });
 });

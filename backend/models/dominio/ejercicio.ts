@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { problemasDelAnalisis, type Analisis } from "./analisis";
 
 // Qué es un ejercicio generado para el alumno. Lo usan la tool generar_ejercicio (lo que arma el LLM tiene que
 // cumplirlo) y el repositorio de ejercicios (lo valida al guardarlo y al leerlo de la base).
@@ -99,6 +100,36 @@ export function problemasDelEjercicio({ enunciado, datosAleatorios }: EjercicioA
     problemas.push(
       "El enunciado no dice qué se busca decidir (la variable de control, sin llamarla así), ej: " +
         '"Se desea determinar la cantidad N de puestos…".'
+    );
+  }
+  return problemas;
+}
+
+/**
+ * Lo que el análisis que armó el modelo de su propio ejercicio dice sobre el enunciado. Si el ejercicio no se puede
+ * analizar con la metodología (su T.E.I. no cumple las reglas, sus datos no son los del enunciado, no hay nada que
+ * decidir), está mal planteado: el modelo lo tiene que rehacer antes de dárselo al alumno.
+ */
+export function problemasDelAnalisisDelEjercicio({
+  datosAleatorios,
+  seDecide,
+  analisis,
+}: {
+  datosAleatorios: DatoAleatorio[];
+  seDecide: string;
+  analisis: Analisis;
+}): string[] {
+  const problemas = problemasDelAnalisis(analisis).map((problema) => `En el análisis de tu ejercicio: ${problema}`);
+  const datosDelAnalisis = new Set(analisis.variables.datos.map((dato) => dato.nombre.trim().toUpperCase()));
+  for (const { sigla } of datosAleatorios) {
+    if (!datosDelAnalisis.has(sigla.trim().toUpperCase())) {
+      problemas.push(`El dato ${sigla} del enunciado no está entre los datos del análisis de tu ejercicio.`);
+    }
+  }
+  if (analisis.variables.control.length === 0) {
+    problemas.push(
+      `El enunciado busca decidir «${seDecide}», pero el análisis de tu ejercicio no tiene variable de control: ` +
+        "lo que se decide es una variable de control (y queda fija durante la corrida)."
     );
   }
   return problemas;

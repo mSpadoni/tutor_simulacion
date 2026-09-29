@@ -1,3 +1,4 @@
+import { ANALISIS_DE_PRUEBA } from "../helpers/analisisDePrueba";
 import { randomUUID } from "node:crypto";
 import { afterAll, describe, expect, it } from "vitest";
 import { EjerciciosController } from "@/backend/controllers/ejercicios.controller";
@@ -7,6 +8,7 @@ import {
   crearToolsEjercicio,
   guardarEjercicio,
   RECHAZOS_POR_RESPUESTA,
+  resumenDelEjercicio,
   type DatosEjercicio,
   type EjercicioGenerado,
 } from "@/backend/tools/ejercicio.tools";
@@ -33,6 +35,7 @@ const EJERCICIO: DatosEjercicio = {
   datosAleatorios: [{ sigla: "IA", fdp: "uniforme entre 5 y 15 minutos" }],
   seDecide: "la cantidad N de mecánicos",
   complicaciones: ["N puestos", "arrepentimiento"],
+  analisis: ANALISIS_DE_PRUEBA,
 };
 
 /** Un alumno logueado con una conversación propia y sus models. */
@@ -94,6 +97,22 @@ describe("guardarEjercicio (la tool generar_ejercicio)", () => {
     expect(intentos.map((intento) => intento.ok)).toEqual([...Array(RECHAZOS_POR_RESPUESTA).fill(false), true]);
     expect(intentos.at(-1)).toMatchObject({ avisos: [expect.stringContaining("es lineal pero no dice qué recta")] });
     expect(await ejercicios.listarRecientes()).toHaveLength(1);
+  });
+
+  it("si se guarda igual, los problemas del análisis interno no van en los avisos que ve el alumno", async () => {
+    const { ejercicios, conversacionId } = await alumnoConConversacion();
+    const sinControl = structuredClone(EJERCICIO);
+    sinControl.analisis.variables.control = [];
+
+    const resultado = await guardarEjercicio(ejercicios, conversacionId, sinControl, { rechazar: false });
+
+    expect(resultado).toMatchObject({
+      ok: true,
+      avisos: [],
+      avisosDelAnalisis: [expect.stringContaining("no tiene variable de control")],
+    });
+    // El modelo sí se entera, con la orden de no revelarle la metodología al alumno.
+    expect(resumenDelEjercicio(resultado)).toContain("No le cuentes los problemas del análisis");
   });
 
   it("si los datos no pasan la validación, le devuelve el error al modelo y no guarda nada", async () => {
