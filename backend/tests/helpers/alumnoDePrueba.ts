@@ -56,7 +56,8 @@ export class NavegadorDePrueba {
     const partes = [...this.cookies.keys()].filter((nombre) => /-auth-token(\.\d+)?$/.test(nombre)).sort();
     const valor = partes.map((nombre) => this.cookies.get(nombre)).join("");
     const sesion = JSON.parse(Buffer.from(valor.replace(/^base64-/, ""), "base64url").toString("utf8"));
-    sesion.expires_at = Math.floor(Date.now() / 1000) - 60;
+    // 1970 (no 0: Supabase lo trata como "sin vencimiento"): vencida sin depender de la fecha actual.
+    sesion.expires_at = 1;
     partes.forEach((nombre) => this.cookies.delete(nombre));
     const nombreBase = partes[0].replace(/\.\d+$/, "");
     this.cookies.set(nombreBase, `base64-${Buffer.from(JSON.stringify(sesion)).toString("base64url")}`);

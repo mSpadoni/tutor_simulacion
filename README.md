@@ -60,7 +60,6 @@ backend/
   supabase/             Config de la base local y migraciones SQL (con las políticas RLS).
   tests/rapidos/        Tests sin Docker ni internet (lógica pura, reglas de arquitectura, vista).
   tests/integracion/    Tests contra la base local de Supabase (Docker), sin internet.
-  tests/externos/       Tests contra OpenAI y Kroki (internet).
 middleware.ts           Refresca la sesión del alumno en cada request (Next.js lo exige en la raíz).
 ```
 
@@ -122,27 +121,21 @@ podrían contradecir a la cátedra. Los originales (`complemento_teorico/`) no s
 
 ## Tests
 
-Los tests no usan mocks. Están en tres grupos:
+Los tests son deterministas: ninguno depende de internet, de un LLM real, del reloj, del azar ni del orden en que se ejecutan. Están en dos grupos:
 
 - **Rápidos** (`backend/tests/rapidos/`): lógica pura, reglas de arquitectura, funciones y componentes de la
   vista. No necesitan Docker ni internet y tardan segundos. ESLint impide que un test de esta carpeta use
   Supabase, Kroki u OpenAI.
 - **Integración** (`backend/tests/integracion/`): repositorios, RLS, auth y middleware contra una **copia local
   de Supabase** en Docker (misma migración, mismo login, mismas políticas RLS, nunca la base real). Sin internet.
-- **Externos** (`backend/tests/externos/`): el contrato con los servicios reales (OpenAI y Kroki): que respondan
-  como esperamos y que sus errores reales se traduzcan a nuestros códigos. Necesitan internet.
-- **Evals** (`backend/tests/evals/`): la conducta del modelo real (qué tool elige ante cada pedido). Es
-  probabilística, así que cada caso se corre 3 veces con temperatura 0 y se exige que pase al menos 2. Gastan
-  crédito: se corren al cambiar el prompt o las tools. Sin `OPENAI_API_KEY` fallan (no se saltean en silencio).
+- El chat se prueba con un **modelo de prueba** del AI SDK (`MockLanguageModelV4`) y Kroki con un **servidor HTTP
+  local**: se prueba cómo la app maneja cada respuesta posible, sin depender de lo que decida el modelo real.
 
 ```bash
 # Una vez por sesión (Docker Desktop abierto). La primera vez baja las imágenes.
 npm run db:start
-npm test                  # rápidos + integración: lo confiable, sin internet
-npm run test:externos     # OpenAI y Kroki (necesitan internet; los de OpenAI, OPENAI_API_KEY)
-npm run test:evals        # conducta del modelo (gasta crédito; al cambiar el prompt o las tools)
+npm test                  # rápidos + integración, sin internet
 npm run test:rapidos      # solo los rápidos, sin Docker (mientras se programa)
-npm run test:todo         # rápidos, integración y externos (sin las evals)
 # Al terminar, para liberar memoria:
 npm run db:stop
 ```
@@ -156,10 +149,7 @@ npm run db:stop
   igual al de la app, que lee y escribe cookies en memoria.
 - Cada archivo de tests crea sus alumnos y los borra al terminar (sus conversaciones y mensajes se borran en cascada).
 - `npm run db:reset` recrea la base local desde las migraciones.
-- Los tests del chat le hablan a la API real de OpenAI. Los de errores (clave
-  inválida, timeout) no gastan crédito y corren siempre; los que piden una
-  respuesta real se saltean si no hay `OPENAI_API_KEY` en `.env.local`.
-  Vitest solo lee las variables `OPENAI_` de ese archivo.
+- Ningún test usa la API de OpenAI ni Kroki reales: no gastan crédito ni necesitan claves.
 
 ## Deploy Vercel
 

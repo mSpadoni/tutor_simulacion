@@ -42,15 +42,10 @@ export const codigoDelError = (eventos: Evento[]) =>
   leerErrorPublico(eventos.find((evento) => evento.type === "error")?.errorText ?? "")?.codigo;
 
 /**
- * Espera a que haya al menos `cantidad` mensajes guardados y los devuelve. La respuesta del tutor se guarda al
- * terminar el stream (en su onFinish): se espera esa condición, con un tope, en vez de un tiempo fijo.
+ * Los mensajes guardados de la conversación. La respuesta del tutor se guarda en el onFinish del stream, y el
+ * AI SDK lo espera antes de cerrarlo: cuando `conversar` terminó de leer, ya está guardada (sin esperas).
  */
-export async function mensajesGuardados(conversaciones: ConversacionesModel, id: string, cantidad: number) {
-  for (let intento = 0; intento < 20; intento++) {
-    const mensajes = await conversaciones.mensajes(id);
-    if (mensajes.length >= cantidad) return mensajes;
-    await new Promise((listo) => setTimeout(listo, 150));
-  }
+export function mensajesGuardados(conversaciones: ConversacionesModel, id: string) {
   return conversaciones.mensajes(id);
 }
 

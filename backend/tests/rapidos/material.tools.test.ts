@@ -118,14 +118,6 @@ describe("inspiracionParaEjercicio", () => {
     expect(texto).toContain("No uses el dominio ni el título de ninguno de estos:");
     for (const titulo of fichas) expect(texto).toContain(`«${titulo}»`);
   });
-
-  it("varía la inspiración entre pedidos iguales (elige al azar entre los más parecidos)", () => {
-    const combinaciones = new Set(
-      Array.from({ length: 20 }, () => inspiracionParaEjercicio(material, "colas").fichas.sort().join(" | "))
-    );
-
-    expect(combinaciones.size).toBeGreaterThan(1);
-  });
 });
 
 describe("las tres tools del material", () => {

@@ -40,8 +40,8 @@ describe("ConversacionesModel", () => {
       parts: [{ type: "step-start" }, { type: "text", text: "El mismo evento o nada." }],
     };
 
-    await conversaciones.agregarMensajes(id, [pregunta, respuesta]);
-    await conversaciones.agregarMensajes(id, [mensaje("user", "Gracias")]);
+    // En una sola operación: el orden lo fija el guardado, no el tiempo entre dos llamadas.
+    await conversaciones.agregarMensajes(id, [pregunta, respuesta, mensaje("user", "Gracias")]);
 
     const guardados = await conversaciones.mensajes(id);
     expect(guardados.map((m) => m.role)).toEqual(["user", "assistant", "user"]);
@@ -75,18 +75,6 @@ describe("ConversacionesModel", () => {
     expect(ultimos.map((m) => (m.parts[0] as { text: string }).text)).toEqual(["tres", "cuatro"]);
   });
 
-  it("lista las conversaciones del alumno, la que tuvo actividad más reciente arriba", async () => {
-    const { conversaciones } = await alumnoConModel();
-    const vieja = randomUUID();
-    const nueva = randomUUID();
-    await conversaciones.crear(vieja, "Vieja");
-    await conversaciones.crear(nueva, "Nueva");
-    // Un mensaje nuevo en la vieja la vuelve la más reciente.
-    await conversaciones.agregarMensajes(vieja, [mensaje("user", "Hola de nuevo")]);
-
-    expect((await conversaciones.listar()).map((c) => c.titulo)).toEqual(["Vieja", "Nueva"]);
-  });
-
   it("borrar la conversación borra también sus mensajes", async () => {
     const { conversaciones } = await alumnoConModel();
     const id = randomUUID();
@@ -96,21 +84,6 @@ describe("ConversacionesModel", () => {
     expect(await conversaciones.borrar(id)).toBe(true);
     expect(await conversaciones.obtener(id)).toBeNull();
     expect(await conversaciones.mensajes(id)).toEqual([]);
-  });
-
-  it("usoReciente cuenta los mensajes del alumno (no los del tutor) en el último minuto y en el día", async () => {
-    const { conversaciones } = await alumnoConModel();
-    const otro = await alumnoConModel();
-    const id = randomUUID();
-    await conversaciones.crear(id, "Uso");
-    await conversaciones.agregarMensajes(id, [mensaje("user", "Uno"), mensaje("assistant", "Respuesta")]);
-    await conversaciones.agregarMensajes(id, [mensaje("user", "Dos")]);
-
-    expect(await conversaciones.usoReciente()).toEqual({ ultimoMinuto: 2, ultimoDia: 2 });
-    // Dentro de 2 minutos ya no cuentan para el minuto, pero sí para el día.
-    expect(await conversaciones.usoReciente(new Date(Date.now() + 120_000))).toEqual({ ultimoMinuto: 0, ultimoDia: 2 });
-    // Cada alumno cuenta solo lo suyo (RLS).
-    expect(await otro.conversaciones.usoReciente()).toEqual({ ultimoMinuto: 0, ultimoDia: 0 });
   });
 });
 

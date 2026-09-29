@@ -14,15 +14,14 @@ const USO = {
 /**
  * Un modelo que responde `texto` en streaming. El texto llega en ráfagas de varias palabras (como llega de un
  * proveedor real), para poder comprobar que la app lo muestra palabra por palabra.
- * `demoraInicialMs`: cuánto tarda en empezar a responder (para probar el timeout).
  */
-export function modeloQueResponde(texto: string, { demoraInicialMs = 0 } = {}) {
+export function modeloQueResponde(texto: string) {
   const rafagas = texto.match(/(\S+\s*){1,3}/g) ?? [];
   return new MockLanguageModelV4({
     modelId: "modelo-de-prueba",
     doStream: async () => ({
       stream: simulateReadableStream({
-        initialDelayInMs: demoraInicialMs,
+        initialDelayInMs: null,
         chunkDelayInMs: 0,
         chunks: [
           { type: "stream-start" as const, warnings: [] },

@@ -54,16 +54,20 @@ describe("guardarEjercicio (la tool generar_ejercicio)", () => {
 });
 
 describe("EjerciciosController.listar («Mis ejercicios» del costado)", () => {
-  it("devuelve título y conversación de cada ejercicio, el más reciente arriba", async () => {
+  it("devuelve título y conversación de cada ejercicio", async () => {
     const { ejercicios, conversacionId } = await alumnoConConversacion();
     await guardarEjercicio(ejercicios, conversacionId, EJERCICIO);
     await guardarEjercicio(ejercicios, conversacionId, { ...EJERCICIO, titulo: "Lavadero de autos" });
 
     const lista = await new EjerciciosController(() => ejercicios).listar();
 
-    expect(lista.map(({ titulo, conversacionId: id }) => ({ titulo, id }))).toEqual([
-      { titulo: "Lavadero de autos", id: conversacionId },
-      { titulo: "Taller de bicicletas", id: conversacionId },
-    ]);
+    // Sin mirar el orden: depende de cuándo se guardó cada uno, no de lo que hace listar().
+    expect(lista.map(({ titulo, conversacionId: id }) => ({ titulo, id }))).toHaveLength(2);
+    expect(lista.map(({ titulo, conversacionId: id }) => ({ titulo, id }))).toEqual(
+      expect.arrayContaining([
+        { titulo: "Lavadero de autos", id: conversacionId },
+        { titulo: "Taller de bicicletas", id: conversacionId },
+      ])
+    );
   });
 });

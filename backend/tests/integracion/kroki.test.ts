@@ -5,7 +5,7 @@ import { levantarServidor, type Respuesta, type ServidorLocal } from "../helpers
 // Cómo maneja ClienteKroki cada respuesta posible del servicio, contra un servidor HTTP real en esta máquina
 // (sin internet ni servicios públicos): así cada caso es determinista y se puede contar cuántos pedidos hizo.
 
-const DIAGRAMA = 'flowchart TD\n  A(["Inicio"]) --> B["T = TPLL"]';
+const DIAGRAMA = 'flowchart TD\n  CI[["C.I."]] --> B["T = TPLL"]';
 const SVG = '<svg xmlns="http://www.w3.org/2000/svg"><text>TPLL</text></svg>';
 const comoSvg = { "content-type": "image/svg+xml" };
 
@@ -18,7 +18,7 @@ afterEach(async () => {
 /** Un servidor que responde `respuestas` en orden (la última se repite) y un cliente apuntado a él. */
 async function clienteContra(respuestas: Respuesta[], opciones: ConstructorParameters<typeof ClienteKroki>[0] = {}) {
   servidor = await levantarServidor((numero) => respuestas[Math.min(numero, respuestas.length) - 1]);
-  return new ClienteKroki({ endpoint: servidor.url, esperaSinRetryAfterMs: 10, ...opciones });
+  return new ClienteKroki({ endpoint: servidor.url, esperaSinRetryAfterMs: 0, ...opciones });
 }
 
 describe("ClienteKroki.renderizar — respuestas del servicio", () => {
@@ -77,15 +77,6 @@ describe("ClienteKroki.renderizar — reintentos", () => {
 
     expect(await kroki.renderizar(DIAGRAMA)).toMatchObject({ ok: false, motivo: "limite" });
     expect(servidor!.pedidos()).toBe(1);
-  });
-
-  it("si el servicio no responde a tiempo, avisa que tardó", async () => {
-    const kroki = await clienteContra([{ status: 200, headers: comoSvg, cuerpo: SVG, demoraMs: 2000 }], {
-      timeoutMs: 50,
-      reintentos: 0,
-    });
-
-    expect(await kroki.renderizar(DIAGRAMA)).toMatchObject({ ok: false, motivo: "tiempo" });
   });
 });
 

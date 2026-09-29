@@ -2,11 +2,11 @@ import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 
 // Un servidor HTTP de verdad, en esta máquina y en un puerto libre, que responde lo que el test le indica.
-// Sirve para probar cómo manejamos las respuestas de un servicio externo (500, 429, algo que no es un SVG, una
-// demora) sin depender de internet ni de servicios públicos. No es un mock: el cliente hace un pedido HTTP real.
+// Sirve para probar cómo manejamos las respuestas de un servicio externo (500, 429, algo que no es un SVG) sin
+// depender de internet ni de servicios públicos. No es un mock: el cliente hace un pedido HTTP real.
 
-/** Lo que responde el servidor a un pedido. `demoraMs`: cuánto tarda en responder. */
-export type Respuesta = { status: number; headers?: Record<string, string>; cuerpo?: string; demoraMs?: number };
+/** Lo que responde el servidor a un pedido. */
+export type Respuesta = { status: number; headers?: Record<string, string>; cuerpo?: string };
 
 export type ServidorLocal = {
   url: string;
@@ -20,14 +20,9 @@ export async function levantarServidor(responder: (numeroDePedido: number) => Re
   let pedidos = 0;
   const servidor = createServer((pedido, respuesta) => {
     pedidos += 1;
-    const { status, headers = {}, cuerpo = "", demoraMs = 0 } = responder(pedidos);
+    const { status, headers = {}, cuerpo = "" } = responder(pedidos);
     pedido.resume(); // se descarta el cuerpo del pedido
-    const enviar = () => {
-      if (respuesta.destroyed) return; // el cliente ya cortó (timeout)
-      respuesta.writeHead(status, headers).end(cuerpo);
-    };
-    if (demoraMs > 0) setTimeout(enviar, demoraMs);
-    else enviar();
+    respuesta.writeHead(status, headers).end(cuerpo);
   });
   await new Promise<void>((listo) => servidor.listen(0, "127.0.0.1", listo));
   const { port } = servidor.address() as AddressInfo;

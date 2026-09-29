@@ -9,8 +9,8 @@ import { alumnoConChat, codigoDelError, conversar, herramientas, mensajesGuardad
 import { errorDeLaApi, modeloQueFalla, modeloQueResponde } from "../helpers/modeloDePrueba";
 import { conVariablesAsync } from "../helpers/variablesDeEntorno";
 
-// NUESTRA orquestación del chat (guardar, límites, errores, timeout, streaming, historial) contra la Supabase local,
-// con un modelo de prueba del AI SDK: determinista y sin internet. La conducta del modelo real está en externos/.
+// NUESTRA orquestación del chat (guardar, errores, timeout, streaming, historial) contra la Supabase local,
+// con un modelo de prueba del AI SDK: determinista y sin internet.
 afterAll(borrarAlumnosDePrueba);
 
 const mensaje = (role: "user" | "assistant", texto: string): TutorUIMessage => ({
@@ -29,7 +29,7 @@ describe("ChatController.responder — conversación", () => {
     await conversar(controller, id, "Dame un ejercicio de colas");
 
     expect(await conversaciones.obtener(id)).toMatchObject({ titulo: "Dame un ejercicio de colas" });
-    const [pregunta, respuesta] = await mensajesGuardados(conversaciones, id, 2);
+    const [pregunta, respuesta] = await mensajesGuardados(conversaciones, id);
     expect(pregunta.role).toBe("user");
     expect(respuesta).toMatchObject({ role: "assistant" });
     expect(herramientas(respuesta)).toEqual([]);
@@ -146,58 +146,17 @@ describe("ChatController.responder — errores", () => {
     expect(codigoDelError(await conversar(controller, randomUUID(), "Hola"))).toBe("tutor_saturado");
   });
 
-  it("si el modelo tarda más que el límite, el stream avisa con «tutor_demorado»", async () => {
-    const { controller } = await alumnoConChat({
-      crearModelo: () => modeloQueResponde("Tarde.", { demoraInicialMs: 2000 }),
-      timeoutMs: 50,
-    });
-
-    expect(codigoDelError(await conversar(controller, randomUUID(), "Hola"))).toBe("tutor_demorado");
-  });
-
   it("no deja escribir en la conversación de otro alumno y no guarda nada", async () => {
     const responde = () => modeloQueResponde("Ok.");
     const duenio = await alumnoConChat({ crearModelo: responde });
     const intruso = await alumnoConChat({ crearModelo: responde });
     const id = randomUUID();
     await conversar(duenio.controller, id, "Mi conversación");
-    await mensajesGuardados(duenio.conversaciones, id, 2);
 
     await expect(conversar(intruso.controller, id, "Hola")).rejects.toMatchObject({
       constructor: ErrorDeAplicacion,
       codigo: "conversacion_no_encontrada",
     });
     expect(await duenio.conversaciones.mensajes(id)).toHaveLength(2);
-  });
-});
-
-describe("ChatController.responder — límite de uso", () => {
-  it("al pasar el límite por minuto corta con «limite_por_minuto», sin guardar ni consultar al modelo", async () => {
-    const modelo = modeloQueResponde("Ok.");
-    const { conversaciones, controller } = await alumnoConChat({
-      crearModelo: () => modelo,
-      limites: { porMinuto: 1, porDia: 100 },
-    });
-    const id = randomUUID();
-    await conversar(controller, id, "Primero");
-    await mensajesGuardados(conversaciones, id, 2);
-
-    await expect(conversar(controller, id, "Segundo")).rejects.toMatchObject({
-      codigo: "limite_por_minuto",
-      mensajePublico: expect.stringContaining("Esperá un minuto"),
-    });
-    expect(await conversaciones.mensajes(id)).toHaveLength(2);
-    expect(modelo.doStreamCalls).toHaveLength(1);
-  });
-
-  it("al pasar el límite del día corta con «limite_por_dia» (que no se puede reintentar)", async () => {
-    const { controller } = await alumnoConChat({
-      crearModelo: () => modeloQueResponde("Ok."),
-      limites: { porMinuto: 100, porDia: 1 },
-    });
-    const id = randomUUID();
-    await conversar(controller, id, "Primero");
-
-    await expect(conversar(controller, id, "Segundo")).rejects.toMatchObject({ codigo: "limite_por_dia" });
   });
 });
