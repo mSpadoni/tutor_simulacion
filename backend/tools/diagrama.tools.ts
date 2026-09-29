@@ -1,18 +1,18 @@
 import "server-only";
 import { tool } from "ai";
 import { z } from "zod";
-import { renderizarMermaid, type ResultadoKroki } from "@/backend/lib/kroki";
+import { clienteKroki, type ClienteKroki, type ResultadoKroki } from "@/backend/lib/kroki";
 
 /** Lo que devuelve la tool: el SVG va a la vista (se muestra como imagen); el modelo solo recibe un resumen. */
 export type DiagramaGenerado = { titulo: string; mermaid: string } & ResultadoKroki;
 
-/** Genera el diagrama con Kroki. `opciones` permite probar con otro servidor o timeout. */
+/** Genera el diagrama con Kroki. `kroki` permite probar con otro servidor o timeout. */
 export async function generarDiagramaFlujo(
   titulo: string,
   mermaid: string,
-  opciones?: Parameters<typeof renderizarMermaid>[1]
+  kroki: ClienteKroki = clienteKroki
 ): Promise<DiagramaGenerado> {
-  return { titulo, mermaid, ...(await renderizarMermaid(mermaid, opciones)) };
+  return { titulo, mermaid, ...(await kroki.renderizar(mermaid)) };
 }
 
 /** Lo que lee el modelo del resultado: si salió, que no lo repita en texto; si no, qué pasó y si puede corregirlo. */

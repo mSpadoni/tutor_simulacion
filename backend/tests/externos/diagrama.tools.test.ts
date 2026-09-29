@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ClienteKroki } from "@/backend/lib/kroki";
 import {
   crearToolsDiagrama,
   generarDiagramaFlujo,
@@ -37,7 +38,11 @@ describe("resumenParaElModelo (lo único que lee el modelo del resultado)", () =
 
   it("si falló el servicio, le pide no reintentar y describir el diagrama en texto", async () => {
     const resumen = resumenParaElModelo(
-      await generarDiagramaFlujo("Llegada", MERMAID, { endpoint: "https://httpbin.org/status/503", reintentos: 0 })
+      await generarDiagramaFlujo(
+        "Llegada",
+        MERMAID,
+        new ClienteKroki({ endpoint: "https://httpbin.org/status/503", reintentos: 0 })
+      )
     );
 
     expect(resumen).toContain("No reintentes");

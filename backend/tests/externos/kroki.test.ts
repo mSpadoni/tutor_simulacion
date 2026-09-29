@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_CARACTERES_MERMAID, renderizarMermaid, validarMermaid } from "@/backend/lib/kroki";
+import { ClienteKroki, clienteKroki, MAX_CARACTERES_MERMAID, validarMermaid } from "@/backend/lib/kroki";
 
 // Sin mocks: contra Kroki real (kroki.io) y, para los errores HTTP, contra httpbin.org, un servicio público real
 // que responde el código que se le pide (/status/500, /status/429...). Necesitan internet.
@@ -30,9 +30,9 @@ describe("validarMermaid (antes de llamar a Kroki)", () => {
   });
 });
 
-describe("renderizarMermaid — con Kroki real", () => {
+describe("ClienteKroki.renderizar — con Kroki real", () => {
   it("un diagrama válido devuelve el SVG", async () => {
-    const resultado = await renderizarMermaid(DIAGRAMA);
+    const resultado = await clienteKroki.renderizar(DIAGRAMA);
 
     expect(resultado.ok).toBe(true);
     if (resultado.ok) {
@@ -42,7 +42,7 @@ describe("renderizarMermaid — con Kroki real", () => {
   });
 
   it("un Mermaid con error de sintaxis devuelve el error de Kroki (para que el modelo lo corrija)", async () => {
-    const resultado = await renderizarMermaid('flowchart TD\n  A["Inicio"] --> ((');
+    const resultado = await clienteKroki.renderizar('flowchart TD\n  A["Inicio"] --> ((');
 
     expect(resultado).toMatchObject({ ok: false, motivo: "sintaxis" });
     expect(resultado.ok || resultado.detalle).toMatch(/error/i);
@@ -51,22 +51,22 @@ describe("renderizarMermaid — con Kroki real", () => {
   it("lo inválido se rechaza sin llamar a Kroki (responde al instante)", async () => {
     const inicio = Date.now();
 
-    const resultado = await renderizarMermaid("esto no es un diagrama");
+    const resultado = await clienteKroki.renderizar("esto no es un diagrama");
 
     expect(resultado).toMatchObject({ ok: false, motivo: "codigo_invalido" });
     expect(Date.now() - inicio).toBeLessThan(50);
   });
 
   it("si Kroki no responde a tiempo, avisa que tardó", async () => {
-    const resultado = await renderizarMermaid(DIAGRAMA, { timeoutMs: 1, reintentos: 0 });
+    const resultado = await new ClienteKroki({ timeoutMs: 1, reintentos: 0 }).renderizar(DIAGRAMA);
 
     expect(resultado).toMatchObject({ ok: false, motivo: "tiempo" });
   });
 });
 
-describe("renderizarMermaid — errores HTTP (con httpbin.org real)", () => {
+describe("ClienteKroki.renderizar — errores HTTP (con httpbin.org real)", () => {
   it("un 5xx se reintenta y, si sigue fallando, avisa que el servicio falló", async () => {
-    const resultado = await renderizarMermaid(DIAGRAMA, { endpoint: "https://httpbin.org/status/500" });
+    const resultado = await new ClienteKroki({ endpoint: "https://httpbin.org/status/500" }).renderizar(DIAGRAMA);
 
     expect(resultado).toMatchObject({ ok: false, motivo: "servicio" });
     expect(resultado.ok || resultado.detalle).toContain("500");
@@ -75,7 +75,7 @@ describe("renderizarMermaid — errores HTTP (con httpbin.org real)", () => {
   it("un 429 espera, reintenta y, si sigue, avisa que hay demasiados pedidos", async () => {
     const inicio = Date.now();
 
-    const resultado = await renderizarMermaid(DIAGRAMA, { endpoint: "https://httpbin.org/status/429" });
+    const resultado = await new ClienteKroki({ endpoint: "https://httpbin.org/status/429" }).renderizar(DIAGRAMA);
 
     expect(resultado).toMatchObject({ ok: false, motivo: "limite" });
     // Sin Retry-After espera 1 s antes de reintentar.
@@ -83,7 +83,7 @@ describe("renderizarMermaid — errores HTTP (con httpbin.org real)", () => {
   });
 
   it("una respuesta 200 que no es SVG no se acepta", async () => {
-    const resultado = await renderizarMermaid(DIAGRAMA, { endpoint: "https://httpbin.org/post" });
+    const resultado = await new ClienteKroki({ endpoint: "https://httpbin.org/post" }).renderizar(DIAGRAMA);
 
     expect(resultado).toMatchObject({ ok: false, motivo: "respuesta_invalida" });
   });

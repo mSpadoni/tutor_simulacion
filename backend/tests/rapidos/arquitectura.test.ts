@@ -54,9 +54,9 @@ describe("reglas de dependencia (ESLint)", () => {
         archivo
       )
     ).toHaveLength(1);
-    expect(
-      await erroresDeDependencia('import { responderComoTutor } from "@/backend/tutor/agente";', archivo)
-    ).toHaveLength(1);
+    expect(await erroresDeDependencia('import { AgenteTutor } from "@/backend/tutor/agente";', archivo)).toHaveLength(
+      1
+    );
     // Los errores para el alumno sí: la ruta los traduce a JSON.
     expect(await erroresDeDependencia('import { ErrorDeChat } from "@/backend/tutor/errores";', archivo)).toEqual([]);
     expect(
@@ -110,9 +110,7 @@ describe("reglas de dependencia (ESLint)", () => {
     expect(
       await erroresDeDependencia('import { crearAlumnoLogueado } from "../helpers/alumnoDePrueba";', archivo)
     ).toEqual([expect.stringContaining("va en backend/tests/externos/")]);
-    expect(
-      await erroresDeDependencia('import { renderizarMermaid } from "@/backend/lib/kroki";', archivo)
-    ).toHaveLength(1);
+    expect(await erroresDeDependencia('import { clienteKroki } from "@/backend/lib/kroki";', archivo)).toHaveLength(1);
     expect(
       await erroresDeDependencia('import type { DiagramaGenerado } from "@/backend/tools/diagrama.tools";', archivo)
     ).toEqual([]);

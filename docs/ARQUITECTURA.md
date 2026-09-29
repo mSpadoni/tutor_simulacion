@@ -37,6 +37,19 @@ MVC sobre Next.js (App Router) + Supabase, con reglas de dependencia que se hace
 
 Las prueba `backend/tests/rapidos/arquitectura.test.ts` con el ESLint real del proyecto, y `npm run lint` las aplica a `app/`, `backend/`, `views/` y `shared/` (`eslint.dirs` en `next.config.ts`).
 
+## Validación y errores
+
+- **Lo que manda el navegador** se valida con Zod en `backend/controllers/validaciones.ts`, en la primera línea de cada controller: nada del navegador llega a un model sin pasar por un esquema. Un dato inválido corta con `ErrorDeAplicacion("pedido_invalido")`.
+- **Cada esquema vive con su dueño**: las entradas de cada tool (las manda el LLM) en la tool, porque el LLM lee sus descripciones; qué es un ejercicio en `models/dominio/ejercicio.ts` (lo usan el repositorio al guardar y leer, y la tool que lo genera).
+- **Las respuestas del servidor no se validan con Zod**: servidor y navegador comparten los tipos de `shared/` y se despliegan juntos, así que un cambio de forma rompe la compilación. La excepción es el texto de un error, que el navegador lee con `leerErrorPublico`.
+- **Errores**: código estable en `shared/errores.ts`, `ErrorDeAplicacion` en el backend (sin status HTTP) y `app/api/respuestaDeError.ts` como único lugar que lo traduce a HTTP.
+
+## Clases o funciones
+
+- **Clase** cuando hay algo que se configura una vez y usan varias operaciones: dependencias inyectadas (los controllers, los repositorios), configuración (`AgenteTutor`: timeout y ritmo del texto; `ClienteKroki`: servidor, timeout y reintentos), estado costoso que se arma una vez (`BuscadorBM25`, `MaterialCatedra`) o un tipo que se atrapa con `instanceof` (`ErrorDeAplicacion`).
+- **Función** cuando recibe datos y devuelve un resultado sin recordar nada: `verificarFdp`, `limiteAlcanzado`, `traducirError`, `textoDe`. Son las más fáciles de probar.
+- Las **tools** se crean con funciones (`crearToolConsultarModelos(material)`): el AI SDK espera objetos `tool()` y la función ya recibe su dependencia. Los componentes y hooks de React son funciones (el estilo actual de React).
+
 ## Plan de refactor
 
 La carpeta `backend/models/` se mantiene (es la M de MVC) y adentro separa `repositorios/` (Supabase) de `dominio/` (lógica pura). Las reglas se aplican por carpeta: un archivo nuevo en cualquiera de las dos queda cubierto solo.

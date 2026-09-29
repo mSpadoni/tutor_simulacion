@@ -7,7 +7,7 @@ import { LIMITES_DE_USO, limiteAlcanzado, type LimitesDeUso } from "@/backend/mo
 import { ejerciciosModel, type EjerciciosModel } from "@/backend/models/repositorios/ejercicios.model";
 import { obtenerMaterialCatedra, type MaterialCatedra } from "@/backend/models/materialCatedra.model";
 import { crearToolsTutor } from "@/backend/tools/tutor.tools";
-import { PAUSA_ENTRE_PALABRAS_MS, responderComoTutor } from "@/backend/tutor/agente";
+import { AgenteTutor } from "@/backend/tutor/agente";
 import { traducirError } from "@/backend/tutor/errores";
 import { validarPedidoDeChat } from "./validaciones";
 import { MAX_MENSAJES_CONTEXTO, type TutorUIMessage } from "@/shared/chat";
@@ -39,8 +39,7 @@ export class ChatController {
   private readonly material: () => MaterialCatedra;
   private readonly conversaciones: () => ConversacionesModel;
   private readonly ejercicios: () => EjerciciosModel;
-  private readonly timeoutMs: number;
-  private readonly pausaEntrePalabrasMs: number;
+  private readonly agente: AgenteTutor;
   private readonly limites: LimitesDeUso;
 
   // Recibe UN objeto y lo desestructura en el momento: cada propiedad con su valor por defecto (`= ...`).
@@ -50,16 +49,16 @@ export class ChatController {
     material = obtenerMaterialCatedra,
     conversaciones = () => conversacionesModel,
     ejercicios = () => ejerciciosModel,
-    timeoutMs = 45_000,
-    pausaEntrePalabrasMs = PAUSA_ENTRE_PALABRAS_MS,
+    timeoutMs,
+    pausaEntrePalabrasMs,
     limites = LIMITES_DE_USO,
   }: Dependencias = {}) {
     this.crearModelo = crearModelo;
     this.material = material;
     this.conversaciones = conversaciones;
     this.ejercicios = ejercicios;
-    this.timeoutMs = timeoutMs;
-    this.pausaEntrePalabrasMs = pausaEntrePalabrasMs;
+    // El agente se configura una vez (timeout y ritmo del texto); sin valores, usa los suyos.
+    this.agente = new AgenteTutor({ timeoutMs, pausaEntrePalabrasMs });
     this.limites = limites;
   }
 
@@ -109,12 +108,10 @@ export class ChatController {
     await conversaciones.agregarMensajes(conversacionId, [mensaje]);
 
     // 4) La respuesta del agente, en streaming. Al terminar (o si el alumno la corta), se guarda.
-    return responderComoTutor({
+    return this.agente.responder({
       modelo,
       mensajes: [...historial, mensaje],
       tools: crearToolsTutor({ material: this.material(), ejercicios: this.ejercicios(), conversacionId }),
-      timeoutMs: this.timeoutMs,
-      pausaEntrePalabrasMs: this.pausaEntrePalabrasMs,
       alTerminar: (respuesta) =>
         conversaciones.agregarMensajes(conversacionId, [respuesta]).catch((error: unknown) => {
           console.error("No se pudo guardar la respuesta del tutor:", error);
